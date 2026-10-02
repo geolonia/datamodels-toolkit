@@ -1,0 +1,29 @@
+# Correspondence between DesignatedShelter and GSI's designated shelter data
+# (one CSV per municipality).
+standard:
+  name:
+    ja: 国土地理院「指定避難所データ」（市町村別 CSV、避難所等データダウンロードサイト）
+    en: "GSI's designated shelter data (one CSV per municipality, 避難所等データダウンロードサイト)"
+  url: https://hinanmap.gsi.go.jp/hinanjocp/hinanbasho/koukaidate.html
+  license:
+    ja: "国土地理院コンテンツ利用規約と、同サイトの「ご利用上の注意」（データは最新とは限らない。指定緊急避難場所と指定避難所は別のもの。指定緊急避難場所は災害の種別ごとに指定される。データを他に提供するときはこの注意も伝える）"
+    en: "GSI's terms of use for its content (国土地理院コンテンツ利用規約) and the site's notes on use (ご利用上の注意): the data may not be current; 指定緊急避難場所 and 指定避難所 differ; designation is per hazard for sites; pass these notes on when sharing"
+  note:
+    ja: "市町村が登録した指定避難所を国土地理院が全国分公開するもの。文字コードは UTF-8（BOM 付き）。市町村の ID と収容人数は含まない。"
+    en: "GSI publishes the designated shelters every municipality registers, nationwide. UTF-8 with a BOM. It has no municipal ID and no capacity."
+# How scripts/convert.mjs names the entities it makes from this list.
+convert:
+  id: "urn:ngsi-ld:DesignatedShelter:{nationalShelterId}"
+fields:
+  nationalShelterId: { to: 共通ID, column: 共通ID }
+  name: { to: 施設・場所名, column: 施設・場所名 }
+  address: { to: 住所, note: { ja: 連結表記。JapaneseAddress の addressText, en: one line; JapaneseAddress addressText }, via: common/JapaneseAddress/gsi-address }
+  location: { to: "緯度, 経度", note: { ja: "[経度, 緯度] の点", en: "a point [longitude, latitude]" }, via: common/Geometry/jichitai-opendata-location }
+  shelterType: { to: 共通ID, note: { ja: "13桁目（種別コードの2桁目）：1 → general、2 → welfare", en: "the 13th character (second type digit): 1 → general, 2 → welfare" }, column: 共通ID, transform: nationalShelterType }
+  alsoEmergencyEvacuationSite: { to: 指定緊急避難場所との住所同一, note: { ja: 1 なら true, en: 1 is true }, column: 指定緊急避難場所との住所同一, transform: flag }
+  designationNotes: { to: その他市町村長が必要と認める事項, column: その他市町村長が必要と認める事項 }
+  targetEvacuees: { to: 受入対象者, column: 受入対象者 }
+  description: { to: 備考, column: 備考 }
+  externalShelterId: { to: null, note: { ja: このデータには無い（NO は一覧の行番号）。nationalShelterId で識別する, en: "not in this data (NO is the row number); nationalShelterId identifies the shelter" } }
+  localGovernmentCode: { to: null, note: { ja: ファイル名の市町村コード（5桁）から導く。検査数字を足して6桁にする（--set localGovernmentCode=13101）, en: "derive from the 5-digit municipality code in the file name, adding the check digit (--set localGovernmentCode=13101)" }, transform: code6 }
+  maxCapacity: { to: null, note: { ja: このデータには無い, en: not in this data } }

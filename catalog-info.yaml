@@ -6,7 +6,11 @@ metadata:
   description: Command-line tools for the datamodels.jp catalog
   annotations:
     github.com/project-slug: geolonia/datamodels-toolkit
-  tags: ['library']
+  tags: ['library', 'cli', 'data-models', 'ngsi-ld', 'json-ld', 'csv', 'open-data', 'fiware']
+  links:
+    - url: https://datamodels.jp
+      title: Data models catalog
+      icon: web
 spec:
   type: 'library'
   lifecycle: 'experimental'

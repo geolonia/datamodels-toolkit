@@ -1,0 +1,509 @@
+{
+  "formatVersion": 1,
+  "generatedAt": "2026-10-02T12:44:41.054Z",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://datamodels.jp/LICENSE-CONTENT",
+  "models": [
+    {
+      "type": "Geometry",
+      "kind": "value",
+      "typeIri": "https://datamodels.jp/ns/common/Geometry",
+      "subject": "common",
+      "domain": "common",
+      "source": "minted",
+      "contextUrl": "https://datamodels.jp/context/common/v1.0.0.jsonld",
+      "contextAliasUrl": "https://datamodels.jp/context/common/v1.jsonld",
+      "schemaUrl": "https://datamodels.jp/schema/common/Geometry/v1.0.0.json",
+      "vocabularyUrl": "https://datamodels.jp/vocab/common/v1.0.0.jsonld",
+      "version": "1.0.0",
+      "status": "draft",
+      "title": {
+        "ja": "ジオメトリ",
+        "en": "Geometry"
+      },
+      "description": {
+        "ja": "location などの GeoProperty の値として使う GeoJSON ジオメトリ（RFC 7946）。点（Point）、線（LineString）、面（Polygon）、それぞれの複数形（MultiPoint、MultiLineString、MultiPolygon）、およびそれらをまとめた GeometryCollection。座標は経度・緯度（・高さ）の順で WGS 84。モデルごとに種類を絞ってよい（例 点だけ）。",
+        "en": "A GeoJSON geometry (RFC 7946) as the value of a GeoProperty such as location: Point, LineString, Polygon, their multi forms (MultiPoint, MultiLineString, MultiPolygon), or a GeometryCollection of these. Positions are longitude, latitude and optional altitude, in WGS 84. A model may narrow the allowed types, for example to Point only."
+      },
+      "sampleProperties": [],
+      "pageUrl": "https://datamodels.jp/models/common/Geometry/",
+      "pageUrlEn": "https://datamodels.jp/en/models/common/Geometry/",
+      "exampleUrls": [
+        "https://datamodels.jp/examples/common/Geometry/example.json"
+      ],
+      "mappingUrls": [
+        "https://datamodels.jp/mapping/common/Geometry/jichitai-opendata-location.yaml"
+      ]
+    },
+    {
+      "type": "JapaneseAddress",
+      "kind": "value",
+      "typeIri": "https://datamodels.jp/ns/common/JapaneseAddress",
+      "subject": "common",
+      "domain": "common",
+      "source": "minted",
+      "contextUrl": "https://datamodels.jp/context/common/v1.0.0.jsonld",
+      "contextAliasUrl": "https://datamodels.jp/context/common/v1.jsonld",
+      "schemaUrl": "https://datamodels.jp/schema/common/JapaneseAddress/v1.0.0.json",
+      "vocabularyUrl": "https://datamodels.jp/vocab/common/v1.0.0.jsonld",
+      "version": "1.0.0",
+      "status": "draft",
+      "title": {
+        "ja": "日本の住所",
+        "en": "Japanese address"
+      },
+      "description": {
+        "ja": "address 属性の値として使う日本の住所。意味が同じ項目は schema.org の PostalAddress の語を使い、日本固有の構造（町字・丁目・番地・号）、JIS コードと全国地方公共団体コード、アドレス・ベース・レジストリの町字ID、住居表示フラグを追加したもの。どの項目も任意。構造化できない場合は addressText だけでもよい。",
+        "en": "A Japanese postal address as the value of an address Property. schema.org PostalAddress terms where the meaning matches, plus the Japanese structure (machiaza, chome, banchi, go), JIS and local-government codes, the Address Base Registry town id and the residential-indication flag. Every field is optional; addressText alone is acceptable when the address cannot be structured."
+      },
+      "sampleProperties": [
+        "addressCountry",
+        "postalCode",
+        "addressRegion",
+        "addressLocality",
+        "machiaza",
+        "chome",
+        "banchi",
+        "go",
+        "buildingName",
+        "residentialIndication",
+        "jisPrefectureCode",
+        "jisMunicipalityCode",
+        "localGovernmentCode",
+        "abrMachiazaId",
+        "addressText"
+      ],
+      "pageUrl": "https://datamodels.jp/models/common/JapaneseAddress/",
+      "pageUrlEn": "https://datamodels.jp/en/models/common/JapaneseAddress/",
+      "exampleUrls": [
+        "https://datamodels.jp/examples/common/JapaneseAddress/example.json"
+      ],
+      "mappingUrls": [
+        "https://datamodels.jp/mapping/common/JapaneseAddress/gif-address.yaml",
+        "https://datamodels.jp/mapping/common/JapaneseAddress/gsi-address.yaml",
+        "https://datamodels.jp/mapping/common/JapaneseAddress/jichitai-opendata-address.yaml"
+      ]
+    },
+    {
+      "type": "DesignatedShelter",
+      "kind": "entity",
+      "typeIri": "https://datamodels.jp/ns/disaster/DesignatedShelter",
+      "subject": "disaster",
+      "domain": "disaster",
+      "source": "minted",
+      "contextUrl": "https://datamodels.jp/context/disaster/v1.0.0.jsonld",
+      "contextAliasUrl": "https://datamodels.jp/context/disaster/v1.jsonld",
+      "schemaUrl": "https://datamodels.jp/schema/disaster/DesignatedShelter/v1.0.0.json",
+      "vocabularyUrl": "https://datamodels.jp/vocab/disaster/v1.0.0.jsonld",
+      "version": "1.0.0",
+      "status": "draft",
+      "title": {
+        "ja": "指定避難所",
+        "en": "Designated shelter"
+      },
+      "description": {
+        "ja": "指定避難所（災害対策基本法第49条の7）1か所を表す。避難した人が一定期間滞在する施設の基本情報（名称・所在地などをまとめたマスタ）で、市町村が登録し国土地理院が公開する。開設状況や避難者数は持たない（それは EvacuationShelter で表し、shelter でここを参照する）。",
+        "en": "One designated shelter (指定避難所, Basic Act on Disaster Management Art. 49-7), the master record of a facility where evacuees stay for a while, as municipalities register it and GSI publishes it. Opening status and evacuee counts are not here (that is EvacuationShelter, which links here with shelter)."
+      },
+      "sampleProperties": [
+        "name",
+        "nameKana",
+        "externalShelterId",
+        "nationalShelterId",
+        "localGovernmentCode",
+        "shelterType",
+        "address",
+        "location",
+        "maxCapacity",
+        "targetEvacuees",
+        "alsoEmergencyEvacuationSite",
+        "site",
+        "designationNotes",
+        "description"
+      ],
+      "pageUrl": "https://datamodels.jp/models/disaster/DesignatedShelter/",
+      "pageUrlEn": "https://datamodels.jp/en/models/disaster/DesignatedShelter/",
+      "exampleUrls": [
+        "https://datamodels.jp/examples/disaster/DesignatedShelter/example-normalized.jsonld",
+        "https://datamodels.jp/examples/disaster/DesignatedShelter/example.json"
+      ],
+      "mappingUrls": [
+        "https://datamodels.jp/mapping/disaster/DesignatedShelter/eei.yaml",
+        "https://datamodels.jp/mapping/disaster/DesignatedShelter/gsi-designated-shelter.yaml"
+      ],
+      "adapters": {
+        "geonicdb": "https://datamodels.jp/adapters/geonicdb/disaster/DesignatedShelter.json"
+      }
+    },
+    {
+      "type": "EvacuationShelter",
+      "kind": "entity",
+      "typeIri": "https://datamodels.jp/ns/disaster/EvacuationShelter",
+      "subject": "disaster",
+      "domain": "disaster",
+      "source": "minted",
+      "contextUrl": "https://datamodels.jp/context/disaster/v1.0.0.jsonld",
+      "contextAliasUrl": "https://datamodels.jp/context/disaster/v1.jsonld",
+      "schemaUrl": "https://datamodels.jp/schema/disaster/EvacuationShelter/v1.0.0.json",
+      "vocabularyUrl": "https://datamodels.jp/vocab/disaster/v1.0.0.jsonld",
+      "version": "1.0.0",
+      "status": "draft",
+      "title": {
+        "ja": "避難所運用状況",
+        "en": "Evacuation shelter operation"
+      },
+      "description": {
+        "ja": "避難所1か所の運用状況を表す。避難所そのものの基本情報（名称・位置などのマスタ）は含まず、指定避難所を shelter（DesignatedShelter）か externalShelterId / nationalShelterId で参照して（どれか 1 つは必須）、その上に開設状況と避難者数だけを重ねる。同じ場所の指定緊急避難場所は site で EvacuationSite を参照する。災害対策基本法第49条の7に基づき市町村長が指定する「指定避難所」（同法第49条の4の「指定緊急避難場所」とは別の概念）の運用を想定している。",
+        "en": "Operational overlay for one evacuation shelter. The shelter master data (name, location) is not included: the designated shelter is referenced by shelter (DesignatedShelter) or by externalShelterId / nationalShelterId, and one of the three is required. Only opening status and evacuee counts live here. When the shelter is also a designated emergency evacuation site, site links to its EvacuationSite. Models the operation of a 指定避難所 (designated shelter, Basic Act on Disaster Management Art. 49-7), a distinct legal concept from the 指定緊急避難場所 (designated emergency evacuation site, Art. 49-4)."
+      },
+      "sampleProperties": [
+        "externalShelterId",
+        "nationalShelterId",
+        "localGovernmentCode",
+        "shelter",
+        "site",
+        "openingStatus",
+        "statusLabel",
+        "evacueeHouseholds",
+        "evacueeTotal",
+        "evacueeFemale",
+        "evacueeMale",
+        "description",
+        "openedAt",
+        "closedAt"
+      ],
+      "pageUrl": "https://datamodels.jp/models/disaster/EvacuationShelter/",
+      "pageUrlEn": "https://datamodels.jp/en/models/disaster/EvacuationShelter/",
+      "exampleUrls": [
+        "https://datamodels.jp/examples/disaster/EvacuationShelter/example-normalized.jsonld",
+        "https://datamodels.jp/examples/disaster/EvacuationShelter/example.json"
+      ],
+      "mappingUrls": [
+        "https://datamodels.jp/mapping/disaster/EvacuationShelter/cao-hinanjo-guideline.yaml",
+        "https://datamodels.jp/mapping/disaster/EvacuationShelter/eei.yaml",
+        "https://datamodels.jp/mapping/disaster/EvacuationShelter/gsi-national-shelter-id.yaml",
+        "https://datamodels.jp/mapping/disaster/EvacuationShelter/jichitai-opendata-shelter.yaml"
+      ],
+      "adapters": {
+        "geonicdb": "https://datamodels.jp/adapters/geonicdb/disaster/EvacuationShelter.json"
+      }
+    },
+    {
+      "type": "EvacuationSite",
+      "kind": "entity",
+      "typeIri": "https://datamodels.jp/ns/disaster/EvacuationSite",
+      "subject": "disaster",
+      "domain": "disaster",
+      "source": "minted",
+      "contextUrl": "https://datamodels.jp/context/disaster/v1.0.0.jsonld",
+      "contextAliasUrl": "https://datamodels.jp/context/disaster/v1.jsonld",
+      "schemaUrl": "https://datamodels.jp/schema/disaster/EvacuationSite/v1.0.0.json",
+      "vocabularyUrl": "https://datamodels.jp/vocab/disaster/v1.0.0.jsonld",
+      "version": "1.0.0",
+      "status": "draft",
+      "title": {
+        "ja": "指定緊急避難場所",
+        "en": "Designated emergency evacuation site"
+      },
+      "description": {
+        "ja": "指定緊急避難場所（災害対策基本法第49条の4）1か所を表す。自治体が「指定緊急避難場所一覧」（自治体標準オープンデータセット 03）として公開する、名称・所在地など施設の基本情報の一覧（マスタ）の1行にあたる。災害種別ごとに指定される。開設状況や避難者数は持たない（それは EvacuationShelter で表す）。",
+        "en": "One designated emergency evacuation site (指定緊急避難場所, Basic Act on Disaster Management Art. 49-4), one row of the list a municipality publishes as 自治体標準オープンデータセット dataset 03. Sites are designated per hazard. Opening status and evacuee counts are not here (that is EvacuationShelter)."
+      },
+      "sampleProperties": [
+        "name",
+        "nameKana",
+        "nameEn",
+        "externalSiteId",
+        "nationalShelterId",
+        "localGovernmentCode",
+        "address",
+        "location",
+        "elevation",
+        "hazardTypes",
+        "alsoDesignatedShelter",
+        "alsoWelfareShelter",
+        "maxCapacity",
+        "targetAreas",
+        "telephone",
+        "url",
+        "description"
+      ],
+      "pageUrl": "https://datamodels.jp/models/disaster/EvacuationSite/",
+      "pageUrlEn": "https://datamodels.jp/en/models/disaster/EvacuationSite/",
+      "exampleUrls": [
+        "https://datamodels.jp/examples/disaster/EvacuationSite/example-normalized.jsonld",
+        "https://datamodels.jp/examples/disaster/EvacuationSite/example.json"
+      ],
+      "mappingUrls": [
+        "https://datamodels.jp/mapping/disaster/EvacuationSite/eei.yaml",
+        "https://datamodels.jp/mapping/disaster/EvacuationSite/gsi-emergency-site.yaml",
+        "https://datamodels.jp/mapping/disaster/EvacuationSite/jichitai-opendata-site.yaml"
+      ],
+      "adapters": {
+        "geonicdb": "https://datamodels.jp/adapters/geonicdb/disaster/EvacuationSite.json"
+      }
+    },
+    {
+      "type": "Attachment",
+      "kind": "entity",
+      "typeIri": "https://datamodels.jp/ns/task/Attachment",
+      "subject": "task",
+      "domain": "task",
+      "source": "minted",
+      "contextUrl": "https://datamodels.jp/context/task/v1.0.0.jsonld",
+      "contextAliasUrl": "https://datamodels.jp/context/task/v1.jsonld",
+      "schemaUrl": "https://datamodels.jp/schema/task/Attachment/v1.0.0.json",
+      "vocabularyUrl": "https://datamodels.jp/vocab/task/v1.0.0.jsonld",
+      "version": "1.0.0",
+      "status": "draft",
+      "title": {
+        "ja": "添付ファイル",
+        "en": "Attachment"
+      },
+      "description": {
+        "ja": "タスクまたはプロジェクトに添付されたファイルのメタデータ。ファイル本体はブローカーの外（元システムやオブジェクトストレージ）に置き、URL で参照する。",
+        "en": "Metadata of a file attached to a task or a project. The file itself stays outside the broker and is referenced by URL."
+      },
+      "sampleProperties": [
+        "task",
+        "project",
+        "author",
+        "contentUrl",
+        "filename",
+        "encodingFormat",
+        "contentSize",
+        "digest",
+        "description",
+        "location",
+        "source",
+        "externalId",
+        "dateCreated"
+      ],
+      "pageUrl": "https://datamodels.jp/models/task/Attachment/",
+      "pageUrlEn": "https://datamodels.jp/en/models/task/Attachment/",
+      "exampleUrls": [
+        "https://datamodels.jp/examples/task/Attachment/example-normalized.jsonld",
+        "https://datamodels.jp/examples/task/Attachment/example.json"
+      ],
+      "mappingUrls": [
+        "https://datamodels.jp/mapping/task/Attachment/github.yaml",
+        "https://datamodels.jp/mapping/task/Attachment/redmine.yaml"
+      ],
+      "adapters": {
+        "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Attachment.json"
+      }
+    },
+    {
+      "type": "Comment",
+      "kind": "entity",
+      "typeIri": "https://datamodels.jp/ns/task/Comment",
+      "subject": "task",
+      "domain": "task",
+      "source": "minted",
+      "contextUrl": "https://datamodels.jp/context/task/v1.0.0.jsonld",
+      "contextAliasUrl": "https://datamodels.jp/context/task/v1.jsonld",
+      "schemaUrl": "https://datamodels.jp/schema/task/Comment/v1.0.0.json",
+      "vocabularyUrl": "https://datamodels.jp/vocab/task/v1.0.0.jsonld",
+      "version": "1.0.0",
+      "status": "draft",
+      "title": {
+        "ja": "コメント",
+        "en": "Comment"
+      },
+      "description": {
+        "ja": "タスクに付けられた記録・申し送り・返信。フィールドの変更履歴は含めない（履歴は Temporal API が持つ）。",
+        "en": "A note, handover or reply on a task. Field change history is not a comment; the temporal API keeps history."
+      },
+      "sampleProperties": [
+        "task",
+        "author",
+        "text",
+        "textFormat",
+        "inReplyTo",
+        "isPrivate",
+        "sentAt",
+        "source",
+        "externalId"
+      ],
+      "pageUrl": "https://datamodels.jp/models/task/Comment/",
+      "pageUrlEn": "https://datamodels.jp/en/models/task/Comment/",
+      "exampleUrls": [
+        "https://datamodels.jp/examples/task/Comment/example-normalized.jsonld",
+        "https://datamodels.jp/examples/task/Comment/example.json"
+      ],
+      "mappingUrls": [
+        "https://datamodels.jp/mapping/task/Comment/github.yaml",
+        "https://datamodels.jp/mapping/task/Comment/redmine.yaml"
+      ],
+      "adapters": {
+        "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Comment.json"
+      }
+    },
+    {
+      "type": "Project",
+      "kind": "entity",
+      "typeIri": "https://datamodels.jp/ns/task/Project",
+      "subject": "task",
+      "domain": "task",
+      "source": "minted",
+      "contextUrl": "https://datamodels.jp/context/task/v1.0.0.jsonld",
+      "contextAliasUrl": "https://datamodels.jp/context/task/v1.jsonld",
+      "schemaUrl": "https://datamodels.jp/schema/task/Project/v1.0.0.json",
+      "vocabularyUrl": "https://datamodels.jp/vocab/task/v1.0.0.jsonld",
+      "version": "1.0.0",
+      "status": "draft",
+      "title": {
+        "ja": "プロジェクト",
+        "en": "Project"
+      },
+      "description": {
+        "ja": "タスクをまとめる単位。案件、災害対応の 1 オペレーション、キャンペーンなど、名前は用途によって変わっても共通の属性を持つ。",
+        "en": "A grouping of tasks: a project in a tracker, one disaster-response operation, a campaign. Called differently in different settings, with the same common attributes."
+      },
+      "sampleProperties": [
+        "name",
+        "description",
+        "identifier",
+        "parent",
+        "projectStatus",
+        "isPublic",
+        "homepage",
+        "start",
+        "end",
+        "location",
+        "keywords",
+        "source",
+        "externalId",
+        "dateCreated",
+        "dateModified"
+      ],
+      "pageUrl": "https://datamodels.jp/models/task/Project/",
+      "pageUrlEn": "https://datamodels.jp/en/models/task/Project/",
+      "exampleUrls": [
+        "https://datamodels.jp/examples/task/Project/example-normalized.jsonld",
+        "https://datamodels.jp/examples/task/Project/example.json"
+      ],
+      "mappingUrls": [
+        "https://datamodels.jp/mapping/task/Project/github.yaml",
+        "https://datamodels.jp/mapping/task/Project/redmine.yaml"
+      ],
+      "adapters": {
+        "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Project.json"
+      }
+    },
+    {
+      "type": "Task",
+      "kind": "entity",
+      "typeIri": "https://datamodels.jp/ns/task/Task",
+      "subject": "task",
+      "domain": "task",
+      "source": "minted",
+      "contextUrl": "https://datamodels.jp/context/task/v1.0.0.jsonld",
+      "contextAliasUrl": "https://datamodels.jp/context/task/v1.jsonld",
+      "schemaUrl": "https://datamodels.jp/schema/task/Task/v1.0.0.json",
+      "vocabularyUrl": "https://datamodels.jp/vocab/task/v1.0.0.jsonld",
+      "version": "1.0.0",
+      "status": "draft",
+      "title": {
+        "ja": "タスク",
+        "en": "Task"
+      },
+      "description": {
+        "ja": "追跡される作業単位。課題管理システムの「チケット」「Issue」、カレンダーの ToDo、自治体の作業指示など。状態と優先度の値域は RFC 8984（JSCalendar）に合わせ、元システム固有の状態名や種別は statusLabel と subtype に保持する。位置は任意のジオメトリ。",
+        "en": "A tracked unit of work: a ticket or issue in a tracker, a calendar to-do, a municipal work order. State and priority follow RFC 8984 (JSCalendar); the source system's own status name and kind are kept in statusLabel and subtype. Location may be any geometry."
+      },
+      "sampleProperties": [
+        "name",
+        "description",
+        "project",
+        "parent",
+        "relatedTo",
+        "refersTo",
+        "progress",
+        "statusLabel",
+        "subtype",
+        "priority",
+        "assignee",
+        "author",
+        "start",
+        "due",
+        "completedAt",
+        "estimatedDuration",
+        "percentComplete",
+        "keywords",
+        "location",
+        "spatialId",
+        "isPrivate",
+        "source",
+        "externalId",
+        "dateCreated",
+        "dateModified"
+      ],
+      "pageUrl": "https://datamodels.jp/models/task/Task/",
+      "pageUrlEn": "https://datamodels.jp/en/models/task/Task/",
+      "exampleUrls": [
+        "https://datamodels.jp/examples/task/Task/example-normalized.jsonld",
+        "https://datamodels.jp/examples/task/Task/example.json"
+      ],
+      "mappingUrls": [
+        "https://datamodels.jp/mapping/task/Task/github-issues.yaml",
+        "https://datamodels.jp/mapping/task/Task/iudx-issuereporting.yaml",
+        "https://datamodels.jp/mapping/task/Task/jscalendar.yaml",
+        "https://datamodels.jp/mapping/task/Task/open311.yaml",
+        "https://datamodels.jp/mapping/task/Task/redmine.yaml"
+      ],
+      "adapters": {
+        "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Task.json"
+      }
+    },
+    {
+      "type": "RoadRestriction",
+      "kind": "entity",
+      "typeIri": "https://datamodels.jp/ns/transportation/RoadRestriction",
+      "subject": "transportation",
+      "domain": "transportation",
+      "source": "minted",
+      "contextUrl": "https://datamodels.jp/context/transportation/v1.0.0.jsonld",
+      "contextAliasUrl": "https://datamodels.jp/context/transportation/v1.jsonld",
+      "schemaUrl": "https://datamodels.jp/schema/transportation/RoadRestriction/v1.0.0.json",
+      "vocabularyUrl": "https://datamodels.jp/vocab/transportation/v1.0.0.jsonld",
+      "version": "1.0.0",
+      "status": "draft",
+      "title": {
+        "ja": "通行規制",
+        "en": "Road restriction"
+      },
+      "description": {
+        "ja": "通行規制（通行止めを含む）1 件。路線名、規制区間（点・線・面）、状態、区分、期間を持つ。",
+        "en": "One road restriction, including closures: road name, regulated section (point, line or area), status, category and period."
+      },
+      "sampleProperties": [
+        "roadName",
+        "roadType",
+        "address",
+        "location",
+        "restrictionStatus",
+        "regulationCategory",
+        "statusLabel",
+        "validFrom",
+        "validTo",
+        "description"
+      ],
+      "pageUrl": "https://datamodels.jp/models/transportation/RoadRestriction/",
+      "pageUrlEn": "https://datamodels.jp/en/models/transportation/RoadRestriction/",
+      "exampleUrls": [
+        "https://datamodels.jp/examples/transportation/RoadRestriction/example-normalized.jsonld",
+        "https://datamodels.jp/examples/transportation/RoadRestriction/example.json"
+      ],
+      "mappingUrls": [
+        "https://datamodels.jp/mapping/transportation/RoadRestriction/eei.yaml",
+        "https://datamodels.jp/mapping/transportation/RoadRestriction/mlit-road-info-prvs.yaml",
+        "https://datamodels.jp/mapping/transportation/RoadRestriction/npa-traffic-regulation-format.yaml",
+        "https://datamodels.jp/mapping/transportation/RoadRestriction/sdm-roadsegment.yaml"
+      ],
+      "adapters": {
+        "geonicdb": "https://datamodels.jp/adapters/geonicdb/transportation/RoadRestriction.json"
+      }
+    }
+  ]
+}
