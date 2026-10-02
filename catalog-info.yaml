@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  namespace: geolonia
+  name: datamodels-toolkit
+  description: Command-line tools for the datamodels.jp catalog
+  annotations:
+    github.com/project-slug: geolonia/datamodels-toolkit
+  tags: ['library']
+spec:
+  type: 'library'
+  lifecycle: 'experimental'
+  owner: group:geolonia/geonicdb
+  # accessGrants:
+  #   - team: group:geolonia/team-name
+  #     permission: write  # read | triage | write | maintain | admin
