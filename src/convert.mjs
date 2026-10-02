@@ -32,14 +32,15 @@ export const LINE = Symbol('line');
  * whose field count differs from the header's; surplus empty fields at the
  * end of a record, as spreadsheets write them, are allowed. Each row carries
  * its source line under LINE. A blank line is ignored; a record of empty fields
- * only (",,,", as spreadsheets write empty rows) is left out and its line listed
- * in the result's `skipped`, so it does not vanish unseen. The header names are
- * in the result's `columns`.
+ * only (",,," as spreadsheets write empty rows, or "" in a one-column file) is
+ * left out and its line listed in the result's `skipped`, so it does not
+ * vanish unseen. The header names are in the result's `columns`.
  */
 export function parseCsv(text) {
   const rows = [];
-  let row = [], field = '', quoted = false, closed = false, line = 1, start = 1;
-  const end = () => { row.push(field); rows.push({ fields: row, line: start }); row = []; field = ''; closed = false; };
+  // written: the record has a quote, so it is not a blank line even with one empty field ("" in a one-column file).
+  let row = [], field = '', quoted = false, closed = false, written = false, line = 1, start = 1;
+  const end = () => { row.push(field); rows.push({ fields: row, line: start, written }); row = []; field = ''; closed = false; written = false; };
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (c === '\n' || (c === '\r' && text[i + 1] !== '\n')) line++;
@@ -52,14 +53,16 @@ export function parseCsv(text) {
       if (c === '\r' && text[i + 1] === '\n') { i++; line++; }
       end(); start = line;
     } else if (closed) throw new Error(`line ${line}: text after a closing quote`);
-    else if (c === '"' && field === '') quoted = true;
+    else if (c === '"' && field === '') { quoted = true; written = true; }
     else if (c === '"') throw new Error(`line ${line}: a quote inside an unquoted field`);
     else field += c;
   }
   if (quoted) throw new Error(`line ${start}: a quoted field is not closed`);
-  if (field !== '' || row.length) end();
+  if (field !== '' || row.length || written) end();
   const blank = (r) => r.fields.every((v) => v.trim() === '');
-  const skipped = rows.filter((r) => blank(r) && r.fields.length > 1).map((r) => r.line);
+  // A blank line is no record; a record of empty fields (",," or "") is one, left out and listed.
+  const empty = (r) => blank(r) && (r.fields.length > 1 || r.written);
+  const skipped = rows.filter(empty).map((r) => r.line);
   const [head, ...body] = rows.filter((r) => !blank(r));
   if (!head) throw new Error('no header row');
   const names = head.fields.map((h) => h.trim());

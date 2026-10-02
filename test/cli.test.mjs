@@ -113,3 +113,10 @@ test('a mapping with an unknown transform stops before the rows, and absent colu
   assert.equal(e.hazardTypes, undefined);
   assert.equal(e.alsoDesignatedShelter, undefined, 'not false: the list does not say');
 });
+
+test('an --out file that cannot be written is one line on standard error, exit code 1', async () => {
+  const r = await datamodels('convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--set', 'localGovernmentCode=13101', '--site', SITE_DIR, '--out', join(dir, 'no', 'such', 'dir', 'x.json'));
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /x\.json: ENOENT\n$/);
+  assert.doesNotMatch(r.stderr, /at |node:internal/);
+});

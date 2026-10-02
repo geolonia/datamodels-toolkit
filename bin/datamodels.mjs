@@ -64,7 +64,9 @@ for (const [i, r] of results.entries()) {
 const context = [entry.contextAliasUrl, CORE_CONTEXT_URL];
 const entities = results.filter((_, i) => !invalidIndex.has(i)).map((r) => (normalized ? toNormalized(r.entity, schema, context) : r.entity));
 const json = `${JSON.stringify(entities, null, 2)}\n`;
-if (out) await writeFile(out, json); else process.stdout.write(json);
+if (out) {
+  try { await writeFile(out, json); } catch (e) { console.error(`${out}: ${e.code ?? e.message}`); process.exit(1); }
+} else process.stdout.write(json);
 
 console.error(`${file}: ${encoding}, ${rows.length} row(s), ${entities.length} valid ${entry.type}, ${invalid.length} invalid`);
 // Columns the mapping reads that the file does not have: their attributes stay empty, unless --set fills them.
