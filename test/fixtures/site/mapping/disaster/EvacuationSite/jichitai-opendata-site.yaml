@@ -1,0 +1,39 @@
+# Correspondence between EvacuationSite and sheet 03 of the Digital Agency's
+# 自治体標準オープンデータセット (data item definition sheet A).
+standard:
+  name:
+    ja: 自治体標準オープンデータセット・データ項目定義書A（20260801版）シート「03.指定緊急避難場所一覧」（デジタル庁）
+    en: "Municipal standard open dataset, data item definition sheet A (2026-08-01), sheet '03. designated emergency evacuation sites' (Digital Agency)"
+  url: https://www.digital.go.jp/resources/open_data/municipal-standard-data-set-test
+  license:
+    ja: "公共データ利用規約（第1.0版）（PDL1.0、CC BY 4.0 と互換）"
+    en: "Public Data License (Version 1.0) (PDL1.0), compatible with CC BY 4.0"
+  note:
+    ja: "このモデルが表すマスタそのもの。項目名は日本語名（英語名）で示す。住所と位置の列は JapaneseAddress と Geometry の対応表（jichitai-opendata-address、jichitai-opendata-location）のとおり。"
+    en: "The master this model represents. Columns are given as the Japanese name (English item name). The address and location columns map as in the JapaneseAddress and Geometry tables (jichitai-opendata-address, jichitai-opendata-location)."
+# How scripts/convert.mjs names the entities it makes from this list.
+convert:
+  id: "urn:ngsi-ld:EvacuationSite:{localGovernmentCode}-{externalSiteId}"
+fields:
+  externalSiteId: { to: ID (identifier), column: ID }
+  localGovernmentCode: { to: 全国地方公共団体コード (localGovernmentCode), note: { ja: 一覧を公開する自治体。所在地の自治体は address.localGovernmentCode（所在地_全国地方公共団体コード）, en: "the publishing municipality; the municipality the site lies in is address.localGovernmentCode (所在地_全国地方公共団体コード)" }, column: 全国地方公共団体コード, transform: code6 }
+  name: { to: 名称 (name), column: 名称 }
+  nameKana: { to: 名称_カナ (nameKana), column: 名称_カナ }
+  nameEn: { to: 名称_英字 (nameEn), column: 名称_英字 }
+  address: { to: "所在地_* (fullAddress, prefecture, city, streetAddress, cityBlock), 建物名等(方書) (buildingNameEtc), 町字ID (streetAddressId)", note: { ja: 詳細は JapaneseAddress の対応表, en: see the JapaneseAddress table }, via: common/JapaneseAddress/jichitai-opendata-address }
+  location: { to: "緯度 (latitude), 経度 (longitude)", note: { ja: "[経度, 緯度] の点", en: "a point [longitude, latitude]" }, via: common/Geometry/jichitai-opendata-location }
+  elevation: { to: 標高 (height), note: { ja: m 単位の数値にする, en: as a number in metres }, column: 標高, transform: number }
+  telephone: { to: 電話番号 (contactPointPhoneNumber), column: 電話番号 }
+  hazardTypes:
+    to: 災害種別_洪水 … 災害種別_火山現象 (typeOfDisasterFlood … typeOfDisasterEruption)
+    note:
+      ja: "8 列のうち 1 の列を配列にする（洪水 → flood、崖崩れ、土石流及び地滑り → landslide、高潮 → stormSurge、地震 → earthquake、津波 → tsunami、大規模な火事 → greatFire、内水氾濫 → inlandFlood、火山現象 → eruption）。空欄は未指定"
+      en: "the columns holding 1 become the array (洪水 → flood, 崖崩れ、土石流及び地滑り → landslide, 高潮 → stormSurge, 地震 → earthquake, 津波 → tsunami, 大規模な火事 → greatFire, 内水氾濫 → inlandFlood, 火山現象 → eruption); an empty column means not designated"
+    transform: flags
+    values: { 災害種別_洪水: flood, 災害種別_崖崩れ、土石流及び地滑り: landslide, 災害種別_高潮: stormSurge, 災害種別_地震: earthquake, 災害種別_津波: tsunami, 災害種別_大規模な火事: greatFire, 災害種別_内水氾濫: inlandFlood, 災害種別_火山現象: eruption }
+  alsoDesignatedShelter: { to: 指定避難所との重複 (alsoForShelter), note: { ja: 1 なら true、空欄なら false, en: "1 is true, empty is false" }, column: 指定避難所との重複, transform: flag }
+  maxCapacity: { to: 想定収容人数 (maxCapacity), note: { ja: データセットでは文字列。整数にする, en: a string in the dataset; convert to an integer }, column: 想定収容人数, transform: integer }
+  targetAreas: { to: 対象となる町会・自治会 (receptionTargetLocalCommunity), note: { ja: "「;」区切りを配列にする", en: "split at ';'" }, column: 対象となる町会・自治会, transform: split }
+  url: { to: URL (url), column: URL }
+  description: { to: 備考 (remarks), column: 備考 }
+  nationalShelterId: { to: null, note: { ja: このデータセットには無い。国土地理院のデータの「共通ID」（mapping/gsi-emergency-site.yaml）, en: "not in this dataset; the '共通ID' of GSI's data (mapping/gsi-emergency-site.yaml)" } }

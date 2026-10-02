@@ -1,0 +1,26 @@
+# Correspondence between EvacuationSite and GSI's designated emergency
+# evacuation site data (one CSV per municipality).
+standard:
+  name:
+    ja: 国土地理院「指定緊急避難場所データ」（市町村別 CSV、避難所等データダウンロードサイト）
+    en: "GSI's designated emergency evacuation site data (one CSV per municipality, 避難所等データダウンロードサイト)"
+  url: https://hinanmap.gsi.go.jp/hinanjocp/hinanbasho/koukaidate.html
+  license:
+    ja: "国土地理院コンテンツ利用規約と、同サイトの「ご利用上の注意」（データは最新とは限らない。指定緊急避難場所と指定避難所は別のもの。指定は災害の種別ごと。データを他に提供するときはこの注意も伝える）"
+    en: "GSI's terms of use for its content (国土地理院コンテンツ利用規約) and the site's notes on use (ご利用上の注意): the data may not be current; 指定緊急避難場所 and 指定避難所 differ; designation is per hazard; pass these notes on when sharing"
+  note:
+    ja: "市町村が登録した指定緊急避難場所を国土地理院が全国分公開するもの。自治体標準オープンデータセットの 03 はこの項目を参照して作られた。文字コードは UTF-8（BOM 付き）。自治体の ID は含まず、全国共通 ID を持つ。"
+    en: "GSI publishes the designated emergency evacuation sites every municipality registers, nationwide. Dataset 03 of the 自治体標準オープンデータセット was built from these columns. UTF-8 with a BOM. It carries the nationwide common ID but not the municipality's own ID."
+# How scripts/convert.mjs names the entities it makes from this list.
+convert:
+  id: "urn:ngsi-ld:EvacuationSite:{nationalShelterId}"
+fields:
+  nationalShelterId: { to: 共通ID, column: 共通ID }
+  name: { to: 施設・場所名, column: 施設・場所名 }
+  address: { to: 住所, note: { ja: 連結表記。JapaneseAddress の addressText, en: one line; JapaneseAddress addressText }, via: common/JapaneseAddress/gsi-address }
+  location: { to: "緯度, 経度", note: { ja: "[経度, 緯度] の点", en: "a point [longitude, latitude]" }, via: common/Geometry/jichitai-opendata-location }
+  hazardTypes: { to: 洪水 … 火山現象, note: { ja: 自治体標準オープンデータセットと同じ 8 列（1 が指定）, en: "the same eight columns as the municipal dataset (1 = designated)" }, transform: flags, values: { 洪水: flood, 崖崩れ、土石流及び地滑り: landslide, 高潮: stormSurge, 地震: earthquake, 津波: tsunami, 大規模な火事: greatFire, 内水氾濫: inlandFlood, 火山現象: eruption } }
+  alsoDesignatedShelter: { to: 指定避難所との住所同一, note: { ja: 住所が同じ指定避難所があるときに 1, en: 1 when a designated shelter has the same address }, column: 指定避難所との住所同一, transform: flag }
+  description: { to: 備考, column: 備考 }
+  externalSiteId: { to: null, note: { ja: このデータには無い（NO は一覧の行番号）。代わりに nationalShelterId で識別する, en: "not in this data (NO is the row number of the list); nationalShelterId identifies the site instead" } }
+  localGovernmentCode: { to: null, note: { ja: ファイル名の市町村コード（5桁）から導く。検査数字を足して6桁にする, en: "derive from the 5-digit municipality code in the file name, adding the check digit for 6 digits" }, transform: code6 }

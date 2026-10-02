@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodels.jp/schema/disaster/DesignatedShelter/v1.0.0.json",
+  "title": "DesignatedShelter",
+  "description": "One designated shelter (指定避難所, Basic Act on Disaster Management Art. 49-7), the master record of a place where evacuees stay: as municipalities register it and GSI publishes it. Its operation during a disaster (opening status, evacuee counts) is EvacuationShelter, which links here with shelter",
+  "x-version": "1.0.0",
+  "x-license-url": "https://datamodels.jp/LICENSE-CONTENT",
+  "x-model-tags": "disaster-response, Japan",
+  "x-derived-from": "https://hinanmap.gsi.go.jp/hinanjocp/hinanbasho/koukaidate.html",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "description": "Entity id (URN)"
+    },
+    "type": {
+      "type": "string",
+      "const": "DesignatedShelter",
+      "description": "Entity type"
+    },
+    "@context": {
+      "description": "JSON-LD context of the entity, optional: a context URL or a list of context URLs",
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "minItems": 1
+        }
+      ]
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the shelter (the facility's name)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://uri.etsi.org/ngsi-ld/name"
+    },
+    "nameKana": {
+      "type": "string",
+      "description": "Name in full-width katakana (施設名（かな）)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/nameKana"
+    },
+    "externalShelterId": {
+      "type": "string",
+      "description": "The shelter's ID in the municipality's own shelter list (unique within the municipality). Required unless nationalShelterId is given",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/externalShelterId"
+    },
+    "nationalShelterId": {
+      "type": "string",
+      "pattern": "^E[0-9]{10}1[12][1-9A-Za-z]$",
+      "description": "The nationwide common shelter/evacuation-site ID (14 characters, the '共通ID' of GSI's data). Only type codes 11 (general designated shelter) and 12 (welfare shelter) are valid on this model. Its structure and source are described once, in EvacuationShelter's mapping 'nationwide common shelter/evacuation-site ID' (gsi-national-shelter-id). Required when externalShelterId is not given",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/nationalShelterId"
+    },
+    "localGovernmentCode": {
+      "type": "string",
+      "pattern": "^\\d{6}$",
+      "description": "Local government code of the municipality that designates the shelter (全国地方公共団体コード, 6 digits)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/common/localGovernmentCode"
+    },
+    "shelterType": {
+      "type": "string",
+      "enum": [
+        "general",
+        "welfare"
+      ],
+      "description": "general (一般避難所) or welfare (福祉避難所, for people who need special care); the second type digit of nationalShelterId says the same",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/shelterType"
+    },
+    "address": {
+      "$ref": "https://datamodels.jp/schema/common/JapaneseAddress/v1.0.0.json",
+      "description": "Address of the shelter, as a JapaneseAddress value (common subject)",
+      "x-ngsi": {
+        "type": "Property",
+        "model": "https://datamodels.jp/ns/common/JapaneseAddress"
+      },
+      "x-iri": "https://schema.org/address"
+    },
+    "location": {
+      "$ref": "https://datamodels.jp/schema/common/Geometry/v1.0.0.json",
+      "properties": {
+        "type": {
+          "const": "Point"
+        }
+      },
+      "description": "Where the shelter is, as a point",
+      "x-ngsi": {
+        "type": "GeoProperty",
+        "model": "https://datamodels.jp/ns/common/Geometry"
+      },
+      "x-iri": "https://uri.etsi.org/ngsi-ld/location"
+    },
+    "maxCapacity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of people the shelter is planned to hold",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/maxCapacity"
+    },
+    "targetEvacuees": {
+      "type": "string",
+      "description": "Who the shelter is for, in the municipality's words (受入対象者), e.g. for a welfare shelter",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/targetEvacuees"
+    },
+    "alsoEmergencyEvacuationSite": {
+      "type": "boolean",
+      "description": "true when a designated emergency evacuation site has the same address (指定緊急避難場所との住所同一)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/alsoEmergencyEvacuationSite"
+    },
+    "site": {
+      "type": "string",
+      "format": "uri",
+      "description": "The designated emergency evacuation site (EvacuationSite) at the same place",
+      "x-ngsi": {
+        "type": "Relationship",
+        "target": "https://datamodels.jp/ns/disaster/EvacuationSite"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/site"
+    },
+    "designationNotes": {
+      "type": "string",
+      "description": "Other matters the mayor considers necessary (その他市町村長が必要と認める事項)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/designationNotes"
+    },
+    "description": {
+      "type": "string",
+      "description": "Remarks (備考)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "http://purl.org/dc/terms/description"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "name",
+    "localGovernmentCode"
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "externalShelterId"
+      ]
+    },
+    {
+      "required": [
+        "nationalShelterId"
+      ]
+    }
+  ],
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "nationalShelterId",
+          "shelterType"
+        ],
+        "properties": {
+          "nationalShelterId": {
+            "pattern": "^E[0-9]{10}11"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "shelterType": {
+            "const": "general"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "nationalShelterId",
+          "shelterType"
+        ],
+        "properties": {
+          "nationalShelterId": {
+            "pattern": "^E[0-9]{10}12"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "shelterType": {
+            "const": "welfare"
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

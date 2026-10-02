@@ -5,6 +5,11 @@
 # setting that lets CodeRabbit approve pull requests.
 
 inheritance: true
+language: en-US
+reviews:
+  path_filters:
+    # A copy of what datamodels.jp serves (npm run fixtures), reviewed in geolonia/datamodels.
+    - "!test/fixtures/site/**"
 
 # Repository-specific overrides go below. Examples:
 #

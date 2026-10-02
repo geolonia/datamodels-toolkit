@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodels.jp/schema/common/JapaneseAddress/v1.0.0.json",
+  "title": "JapaneseAddress",
+  "x-kind": "value",
+  "description": "A Japanese postal address as the value of an `address` Property: schema.org PostalAddress fields where the meaning matches, plus the Japanese structure (machiaza, chome, banchi, go), the JIS and local-government codes, the Address Base Registry town id and the residential-indication flag.",
+  "x-version": "1.0.0",
+  "x-license-url": "https://datamodels.jp/LICENSE-CONTENT",
+  "x-model-tags": "address, Japan",
+  "type": "object",
+  "properties": {
+    "addressCountry": {
+      "type": "string",
+      "description": "Country. Always JP",
+      "const": "JP",
+      "x-iri": "https://schema.org/addressCountry"
+    },
+    "postalCode": {
+      "type": "string",
+      "description": "Postal code, 7 digits with or without hyphen",
+      "pattern": "^\\d{3}-?\\d{4}$",
+      "x-iri": "https://schema.org/postalCode"
+    },
+    "addressRegion": {
+      "type": "string",
+      "description": "Prefecture name",
+      "x-iri": "https://schema.org/addressRegion"
+    },
+    "addressLocality": {
+      "type": "string",
+      "description": "Municipality name. For designated cities includes the ward (e.g. 横浜市中区)",
+      "x-iri": "https://schema.org/addressLocality"
+    },
+    "machiaza": {
+      "type": "string",
+      "description": "Town or district name (町字: 町名, 大字, 字), without chome",
+      "x-iri": "https://datamodels.jp/ns/common/machiaza"
+    },
+    "chome": {
+      "type": "string",
+      "description": "Chome (丁目), digits only (\"一丁目\" → \"1\")",
+      "x-iri": "https://datamodels.jp/ns/common/chome",
+      "pattern": "^\\d+$"
+    },
+    "banchi": {
+      "type": "string",
+      "description": "Banchi (番地) or, in residential-indication areas, the block number (街区符号)",
+      "x-iri": "https://datamodels.jp/ns/common/banchi"
+    },
+    "go": {
+      "type": "string",
+      "description": "Go (号) or, in residential-indication areas, the residence number (住居番号)",
+      "x-iri": "https://datamodels.jp/ns/common/go"
+    },
+    "buildingName": {
+      "type": "string",
+      "description": "Building name, room number and anything below go",
+      "x-iri": "https://datamodels.jp/ns/common/buildingName"
+    },
+    "residentialIndication": {
+      "type": "boolean",
+      "description": "true in a residential-indication area (banchi/go are block and residence numbers), false for lot numbers (地番)",
+      "x-iri": "https://datamodels.jp/ns/common/residentialIndication"
+    },
+    "jisPrefectureCode": {
+      "type": "string",
+      "description": "Prefecture code (JIS X 0401, 2 digits)",
+      "pattern": "^\\d{2}$",
+      "x-iri": "https://datamodels.jp/ns/common/jisPrefectureCode"
+    },
+    "jisMunicipalityCode": {
+      "type": "string",
+      "description": "Municipality code (JIS X 0402, 5 digits including the prefecture code)",
+      "pattern": "^\\d{5}$",
+      "x-iri": "https://datamodels.jp/ns/common/jisMunicipalityCode"
+    },
+    "localGovernmentCode": {
+      "type": "string",
+      "description": "Local government code (全国地方公共団体コード: JIS X 0402 plus a check digit, 6 digits)",
+      "pattern": "^\\d{6}$",
+      "x-iri": "https://datamodels.jp/ns/common/localGovernmentCode"
+    },
+    "abrMachiazaId": {
+      "type": "string",
+      "description": "Address Base Registry town id (町字ID, 7 digits). Unique together with localGovernmentCode",
+      "pattern": "^\\d{7}$",
+      "x-iri": "https://datamodels.jp/ns/common/abrMachiazaId"
+    },
+    "addressText": {
+      "type": "string",
+      "description": "Full address as one normalised line. Also the fallback when structured fields are unavailable",
+      "x-iri": "https://datamodels.jp/ns/common/addressText"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
