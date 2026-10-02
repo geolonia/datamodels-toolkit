@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { decodeCsv, parseCsv, code6, convertRows, LINE } from '../src/convert.mjs';
+import { decodeCsv, parseCsv, code6, convertRows, mappingProblems, mappedColumns, LINE } from '../src/convert.mjs';
 import { siteReader, loadTarget } from '../src/catalog.mjs';
 
 const reader = siteReader(join(import.meta.dirname, 'fixtures', 'site'));
@@ -162,4 +162,26 @@ test('a GSI designated shelter row becomes a valid DesignatedShelter; its type c
   const type = (id) => convertRows([{ 共通ID: id }], map, { type: 'DesignatedShelter', mappings })[0];
   assert.equal(type('E1310100012121').entity.shelterType, 'welfare');
   assert.match(type('E1310100012201').problems.join(), /shelterType: 共通ID: E1310100012201 is not the ID of a designated shelter/, 'type 20 is an evacuation site');
+});
+
+test('a column the file does not have gives no value, not false; the columns read are listed', () => {
+  const map = { convert: { id: 'urn:ngsi-ld:T:{n}' }, fields: { n: { to: 'n', column: 'n' }, f: { to: 'f', column: 'f', transform: 'flag' }, h: { to: 'h', transform: 'flags', values: { 洪水: 'flood', 地震: 'earthquake' } } } };
+  const [r] = convertRows([{ n: 'a' }], map, { type: 'T' });
+  assert.deepEqual(r.entity, { id: 'urn:ngsi-ld:T:a', type: 'T', n: 'a' });
+  const [partly] = convertRows([{ n: 'b', 洪水: '1' }], map, { type: 'T' });
+  assert.deepEqual(partly.entity.h, ['flood'], 'the flags columns that are there still count');
+  assert.deepEqual(mappedColumns(map), ['n', 'f', '洪水', '地震']);
+  assert.ok(mappedColumns(site.mapping, site.mappings).includes('所在地_連結表記'), 'through via');
+  assert.deepEqual(parseCsv('a,b\n1,2\n').columns, ['a', 'b']);
+});
+
+test('an unknown transform or a missing via mapping is found before any row is read', () => {
+  const map = { fields: { a: { to: 'a', column: 'a', transform: 'upper' }, b: { to: 'b', via: 'x/X/y' } } };
+  assert.deepEqual(mappingProblems(map, {}), [
+    'a: unknown transform "upper" (known: text, code6, number, integer, numbers, flag, flags, split, municipality, machiazaId, nationalShelterType)',
+    'b: no mapping x/X/y',
+  ]);
+  const inner = { fields: { c: { to: 'c', column: 'c', transform: 'lower' } } };
+  assert.match(mappingProblems({ fields: { b: { to: 'b', via: 'x/X/y' } } }, { 'x/X/y': inner }).join(), /^x\/X\/y: c: unknown transform "lower"/);
+  for (const t of [site, gsiSite, shelter]) assert.deepEqual(mappingProblems(t.mapping, t.mappings), []);
 });

@@ -4,7 +4,7 @@
 // builds). URLs in the catalog always name https://datamodels.jp; a site
 // argument only changes where they are read from.
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { resolve, sep } from 'node:path';
 import YAML from 'yaml';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
@@ -14,16 +14,24 @@ export const CORE_CONTEXT_URL = 'https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-co
 
 /** A reader for catalog URLs. `site` is a URL (default datamodels.jp) or a directory. */
 export function siteReader(site = SITE) {
-  const root = site.replace(/\/+$/, '');
+  const root = site.replace(/(.)\/+$/, '$1');
   const local = !/^https?:\/\//.test(root);
   const text = async (url) => {
-    if (!url.startsWith(`${SITE}/`)) throw new Error(`${url}: not a ${SITE} URL`);
-    const path = url.slice(SITE.length + 1);
+    // Parsed, so dot segments (/../) are resolved before the origin is checked.
+    let u;
+    try { u = new URL(url); } catch { throw new Error(`${url}: not a URL`); }
+    if (u.origin !== SITE) throw new Error(`${url}: not a ${SITE} URL`);
     if (local) {
-      try { return await readFile(join(root, path), 'utf8'); } catch (e) { throw new Error(`${join(root, path)}: ${e.code ?? e.message}`); }
+      // An encoded slash (%2F) can still climb after decoding: the file must stay inside the site directory.
+      const base = resolve(root);
+      let path;
+      try { path = decodeURIComponent(u.pathname).replace(/^\/+/, ''); } catch { throw new Error(`${url}: malformed path`); }
+      const file = resolve(base, path);
+      if (!file.startsWith(base + sep)) throw new Error(`${url}: outside the site directory ${base}`);
+      try { return await readFile(file, 'utf8'); } catch (e) { throw new Error(`${file}: ${e.code ?? e.message}`); }
     }
-    const res = await fetch(`${root}/${path}`);
-    if (!res.ok) throw new Error(`${root}/${path}: HTTP ${res.status}`);
+    const res = await fetch(`${root}${u.pathname}`);
+    if (!res.ok) throw new Error(`${root}${u.pathname}: HTTP ${res.status}`);
     return res.text();
   };
   return { text, json: async (url) => JSON.parse(await text(url)), yaml: async (url) => YAML.parse(await text(url)) };

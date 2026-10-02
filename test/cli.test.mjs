@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, writeFile, readFile } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -86,4 +86,30 @@ test('large output through a pipe arrives complete', async () => {
   const r = await run(process.execPath, [BIN, 'convert', 'disaster/EvacuationSite', 'gsi-emergency-site', big, '--set', 'localGovernmentCode=13101', '--site', SITE_DIR], { maxBuffer: 64 * 1024 * 1024 });
   assert.ok(r.stdout.length > 1024 * 1024, `${r.stdout.length} bytes`);
   assert.equal(JSON.parse(r.stdout).length, 3000);
+});
+
+test('the reader keeps local reads inside the site directory', async () => {
+  const reader = siteReader(SITE_DIR);
+  assert.ok(JSON.parse(await reader.text('https://datamodels.jp/mapping/../catalog.json')).models, 'a dot segment that stays inside is fine');
+  await assert.rejects(reader.text('https://datamodels.jp/mapping/..%2F..%2F..%2F..%2Fpackage.json'), /outside the site directory/);
+  await assert.rejects(reader.text('https://datamodels.jp/%E0%A4%A'), /malformed path/);
+});
+
+test('a mapping with an unknown transform stops before the rows, and absent columns are reported', async () => {
+  const bad = join(dir, 'bad-site');
+  await cp(SITE_DIR, bad, { recursive: true });
+  const file = join(bad, 'mapping', 'disaster', 'EvacuationSite', 'gsi-emergency-site.yaml');
+  await writeFile(file, (await readFile(file, 'utf8')).replace(/transform: flag\b/, 'transform: flagg'));
+  let r = await datamodels('convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--site', bad);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the mapping cannot be applied:\n {2}\S+: unknown transform "flagg"/);
+  assert.equal(r.stdout, '');
+  const short = join(dir, 'short.csv');
+  await writeFile(short, 'NO,共通ID,施設・場所名,住所,緯度,経度\n28,E1310100002201,番町小学校,東京都千代田区六番町8,35.688111802263,139.73407899331\n');
+  r = await datamodels('convert', 'disaster/EvacuationSite', 'gsi-emergency-site', short, '--set', 'localGovernmentCode=13101', '--site', SITE_DIR);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stderr, /not in the file, so left empty: .*洪水/);
+  const [e] = JSON.parse(r.stdout);
+  assert.equal(e.hazardTypes, undefined);
+  assert.equal(e.alsoDesignatedShelter, undefined, 'not false: the list does not say');
 });

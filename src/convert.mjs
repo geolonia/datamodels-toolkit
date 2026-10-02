@@ -33,7 +33,8 @@ export const LINE = Symbol('line');
  * end of a record, as spreadsheets write them, are allowed. Each row carries
  * its source line under LINE. A blank line is ignored; a record of empty fields
  * only (",,,", as spreadsheets write empty rows) is left out and its line listed
- * in the result's `skipped`, so it does not vanish unseen.
+ * in the result's `skipped`, so it does not vanish unseen. The header names are
+ * in the result's `columns`.
  */
 export function parseCsv(text) {
   const rows = [];
@@ -68,7 +69,7 @@ export function parseCsv(text) {
   const bad = body.filter((r) => r.fields.length < n || r.fields.slice(n).some((v) => v.trim() !== ''));
   if (bad.length) throw new Error(`${bad.slice(0, 5).map((r) => `line ${r.line}: ${r.fields.length} fields`).join(', ')}${bad.length > 5 ? ` and ${bad.length - 5} more` : ''} (the header has ${n})`);
   const out = body.map((r) => Object.defineProperty(Object.fromEntries(names.map((h, i) => [h, r.fields[i].trim()])), LINE, { value: r.line }));
-  return Object.defineProperty(out, 'skipped', { value: skipped.filter((l) => l > head.line) });
+  return Object.defineProperties(out, { skipped: { value: skipped.filter((l) => l > head.line) }, columns: { value: names } });
 }
 
 // 全国地方公共団体コード: the 5-digit JIS X 0402 code plus a check digit (MIC,
@@ -99,6 +100,49 @@ export function code6(v) {
 
 export const TRANSFORMS = ['text', 'code6', 'number', 'integer', 'numbers', 'flag', 'flags', 'split', 'municipality', 'machiazaId', 'nationalShelterType'];
 
+// Every mapping a conversion uses: the mapping itself and those it reaches through via.
+function reachable(mapping, mappings) {
+  const out = [['', mapping]];
+  const seen = new Set();
+  for (let i = 0; i < out.length; i++) {
+    for (const rule of Object.values(out[i][1].fields ?? {})) {
+      if (!rule?.via || seen.has(rule.via) || !mappings[rule.via]) continue;
+      seen.add(rule.via); out.push([rule.via, mappings[rule.via]]);
+    }
+  }
+  return out;
+}
+
+/**
+ * What is wrong with the conversion rules before any row is read: a transform
+ * this converter does not know, or a via mapping that is missing. The catalog
+ * checks only the structure of the rules (geolonia/datamodels#91); the names
+ * of the transforms are checked here.
+ */
+export function mappingProblems(mapping, mappings = {}) {
+  const out = [];
+  for (const [name, map] of reachable(mapping, mappings)) {
+    for (const [field, rule] of Object.entries(map.fields ?? {})) {
+      const where = name ? `${name}: ${field}` : field;
+      if (rule?.transform !== undefined && !TRANSFORMS.includes(rule.transform)) out.push(`${where}: unknown transform "${rule.transform}" (known: ${TRANSFORMS.join(', ')})`);
+      if (rule?.via && !mappings[rule.via]) out.push(`${where}: no mapping ${rule.via}`);
+    }
+  }
+  return out;
+}
+
+/** The columns a conversion reads, through via too: `column` names and the columns of `flags` values. */
+export function mappedColumns(mapping, mappings = {}) {
+  const cols = new Set();
+  for (const [, map] of reachable(mapping, mappings)) {
+    for (const rule of Object.values(map.fields ?? {})) {
+      for (const c of [].concat(rule?.column ?? [])) cols.add(c);
+      if (rule?.transform === 'flags') for (const c of Object.keys(rule.values ?? {})) cols.add(c);
+    }
+  }
+  return [...cols];
+}
+
 // One attribute from one row. Returns { value } (undefined means leave it out), and optionally fix or problem.
 function apply(rule, row, set) {
   const cols = rule.column === undefined ? [] : [].concat(rule.column);
@@ -115,9 +159,12 @@ function apply(rule, row, set) {
       return ns.every(Number.isFinite) && raw.every((x) => x) ? { value: ns } : { problem: `${cols.join(', ')}: not all numbers (${raw.join(', ')})` };
     }
     // Lists mark a flag with 1 and leave it empty (or 0) otherwise; anything else is reported, not read as false.
-    case 'flag': return one === '1' ? { value: true } : one === '' || one === '0' ? { value: false } : { problem: `${cols[0]}: ${one} is not 1, 0 or empty` };
+    // A column the file does not have says nothing: no value, not false (mappedColumns reports it).
+    case 'flag': if (!(cols[0] in row)) return { value: undefined }; return one === '1' ? { value: true } : one === '' || one === '0' ? { value: false } : { problem: `${cols[0]}: ${one} is not 1, 0 or empty` };
     case 'flags': {
-      const marks = Object.keys(rule.values ?? {}).filter((c) => !['1', '0', ''].includes(row[c] ?? ''));
+      const present = Object.keys(rule.values ?? {}).filter((c) => c in row);
+      if (!present.length) return { value: undefined };
+      const marks = present.filter((c) => !['1', '0', ''].includes(row[c]));
       if (marks.length) return { problem: marks.map((c) => `${c}: ${row[c]} is not 1, 0 or empty`).join('; ') };
       const vs = Object.entries(rule.values ?? {}).filter(([c]) => row[c] === '1').map(([, v]) => v);
       return { value: vs.length ? vs : undefined };

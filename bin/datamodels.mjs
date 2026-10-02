@@ -13,7 +13,7 @@
 // (encoding, repairs, invalid rows) goes to standard error; the exit code is 1
 // when a row is invalid or a file cannot be read, 2 for a usage error.
 import { readFile, writeFile } from 'node:fs/promises';
-import { decodeCsv, parseCsv, convertRows, LINE } from '../src/convert.mjs';
+import { decodeCsv, parseCsv, convertRows, mappingProblems, mappedColumns, LINE } from '../src/convert.mjs';
 import { toNormalized } from '../src/ngsi.mjs';
 import { siteReader, loadTarget, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
 
@@ -41,6 +41,9 @@ if (extra.length) usage(`unexpected arguments: ${extra.join(' ')}`);
 let loaded;
 try { loaded = await loadTarget(siteReader(site), target, mappingName); } catch (e) { console.error(e.message); process.exit(1); }
 const { entry, schema, mapping, mappings, validate, errorsText } = loaded;
+// Rules this converter cannot apply stop the run before any row is read.
+const ruleProblems = mappingProblems(mapping, mappings);
+if (ruleProblems.length) { console.error(`${target} ${mappingName}: the mapping cannot be applied:\n${ruleProblems.map((p) => `  ${p}`).join('\n')}`); process.exit(1); }
 const set = Object.fromEntries(sets.map((kv) => { const i = kv.indexOf('='); return [kv.slice(0, i), kv.slice(i + 1)]; }));
 // A name the mapping converts nothing into would be ignored without a word.
 const settable = Object.keys(mapping.fields ?? {}).filter((k) => mapping.fields[k]?.via === undefined && mapping.fields[k]?.value === undefined && mapping.fields[k]?.transform !== 'flags');
@@ -64,6 +67,10 @@ const json = `${JSON.stringify(entities, null, 2)}\n`;
 if (out) await writeFile(out, json); else process.stdout.write(json);
 
 console.error(`${file}: ${encoding}, ${rows.length} row(s), ${entities.length} valid ${entry.type}, ${invalid.length} invalid`);
+// Columns the mapping reads that the file does not have: their attributes stay empty, unless --set fills them.
+const filled = new Set(Object.keys(set).flatMap((k) => [].concat(mapping.fields[k]?.column ?? [])));
+const absent = mappedColumns(mapping, mappings).filter((c) => !rows.columns.includes(c) && !filled.has(c));
+if (absent.length) console.error(`  not in the file, so left empty: ${absent.join(', ')}`);
 if (rows.skipped.length) console.error(`  skipped ${rows.skipped.length} record(s) with only empty fields: line ${rows.skipped.slice(0, 10).join(', ')}${rows.skipped.length > 10 ? ', …' : ''}`);
 for (const [k, e] of repairs) console.error(`  repaired ${e.n}×: ${k} (e.g. ${e.example})`);
 for (const x of invalid.slice(0, 20)) console.error(`  line ${x.line}: ${x.problems.join('; ')}`);
