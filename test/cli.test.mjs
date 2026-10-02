@@ -77,3 +77,13 @@ test('every fixture model loads: its mapping, the mappings it reaches through vi
   assert.deepEqual(Object.keys(t.mappings).sort(), ['common/Geometry/jichitai-opendata-location', 'common/JapaneseAddress/jichitai-opendata-address']);
   assert.equal(typeof t.validate, 'function');
 });
+
+test('large output through a pipe arrives complete', async () => {
+  const head = '\ufeffNO,共通ID,施設・場所名,住所,洪水,崖崩れ、土石流及び地滑り,高潮,地震,津波,大規模な火事,内水氾濫,火山現象,指定避難所との住所同一,緯度,経度,備考\n';
+  const rows = Array.from({ length: 3000 }, (_, i) => `${i + 1},E13101${String(i + 1).padStart(5, '0')}201,番町小学校${i + 1},東京都千代田区六番町8,1,,1,1,,,1,,1,35.688111802263,139.73407899331,`);
+  const big = join(dir, 'big.csv');
+  await writeFile(big, `${head}${rows.join('\n')}\n`);
+  const r = await run(process.execPath, [BIN, 'convert', 'disaster/EvacuationSite', 'gsi-emergency-site', big, '--set', 'localGovernmentCode=13101', '--site', SITE_DIR], { maxBuffer: 64 * 1024 * 1024 });
+  assert.ok(r.stdout.length > 1024 * 1024, `${r.stdout.length} bytes`);
+  assert.equal(JSON.parse(r.stdout).length, 3000);
+});

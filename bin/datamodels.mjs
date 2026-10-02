@@ -68,4 +68,5 @@ if (rows.skipped.length) console.error(`  skipped ${rows.skipped.length} record(
 for (const [k, e] of repairs) console.error(`  repaired ${e.n}×: ${k} (e.g. ${e.example})`);
 for (const x of invalid.slice(0, 20)) console.error(`  line ${x.line}: ${x.problems.join('; ')}`);
 if (invalid.length > 20) console.error(`  … ${invalid.length - 20} more`);
-process.exit(invalid.length ? 1 : 0);
+// Not process.exit(): it can cut off output still being written to a pipe.
+process.exitCode = invalid.length ? 1 : 0;
