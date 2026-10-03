@@ -185,3 +185,10 @@ test('an unknown transform or a missing via mapping is found before any row is r
   assert.match(mappingProblems({ fields: { b: { to: 'b', via: 'x/X/y' } } }, { 'x/X/y': inner }).join(), /^x\/X\/y: c: unknown transform "lower"/);
   for (const t of [site, gsiSite, shelter]) assert.deepEqual(mappingProblems(t.mapping, t.mappings), []);
 });
+
+test('an explicit empty record in a one-column file is listed, like ",," in a wider one', () => {
+  const rows = parseCsv('only\n""\nvalue\n\n""');
+  assert.deepEqual(rows.map((r) => r.only), ['value']);
+  assert.deepEqual(rows.skipped, [2, 5], 'the quoted empty records, also the last one without a line break; not the blank line');
+  assert.deepEqual(parseCsv('only\nvalue\n\n').skipped, [], 'blank lines stay ignored');
+});
