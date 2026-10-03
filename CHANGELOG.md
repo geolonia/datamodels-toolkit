@@ -4,7 +4,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
-## [0.1.0] - not released yet
+## 0.1.0 - not released yet
 
 First version: the CSV converter moved from [geolonia/datamodels](https://github.com/geolonia/datamodels) ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
 
@@ -18,4 +18,3 @@ First version: the CSV converter moved from [geolonia/datamodels](https://github
 - Errors are one line on standard error; exit code 1 for invalid rows or unreadable files, 2 for usage errors. Output written to a pipe is complete (#1, #4).
 
 [Unreleased]: https://github.com/geolonia/datamodels-toolkit/commits/main
-[0.1.0]: https://github.com/geolonia/datamodels-toolkit/commits/main
