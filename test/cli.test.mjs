@@ -41,6 +41,16 @@ test('--normalized writes NGSI-LD normalized entities with the alias context and
   assert.deepEqual(e.name, { type: 'Property', value: '番町小学校' });
 });
 
+test('--help explains every option, also after convert', async () => {
+  for (const args of [['--help'], ['convert', '--help']]) {
+    const r = await datamodels(...args);
+    assert.equal(r.code, 0, args.join(' '));
+    assert.match(r.stdout, /^usage: datamodels convert /, args.join(' '));
+    // Each option starts a line of its own and is followed by its description, not only named in the usage line.
+    for (const option of ['--set', '--normalized', '--out', '--site']) assert.match(r.stdout, new RegExp(`^ +${option} .*\\w`, 'm'), `${args.join(' ')}: ${option}`);
+  }
+});
+
 test('usage errors exit with 2 and name the problem', async () => {
   for (const [args, message] of [
     [[], /missing command/],

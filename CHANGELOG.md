@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Added
+
+- `datamodels --help` and `datamodels convert --help` explain each option (#6).
+
 ## 0.1.0 - not released yet
 
 First version: the CSV converter moved from [geolonia/datamodels](https://github.com/geolonia/datamodels) ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
