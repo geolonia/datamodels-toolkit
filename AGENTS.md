@@ -13,18 +13,24 @@ Owner: See catalog-info.yaml
 
 ## Setup
 
-- Install: See README for setup
-- Dev: See README for dev command
+- Install: `npm ci` (Node.js 24 or later; npm, not pnpm)
+- Run: `node bin/datamodels.mjs convert <subject>/<Type> <mapping> <file.csv>`
 
 ## Test & Lint
 
-- Lint: See README for lint command
-- Test: See README for test command
+- Test: `npm test` (reads `test/fixtures/site/`, no network)
+- Refresh the fixtures from datamodels.jp: `npm run fixtures`
+- No linter yet.
 
 ## Constraints
 
 - Do not commit secrets.
-- Prefer small PRs with tests.
+- Prefer small PRs with tests; a change in behaviour needs a test.
+- Sign off every commit (`git commit -s`, DCO); see CONTRIBUTING.md.
+- Plain English in code comments, commit messages and docs.
+- The conversion rules belong to geolonia/datamodels (mapping files); this repository applies them. New subcommands only for a named user and task (geolonia/datamodels#91).
+- Never call `process.exit()` in the command line: it can cut off output to a pipe. Throw `Exit` or return the code from `main()`.
+- Update CHANGELOG.md under "Unreleased" for user-visible changes.
 
 ## Issue intake (from Slack / Claude)
 

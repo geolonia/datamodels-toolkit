@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "generatedAt": "2026-10-02T12:44:41.054Z",
+  "generatedAt": "2026-10-03T00:22:13.016Z",
   "license": "CC0-1.0",
   "licenseUrl": "https://datamodels.jp/LICENSE-CONTENT",
   "models": [
@@ -482,6 +482,8 @@
         "roadType",
         "address",
         "location",
+        "restrictionLength",
+        "maximumAllowedWeight",
         "restrictionStatus",
         "regulationCategory",
         "statusLabel",

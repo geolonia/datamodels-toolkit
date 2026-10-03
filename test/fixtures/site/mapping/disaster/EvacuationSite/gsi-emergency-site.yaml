@@ -11,7 +11,7 @@ standard:
   note:
     ja: "市町村が登録した指定緊急避難場所を国土地理院が全国分公開するもの。自治体標準オープンデータセットの 03 はこの項目を参照して作られた。文字コードは UTF-8（BOM 付き）。自治体の ID は含まず、全国共通 ID を持つ。"
     en: "GSI publishes the designated emergency evacuation sites every municipality registers, nationwide. Dataset 03 of the 自治体標準オープンデータセット was built from these columns. UTF-8 with a BOM. It carries the nationwide common ID but not the municipality's own ID."
-# How scripts/convert.mjs names the entities it makes from this list.
+# How the converter (datamodels convert, geolonia/datamodels-toolkit) names the entities it makes from this list.
 convert:
   id: "urn:ngsi-ld:EvacuationSite:{nationalShelterId}"
 fields:
