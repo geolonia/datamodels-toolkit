@@ -11,7 +11,7 @@ standard:
   note:
     ja: "市町村が登録した指定避難所を国土地理院が全国分公開するもの。文字コードは UTF-8（BOM 付き）。市町村の ID と収容人数は含まない。"
     en: "GSI publishes the designated shelters every municipality registers, nationwide. UTF-8 with a BOM. It has no municipal ID and no capacity."
-# How scripts/convert.mjs names the entities it makes from this list.
+# How the converter (datamodels convert, geolonia/datamodels-toolkit) names the entities it makes from this list.
 convert:
   id: "urn:ngsi-ld:DesignatedShelter:{nationalShelterId}"
 fields:

@@ -11,7 +11,7 @@ standard:
   note:
     ja: "このモデルが表すマスタそのもの。項目名は日本語名（英語名）で示す。住所と位置の列は JapaneseAddress と Geometry の対応表（jichitai-opendata-address、jichitai-opendata-location）のとおり。"
     en: "The master this model represents. Columns are given as the Japanese name (English item name). The address and location columns map as in the JapaneseAddress and Geometry tables (jichitai-opendata-address, jichitai-opendata-location)."
-# How scripts/convert.mjs names the entities it makes from this list.
+# How the converter (datamodels convert, geolonia/datamodels-toolkit) names the entities it makes from this list.
 convert:
   id: "urn:ngsi-ld:EvacuationSite:{localGovernmentCode}-{externalSiteId}"
 fields:

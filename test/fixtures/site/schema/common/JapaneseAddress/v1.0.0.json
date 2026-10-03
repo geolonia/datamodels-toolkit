@@ -44,12 +44,12 @@
     },
     "banchi": {
       "type": "string",
-      "description": "Banchi (番地) or, in residential-indication areas, the block number (街区符号)",
+      "description": "Banchi (番地): in a residential-indication area the block number (街区符号); elsewhere the whole lot number (地番), branch number included, for example 4638-1",
       "x-iri": "https://datamodels.jp/ns/common/banchi"
     },
     "go": {
       "type": "string",
-      "description": "Go (号) or, in residential-indication areas, the residence number (住居番号)",
+      "description": "Go (号): in a residential-indication area the residence number (住居番号). Empty for a lot number (地番): its branch number stays in banchi",
       "x-iri": "https://datamodels.jp/ns/common/go"
     },
     "buildingName": {
