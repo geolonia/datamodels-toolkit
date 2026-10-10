@@ -60,6 +60,21 @@ datamodels add road/Segment --value      # a value type, used inside attributes
 
 Adds a model to a subject of the node: `schema.json` (with `id` and `type` for an entity), `catalog.yaml` with a title and description in each of the node's languages, `examples/example.json`, and the type in the subject's `@context`. The skeleton builds and passes `check` at once; then add its attributes, each with an `x-iri` and a description in `catalog.yaml`.
 
+## extend
+
+```bash
+datamodels extend task/Task road/RoadTask               # the same type, with more attributes
+datamodels extend task/Task road/PatrolTask --subclass  # a subtype with its own IRI
+datamodels extend                                        # in a terminal: pick the model from a list
+```
+
+Starts a model of this node from a model of another node, such as datamodels.jp's: what the [extension builder](https://datamodels.jp/guide/builder) does in the browser. The model is `<subject>/<Type>` as listed in the other node's `catalog.json`, or its type IRI; `--index` names that `catalog.json` (default: the first node in `node.yaml`, else datamodels.jp).
+
+It copies the other model's schema at its current version, imports its `@context` (exact version) into the subject's, takes the titles and attribute descriptions from the other catalog, adapts its example, and records the model in `extends`, so `check` keeps its names and meanings. It adds the other node to `nodes` in `node.yaml` when it is not there yet. Then add this node's attributes, as for `add`.
+
+- **Default:** the same type with more attributes. The type keeps the other model's IRI (`x-alias-of`).
+- **`--subclass`:** a type of its own in this node's namespace, with the other model as its parent (`x-subclass-of`).
+
 ## build
 
 ```bash

@@ -43,13 +43,14 @@ import { Command, InvalidArgumentError } from 'commander';
 import { decodeCsv, parseCsv, convertRows, mappingProblems, mappedColumns, LINE } from '../src/convert.mjs';
 import { toNormalized } from '../src/ngsi.mjs';
 import { siteReader, loadTarget, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
-import { buildNode } from '../src/build/node.mjs';
+import { buildNode, readNode } from '../src/build/node.mjs';
 import { checkNode } from '../src/build/check.mjs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { initSettings, writeNode, publishToGitHub } from '../src/init.mjs';
 import { addModel } from '../src/add.mjs';
 import { releaseSubject } from '../src/release.mjs';
+import { extendModel, extendableModels } from '../src/extend.mjs';
 
 const USAGES = {
   convert: `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`,
@@ -57,6 +58,7 @@ const USAGES = {
   check: `usage: datamodels check [dir] [--offline]`,
   add: `usage: datamodels add <subject>/<Type> [dir] [--value]`,
   release: `usage: datamodels release <subject> [dir] [--offline]`,
+  extend: `usage: datamodels extend <model> <subject>/<Type> [dir] [--index URL] [--subclass]`,
   init: `usage: datamodels init [dir] [--base-url URL] [--iris hash|slash] [--languages en,ja] [--publisher name] [--publisher-url URL] [--license id] [--subject name] [--github owner/name] [--yes]`,
 };
 const USAGE = Object.values(USAGES).join('\n');
@@ -68,7 +70,7 @@ const fail = (msg) => { throw new Exit(1, msg); };
 
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
-function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease }) {
+function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease, onExtend }) {
   // An option's value: present, not empty (--out=) and not another option.
   const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
   const cli = new Command('datamodels')
@@ -130,6 +132,15 @@ function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease }) {
     .argument('[dir]', 'the node: node.yaml and models/', '.')
     .option('--offline', 'do not compare the snapshot with the published files')
     .action(onRelease);
+  cli.command('extend')
+    .description("start a model from a model of another node, such as datamodels.jp's: a copy of its schema at its version, its @context imported, recorded in extends")
+    .usage(USAGES.extend.replace('usage: datamodels extend ', ''))
+    .argument('[model]', 'the model to extend: <subject>/<Type> as in the index, or its type IRI (asked in a terminal)')
+    .argument('[subject/Type]', 'the new model in this node, for example road/RoadTask (asked in a terminal)')
+    .argument('[dir]', 'the node: node.yaml and models/', '.')
+    .option('--index <URL>', "the other node's catalog.json (default: the first node in node.yaml, else datamodels.jp)", value('--index'))
+    .option('--subclass', "a subtype with its own type IRI, instead of the same type with more attributes")
+    .action(onExtend);
   return cli;
 }
 
@@ -158,6 +169,7 @@ async function main(args) {
     onInit: async (dir, options) => { code = await init(dir, options); },
     onAdd: async (target, dir, options) => { code = await add(target, dir, options); },
     onRelease: async (subject, dir, options) => { code = await release(subject, dir, options); },
+    onExtend: async (model, target, dir, options) => { code = await extend(model, target, dir, options); },
   });
   // datamodels --help lists the commands; datamodels help build is commander's.
   if (args.length === 1 && ['--help', '-h', 'help'].includes(args[0])) { cli.outputHelp(); return 0; }
@@ -250,6 +262,37 @@ async function release(subjectName, dir, { offline }) {
   if (!r.written) console.error(`${r.subject} v${r.version}: already released (${r.dir}), unchanged`);
   else console.error(`${r.subject} v${r.version}: released into ${r.dir}${r.online ? `, the same as the ${r.online} published file(s)` : ''}. Commit it; the next version leaves these files online.`);
   return 0;
+}
+
+async function extend(model, target, dir, { index, subclass }) {
+  if (!model || !target) {
+    if (!(process.stdin.isTTY && process.stdout.isTTY)) usage('missing arguments', USAGES.extend);
+    ({ model, target } = await askExtend(model, target, dir, index));
+  }
+  let r;
+  try { r = await extendModel(dir, model, target, { index, subclass }); } catch (e) { fail(e.message); }
+  for (const f of r.added) console.error(`  added ${f}`);
+  for (const f of r.changed) console.error(`  changed ${f}`);
+  console.error(`${target}: ${r.typeIri}, extends ${r.extends.typeIri} v${r.extends.version}. Next: this node's attributes in schema.json (each with x-iri), context.jsonld and catalog.yaml, then datamodels check.`);
+  return 0;
+}
+
+// The questions of extend: the model, picked from the index, and the name of the new one.
+async function askExtend(model, target, dir, index) {
+  const p = await import('@clack/prompts');
+  const answer = async (v) => { if (p.isCancel(v)) { p.cancel('Nothing written.'); throw new Exit(1, 'extend cancelled'); } return v; };
+  p.intro('datamodels extend: a model from another node');
+  if (!model) {
+    let from = index;
+    if (!from) { try { from = (await readNode(dir)).nodes?.[0]?.index; } catch (e) { fail(e.message); } }
+    from ??= 'https://datamodels.jp/catalog.json';
+    let models;
+    try { models = await extendableModels(from); } catch (e) { fail(e.message); }
+    model = await answer(await p.select({ message: `Model to extend (${from})`, options: models.map((m) => ({ value: m.typeIri, label: `${m.subject}/${m.type}`, hint: m.title?.en ?? m.title?.ja })) }));
+  }
+  if (!target) target = await answer(await p.text({ message: 'The new model in this node (<subject>/<Type>)', placeholder: 'road/RoadTask', validate: (v) => (/^[a-z][a-z0-9-]*\/[A-Z][A-Za-z0-9]*$/.test(v ?? '') ? undefined : 'subject/Type, for example road/RoadTask') }));
+  p.outro('Writing the files.');
+  return { model, target };
 }
 
 async function init(dir, options) {
