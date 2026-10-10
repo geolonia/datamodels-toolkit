@@ -29,7 +29,7 @@ eleventyComputed:
 <p>Every type and attribute this subject defines, under its IRI.</p>
 <dl>
 {%- for t in s.terms %}
-<dt id="{{ t.name }}"><a href="{{ t.page }}">{{ t.name }}</a></dt>
+<dt id="{{ t.anchor }}"><a href="{{ t.page }}">{{ t.name }}</a></dt>
 <dd>{% if t.kind == "type" %}Type{% else %}Attribute of {{ t.model }}{% endif %}. IRI: {{ t.iri }}{% for x in t.texts %}<br><span lang="{{ x.lang }}">{{ x.text }}</span>{% endfor %}</dd>
 {%- endfor %}
 </dl>

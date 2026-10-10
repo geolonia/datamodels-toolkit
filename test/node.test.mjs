@@ -7,6 +7,7 @@ import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { randomBytes } from 'node:crypto';
 import { readNode, buildNode, buildVocabulary, catalogUrls } from '../src/build/index.mjs';
 
 const run = promisify(execFile);
@@ -90,6 +91,27 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   assert.match(model, /<h3 id="route">route<\/h3>/);
   assert.match(model, /<dt>Extends<\/dt><dd><a href="https:\/\/datamodels\.jp\/ns\/task\/Task">/);
   assert.match(model, /<title>RoadPatrol: data models by Example Inc\.<\/title>/);
+  // The anchor follows the IRI, not the attribute's name.
+  const sf = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const sj = JSON.parse(await readFile(sf, 'utf8'));
+  sj.properties.route['x-iri'] = `${BASE}/ns/road#lane`;
+  await writeFile(sf, JSON.stringify(sj));
+  await buildNode(dir);
+  const renamed = await read('ns/road.html');
+  assert.ok(renamed.includes('id="lane"') && !renamed.includes('id="route"'), 'the anchor of route is lane');
+  // Only http(s) URLs from the sources become links.
+  const schemaFile = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  await writeFile(schemaFile, JSON.stringify({ ...JSON.parse(await readFile(schemaFile, 'utf8')), 'x-subclass-of': 'javascript:alert(1)' }));
+  await buildNode(dir);
+  assert.doesNotMatch(await read('models/road/RoadPatrol/index.html'), /javascript:/);
+});
+
+test('an eleventy.config.js where the command runs does not change the pages', async () => {
+  const dir = await node();
+  await writeFile(join(dir, 'eleventy.config.js'), "export default function () { throw new Error('the node\\'s own Eleventy configuration was loaded'); }\n");
+  const r = await run(process.execPath, [BIN, 'build'], { cwd: dir }).then((x) => ({ code: 0, ...x }), (e) => ({ code: e.code, stderr: e.stderr }));
+  assert.equal(r.code, 0, r.stderr);
+  assert.ok((await readFile(join(dir, '_site', 'ns', 'road.html'), 'utf8')).includes('id="RoadPatrol"'));
 });
 
 test('slash IRIs when node.yaml asks for them, with their redirects', async () => {
@@ -117,6 +139,9 @@ test('extends must name a type IRI, a version and an index', async () => {
   const file = join(dir, 'models', 'road', 'RoadPatrol', 'catalog.yaml');
   await writeFile(file, (await readFile(file, 'utf8')).replace('version: 1.0.0', 'version: v1'));
   await assert.rejects(buildNode(dir), /road\/RoadPatrol\/catalog\.yaml: extends must be a list of \{ typeIri, version: X\.Y\.Z, index \}/);
+  // A list that would read as a version is not one.
+  await writeFile(file, (await readFile(file, 'utf8')).replace('version: v1', 'version: [1.0.0]'));
+  await assert.rejects(buildNode(dir), /extends must be a list of \{ typeIri, version: X\.Y\.Z, index \}/);
 });
 
 test('node.yaml: a missing file, and every problem at once', async () => {
@@ -127,6 +152,14 @@ test('node.yaml: a missing file, and every problem at once', async () => {
     for (const p of ['baseUrl must be', 'iris must be hash or slash', 'languages must be', 'publisher needs', 'license is required', 'licenseUrl must be', 'nodes must be']) assert.ok(e.message.includes(p), p);
     return true;
   });
+  // URLs are published, so credentials in them are refused.
+  // (Made here, so no URL with credentials is written in the source.)
+  const withCredentials = (url) => { const u = new URL(url); u.username = 'someone'; u.password = randomBytes(6).toString('hex'); return u.href; };
+  await writeFile(join(empty, 'node.yaml'), `baseUrl: ${withCredentials(BASE)}\npublisher: { name: { en: X }, url: ${withCredentials('https://example.org/')} }\nlicense: CC0-1.0\n`);
+  await assert.rejects(readNode(empty), /baseUrl must be an http\(s\) URL without credentials[^]*publisher needs/);
+  // A YAML list is not a URL, even one that new URL() would read as one.
+  await writeFile(join(empty, 'node.yaml'), `baseUrl: [${BASE}]\npublisher: { name: { en: X }, url: https://example.org/ }\nlicense: CC0-1.0\n`);
+  await assert.rejects(readNode(empty), /node\.yaml:\n {2}baseUrl must be/);
   // The defaults: hash IRIs, English.
   await writeFile(join(empty, 'node.yaml'), `baseUrl: ${BASE}\npublisher: { name: { ja: 例 }, url: https://example.org/ }\nlicense: CC0-1.0\n`);
   assert.deepEqual(await readNode(empty), { baseUrl: BASE, iris: 'hash', languages: ['en'], publisher: { name: { ja: '例' }, url: 'https://example.org/' }, license: 'CC0-1.0' });
