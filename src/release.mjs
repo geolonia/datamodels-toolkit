@@ -35,16 +35,19 @@ export async function releaseSubject(dir, subjectName, { offline = false, fetch:
   if (offline) result.notes.push('offline: the snapshot was not compared with the published files');
   else {
     const changed = [];
+    const unread = [];
     for (const e of entries) {
-      let res;
-      try { res = await fetchUrl(e.url, { signal: AbortSignal.timeout(timeout) }); } catch (err) { result.notes.push(`${e.url}: not reachable (${err.cause?.code ?? err.message}), not compared`); continue; }
-      if (res.status === 404) continue;
-      if (!res.ok) { result.notes.push(`${e.url}: HTTP ${res.status}, not compared`); continue; }
-      let body;
-      try { body = Buffer.from(await res.arrayBuffer()); } catch (err) { result.notes.push(`${e.url}: not reachable (${err.cause?.code ?? err.message}), not compared`); continue; }
-      result.online++;
-      if (!body.equals(Buffer.from(e.content))) changed.push(e.url);
+      // Only "not published" (404) lets a file through uncompared; any other failure stops the release.
+      try {
+        const res = await fetchUrl(e.url, { signal: AbortSignal.timeout(timeout) });
+        if (res.status === 404) continue;
+        if (!res.ok) { unread.push(`${e.url}: HTTP ${res.status}`); continue; }
+        const body = Buffer.from(await res.arrayBuffer());
+        result.online++;
+        if (!body.equals(Buffer.from(e.content))) changed.push(e.url);
+      } catch (err) { unread.push(`${e.url}: ${err.cause?.code ?? err.message}`); }
     }
+    if (unread.length) throw new Error(`${subject.name} v${subject.version}: nothing released, the published files could not be compared:\n${unread.map((u) => `  ${u}`).join('\n')}\nTry again when the site answers, or release with --offline to skip the comparison.`);
     if (changed.length) throw new Error(`${subject.name} v${subject.version} is published, and its sources changed since:\n${changed.map((u) => `  ${u}`).join('\n')}\nThe snapshot must keep what was published. Restore the sources of v${subject.version} (for example with git), release, then make the change with a new version.`);
   }
   await snapshotRelease(subject, options);
