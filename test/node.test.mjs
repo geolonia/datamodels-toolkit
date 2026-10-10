@@ -7,6 +7,7 @@ import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { randomBytes } from 'node:crypto';
 import { readNode, buildNode, buildVocabulary, catalogUrls } from '../src/build/index.mjs';
 
 const run = promisify(execFile);
@@ -117,6 +118,9 @@ test('extends must name a type IRI, a version and an index', async () => {
   const file = join(dir, 'models', 'road', 'RoadPatrol', 'catalog.yaml');
   await writeFile(file, (await readFile(file, 'utf8')).replace('version: 1.0.0', 'version: v1'));
   await assert.rejects(buildNode(dir), /road\/RoadPatrol\/catalog\.yaml: extends must be a list of \{ typeIri, version: X\.Y\.Z, index \}/);
+  // A list that would read as a version is not one.
+  await writeFile(file, (await readFile(file, 'utf8')).replace('version: v1', 'version: [1.0.0]'));
+  await assert.rejects(buildNode(dir), /extends must be a list of \{ typeIri, version: X\.Y\.Z, index \}/);
 });
 
 test('node.yaml: a missing file, and every problem at once', async () => {
@@ -127,6 +131,14 @@ test('node.yaml: a missing file, and every problem at once', async () => {
     for (const p of ['baseUrl must be', 'iris must be hash or slash', 'languages must be', 'publisher needs', 'license is required', 'licenseUrl must be', 'nodes must be']) assert.ok(e.message.includes(p), p);
     return true;
   });
+  // URLs are published, so credentials in them are refused.
+  // (Made here, so no URL with credentials is written in the source.)
+  const withCredentials = (url) => { const u = new URL(url); u.username = 'someone'; u.password = randomBytes(6).toString('hex'); return u.href; };
+  await writeFile(join(empty, 'node.yaml'), `baseUrl: ${withCredentials(BASE)}\npublisher: { name: { en: X }, url: ${withCredentials('https://example.org/')} }\nlicense: CC0-1.0\n`);
+  await assert.rejects(readNode(empty), /baseUrl must be an http\(s\) URL without credentials[^]*publisher needs/);
+  // A YAML list is not a URL, even one that new URL() would read as one.
+  await writeFile(join(empty, 'node.yaml'), `baseUrl: [${BASE}]\npublisher: { name: { en: X }, url: https://example.org/ }\nlicense: CC0-1.0\n`);
+  await assert.rejects(readNode(empty), /node\.yaml:\n {2}baseUrl must be/);
   // The defaults: hash IRIs, English.
   await writeFile(join(empty, 'node.yaml'), `baseUrl: ${BASE}\npublisher: { name: { ja: 例 }, url: https://example.org/ }\nlicense: CC0-1.0\n`);
   assert.deepEqual(await readNode(empty), { baseUrl: BASE, iris: 'hash', languages: ['en'], publisher: { name: { ja: '例' }, url: 'https://example.org/' }, license: 'CC0-1.0' });

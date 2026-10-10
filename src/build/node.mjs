@@ -19,7 +19,8 @@ import { publishCatalog } from './publish.mjs';
 import { llmsTxt } from './llms.mjs';
 import { writePages } from './pages.mjs';
 
-const httpUrl = (s) => { try { const u = new URL(s); return ['http:', 'https:'].includes(u.protocol) && !!u.hostname; } catch { return false; } };
+// Every URL here is published: one with a user name or password in it would publish them too.
+const httpUrl = (s) => { if (typeof s !== 'string') return false; try { const u = new URL(s); return ['http:', 'https:'].includes(u.protocol) && !!u.hostname && !u.username && !u.password; } catch { return false; } };
 const texts = (o) => !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length > 0 && Object.values(o).every((v) => typeof v === 'string' && v.trim());
 
 /** The settings in `<dir>/node.yaml`, checked; every problem in one error. */
@@ -30,7 +31,7 @@ export async function readNode(dir) {
   if (!node || typeof node !== 'object' || Array.isArray(node)) throw new Error(`${file}: must be a mapping of settings`);
   const problems = [];
   const { baseUrl, iris = 'hash', languages = ['en'], publisher, license, licenseUrl, nodes } = node;
-  if (!httpUrl(baseUrl) || new URL(baseUrl).search || new URL(baseUrl).hash) problems.push('baseUrl must be an http(s) URL without query or fragment');
+  if (!httpUrl(baseUrl) || new URL(baseUrl).search || new URL(baseUrl).hash) problems.push('baseUrl must be an http(s) URL without credentials, query or fragment');
   if (!['hash', 'slash'].includes(iris)) problems.push('iris must be hash or slash');
   if (!Array.isArray(languages) || !languages.length || !languages.every((l) => typeof l === 'string' && /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/.test(l))) problems.push('languages must be a list of language tags, for example [en] or [ja, en]');
   if (!texts(publisher?.name) || !httpUrl(publisher?.url)) problems.push('publisher needs a name in at least one language and an http(s) url');
@@ -58,7 +59,7 @@ export async function buildNode(dir, { out = join(dir, '_site'), now } = {}) {
   for (const s of subjects) for (const m of s.models) {
     const ext = m.catalog?.extends;
     if (ext === undefined) continue;
-    if (!Array.isArray(ext) || !ext.every((e) => httpUrl(e?.typeIri) && /^\d+\.\d+\.\d+$/.test(String(e?.version)) && httpUrl(e?.index))) {
+    if (!Array.isArray(ext) || !ext.every((e) => httpUrl(e?.typeIri) && typeof e?.version === 'string' && /^\d+\.\d+\.\d+$/.test(e.version) && httpUrl(e?.index))) {
       throw new Error(`${s.name}/${m.type}/catalog.yaml: extends must be a list of { typeIri, version: X.Y.Z, index }, with http(s) URLs`);
     }
   }
