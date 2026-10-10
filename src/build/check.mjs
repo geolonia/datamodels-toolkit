@@ -66,7 +66,8 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
     for (const s of subjects) for (const m of s.models) {
       const where = `${s.name}/${m.type}`;
       let validate;
-      try { validate = await ajv.compileAsync(m.schema); } catch (e) { problems.push(`${where}/schema.json: ${e.message}`); continue; }
+      // A schema another one referenced is already loaded (from the build, the same bytes): use it.
+      try { validate = (m.schema.$id && ajv.getSchema(m.schema.$id)) || await ajv.compileAsync(m.schema); } catch (e) { problems.push(`${where}/schema.json: ${e.message}`); continue; }
       if (m.examples['example.json'] && !validate(m.examples['example.json'])) problems.push(`${where}/examples/example.json: ${ajv.errorsText(validate.errors)}`);
     }
 
@@ -91,9 +92,12 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
         try {
           if (!indexes.has(ext.index)) indexes.set(ext.index, getJson(ext.index));
           const index = await indexes.get(ext.index);
-          const entry = (index.models ?? []).find((e) => e.typeIri === ext.typeIri && e.version === ext.version);
+          const entry = (index.models ?? []).find((e) => e.typeIri === ext.typeIri);
           if (!entry) { problems.push(`${where}: not listed in ${ext.index}`); continue; }
-          const theirContext = (await getJson(entry.contextUrl))['@context'];
+          // An index lists the current version; an older one is at the same path with its own version (docs/node.md, section 1).
+          const contextUrl = entry.version === ext.version ? entry.contextUrl : entry.contextUrl.replace(`/v${entry.version}.jsonld`, `/v${ext.version}.jsonld`);
+          if (contextUrl === entry.contextUrl && entry.version !== ext.version) { notes.push(`${where}: not checked, ${ext.index} lists v${entry.version} and the @context of v${ext.version} could not be found`); continue; }
+          const theirContext = (await getJson(contextUrl))['@context'];
           const theirs = contextTerms(theirContext);
           // Prefixes of the extended context may be used here without being defined again.
           const ours = contextTerms(s.context['@context'], contextDefs(theirContext));

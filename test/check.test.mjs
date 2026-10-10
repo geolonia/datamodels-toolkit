@@ -107,6 +107,34 @@ test('extends: a redefined term or a missing model is a problem, an unreachable 
   assert.match(r.notes[0], /extends .*: not checked, .*(timed out|aborted)/i);
 });
 
+test('a schema that references another model of the node', async () => {
+  const dir = await node();
+  // A value type, and RoadPatrol's route referencing it by its URL.
+  const seg = join(dir, 'models', 'road', 'Segment');
+  await mkdir(seg, { recursive: true });
+  await writeFile(join(seg, 'schema.json'), JSON.stringify({ $id: `${BASE}/schema/road/Segment/v0.1.0.json`, 'x-kind': 'value', type: 'object', properties: { from: { type: 'string', 'x-iri': `${BASE}/ns/road#from` } } }));
+  await writeFile(join(seg, 'catalog.yaml'), 'title: { en: Segment }\ndescription: { en: A part of a road. }\nattributes:\n  from: { en: Start }\n');
+  const m = join(dir, 'models', 'road', 'RoadPatrol');
+  const schema = JSON.parse(await readFile(join(m, 'schema.json'), 'utf8'));
+  schema.properties.route = { $ref: `${BASE}/schema/road/Segment/v0.1.0.json`, 'x-iri': `${BASE}/ns/road#route` };
+  await writeFile(join(m, 'schema.json'), JSON.stringify(schema));
+  await writeFile(join(m, 'examples', 'example.json'), JSON.stringify({ id: 'urn:ngsi-ld:RoadPatrol:1', type: 'RoadPatrol', route: { from: 'A' } }));
+  assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
+  await writeFile(join(m, 'examples', 'example.json'), JSON.stringify({ id: 'urn:ngsi-ld:RoadPatrol:1', type: 'RoadPatrol', route: { from: 1 } }));
+  assert.deepEqual((await checkNode(dir, { offline: true })).problems, ['road/RoadPatrol/examples/example.json: data/route/from must be string']);
+});
+
+test('extends an older version than the index lists', async () => {
+  const dir = await node();
+  const older = 'https://datamodels.jp/context/task/v1.0.0.jsonld';
+  const files = {
+    [INDEX]: { models: [{ typeIri: TASK, version: '1.1.0', contextUrl: 'https://datamodels.jp/context/task/v1.1.0.jsonld' }] },
+    [older]: { '@context': { task: 'https://datamodels.jp/ns/task/', route: 'task:route' } },
+  };
+  // The terms of v1.0.0, which the model extends, are compared.
+  assert.deepEqual((await checkNode(dir, { fetch: fakeFetch(files) })).problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: redefines route (https://datamodels.jp/ns/task/route there, ${BASE}/ns/road#route here)`]);
+});
+
 test('datamodels check exits with 1 on a problem', async () => {
   const dir = await node();
   let r = await datamodels('check', dir, '--offline');
