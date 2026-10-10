@@ -58,7 +58,7 @@ export async function buildNode(dir, { out = join(dir, '_site'), now } = {}) {
   for (const s of subjects) for (const m of s.models) {
     const ext = m.catalog?.extends;
     if (ext === undefined) continue;
-    if (!Array.isArray(ext) || !ext.every((e) => httpUrl(e?.typeIri) && /^\d+\.\d+\.\d+$/.test(String(e?.version)) && httpUrl(e?.index))) {
+    if (!Array.isArray(ext) || !ext.every((e) => httpUrl(e?.typeIri) && typeof e?.version === 'string' && /^\d+\.\d+\.\d+$/.test(e.version) && httpUrl(e?.index))) {
       throw new Error(`${s.name}/${m.type}/catalog.yaml: extends must be a list of { typeIri, version: X.Y.Z, index }, with http(s) URLs`);
     }
   }

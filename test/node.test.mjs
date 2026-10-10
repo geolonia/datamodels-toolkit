@@ -89,6 +89,9 @@ test('extends must name a type IRI, a version and an index', async () => {
   const file = join(dir, 'models', 'road', 'RoadPatrol', 'catalog.yaml');
   await writeFile(file, (await readFile(file, 'utf8')).replace('version: 1.0.0', 'version: v1'));
   await assert.rejects(buildNode(dir), /road\/RoadPatrol\/catalog\.yaml: extends must be a list of \{ typeIri, version: X\.Y\.Z, index \}/);
+  // A list that would read as a version is not one.
+  await writeFile(file, (await readFile(file, 'utf8')).replace('version: v1', 'version: [1.0.0]'));
+  await assert.rejects(buildNode(dir), /extends must be a list of \{ typeIri, version: X\.Y\.Z, index \}/);
 });
 
 test('node.yaml: a missing file, and every problem at once', async () => {
