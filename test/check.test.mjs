@@ -177,6 +177,24 @@ test('a term from a context imported by URL: checked online, noted offline or wh
   assert.match(o.notes.join('\n'), /road\/context\.jsonld: https:\/\/shared\.example\.org\/context\/common\/v1\.0\.0\.jsonld could not be read \(ENOTFOUND\)/);
 });
 
+test('the parts of an @context count in their order: a later import overrides an earlier inline term', async () => {
+  const dir = await node();
+  const shared = 'https://shared.example.org/context/common/v1.0.0.jsonld';
+  await listNodes(dir, [{ url: 'https://shared.example.org/', index: 'https://shared.example.org/catalog.json' }]);
+  const served = { ...datamodelsJp(), [shared]: { '@context': { route: 'https://other.example/route' } } };
+  const ctx = join(dir, 'models', 'road', 'context.jsonld');
+  const own = { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' };
+  // The import first, the node's own route after it: the node's IRI wins.
+  await writeFile(ctx, JSON.stringify({ '@context': [shared, own] }));
+  assert.deepEqual((await checkNode(dir, { fetch: fakeFetch(served) })).problems, []);
+  // The import after: its route wins, and differs from the schema's.
+  await writeFile(ctx, JSON.stringify({ '@context': [own, shared] }));
+  assert.deepEqual((await checkNode(dir, { fetch: fakeFetch(served) })).problems, [`road/RoadPatrol: route is ${BASE}/ns/road#route in the schema, but the @context expands it to https://other.example/route`]);
+  // null clears what came before it.
+  await writeFile(ctx, JSON.stringify({ '@context': [{ route: 'https://other.example/route' }, null, own] }));
+  assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
+});
+
 test('imports of an imported context are followed: datamodels.jp subjects import its common context', async () => {
   const dir = await node();
   await listNodes(dir, [{ url: 'https://datamodels.jp/', index: INDEX }]);
