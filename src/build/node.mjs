@@ -50,11 +50,8 @@ export async function readNode(dir) {
   return { baseUrl: baseUrl.replace(/\/+$/, ''), iris, languages, publisher, license, ...(licenseUrl ? { licenseUrl } : {}), ...(nodes?.length ? { nodes } : {}) };
 }
 
-/**
- * Build the node in `dir` into `out` (default `<dir>/_site`): the files of
- * publishCatalog(), llms.txt and the pages (unless `pages: false`). Returns { node, subjects, catalog, exactPaths, redirects, pages }.
- */
-export async function buildNode(dir, { out = join(dir, '_site'), now, pages: withPages = true } = {}) {
+/** The node in `dir`: its settings, URLs and subjects with their models, checked. Returns { node, urls, subjects }. */
+export async function loadNode(dir) {
   const node = await readNode(dir);
   const urls = catalogUrls(node.baseUrl, { iris: node.iris });
   const modelsDir = join(dir, 'models');
@@ -71,6 +68,15 @@ export async function buildNode(dir, { out = join(dir, '_site'), now, pages: wit
       throw new Error(`${s.name}/${m.type}/catalog.yaml: extends must be a list of { typeIri, version: X.Y.Z, index }, with http(s) URLs`);
     }
   }
+  return { node, urls, subjects };
+}
+
+/**
+ * Build the node in `dir` into `out` (default `<dir>/_site`): the files of
+ * publishCatalog(), llms.txt and the pages (unless `pages: false`). Returns { node, subjects, catalog, exactPaths, redirects, pages }.
+ */
+export async function buildNode(dir, { out = join(dir, '_site'), now, pages: withPages = true } = {}) {
+  const { node, urls, subjects } = await loadNode(dir);
   const head = { publisher: node.publisher, license: node.license, ...(node.licenseUrl ? { licenseUrl: node.licenseUrl } : {}), ...(node.nodes ? { nodes: node.nodes } : {}) };
   await mkdir(out, { recursive: true });
   const result = await publishCatalog(subjects, { urls, outDir: out, languages: node.languages, head, ...(now ? { now } : {}) });

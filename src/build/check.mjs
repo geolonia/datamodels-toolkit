@@ -5,7 +5,7 @@
 // model it extends. Other nodes that cannot be reached are noted and skipped:
 // a node that is down never fails someone else's build (docs/node.md, section 5).
 import { readFileSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -206,17 +206,27 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
     if (offline) { notes.push('offline: the published files and the models this node extends were not checked'); return { problems, notes }; }
 
     // An exact version that is already online must be served unchanged; one that is not online yet is new.
+    const online = new Set();
     for (const path of exactPaths) {
       const url = `${urls.baseUrl}${path}`;
-      let online;
+      let body;
       try {
         const res = await fetch(url);
         if (res.status === 404) continue;
         if (!res.ok) { notes.push(`${url}: HTTP ${res.status}, not compared`); continue; }
         // The body too: a server can send its headers and then stall or break off.
-        online = Buffer.from(await res.arrayBuffer());
+        body = Buffer.from(await res.arrayBuffer());
       } catch (e) { notes.push(`${url}: not reachable (${e.cause?.code ?? e.message}), not compared`); continue; }
-      if (!online.equals(await readFile(join(out, path.slice(1))))) problems.push(`${url}: a published version changed. A published file never changes; give the subject a new version instead.`);
+      online.add(url);
+      if (!body.equals(await readFile(join(out, path.slice(1))))) problems.push(`${url}: a published version changed. A published file never changes; give the subject a new version instead.`);
+    }
+
+    // A published version without a snapshot leaves the site with the next version (#27).
+    for (const s of subjects) {
+      const published = online.has(urls.versionUrls(s.name, s.version).context);
+      if (published && !(await stat(join(s.dir, 'releases', `v${s.version}`)).then(() => true, () => false))) {
+        notes.push(`${s.name} v${s.version} is published but not released: run datamodels release ${s.name} before you change it, or its files leave the site with the next version`);
+      }
     }
 
     // Terms of an extended model keep their IRIs here.
