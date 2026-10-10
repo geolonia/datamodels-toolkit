@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+
+- `datamodels init` writes a workflow that pins the Action to the v0.1.0 release (its commit SHA, with the tag as a comment), instead of `main`. Dependabot can then propose newer releases.
+
 ## [0.1.0] - 2026-10-10
 
 First release: the CSV converter moved from [geolonia/datamodels](https://github.com/geolonia/datamodels) ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)), and the tools to publish a data model node of the [web of data models](https://github.com/geolonia/datamodels/issues/200).

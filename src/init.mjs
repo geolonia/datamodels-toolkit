@@ -8,10 +8,12 @@ import { dirname, join, relative, sep } from 'node:path';
 import YAML from 'yaml';
 import { settingsProblems } from './build/node.mjs';
 
-// The version of this repository's GitHub Action a new node's workflow uses.
-// Until the first release there is no tag to pin, so new nodes follow main;
-// a release sets this to the commit SHA of its tag.
-export const ACTION_REF = 'main';
+// The version of this repository's GitHub Action a new node's workflow uses:
+// the commit SHA of a release tag, with the tag as a comment, so Dependabot
+// can propose newer releases. A release updates both (it cannot point to
+// itself: the tag is made after the release commit).
+export const ACTION_REF = '73bee7bf36020685b04477c9342fa101d34511bc';
+export const ACTION_VERSION = 'v0.1.0';
 const CHECKOUT = 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1';
 const GITIGNORE = ['_site/', 'node_modules/'];
 const SUBJECT_NAME = /^[a-z][a-z0-9-]*$/;
@@ -76,7 +78,7 @@ jobs:
       - uses: ${CHECKOUT}
         with:
           persist-credentials: false
-      - uses: geolonia/datamodels-toolkit@${ACTION_REF}
+      - uses: geolonia/datamodels-toolkit@${ACTION_REF} # ${ACTION_VERSION}
         with:
           deploy: 'false'
 
@@ -99,7 +101,7 @@ jobs:
         with:
           persist-credentials: false
       - id: node
-        uses: geolonia/datamodels-toolkit@${ACTION_REF}
+        uses: geolonia/datamodels-toolkit@${ACTION_REF} # ${ACTION_VERSION}
 `;
 }
 
