@@ -1,0 +1,33 @@
+standard:
+  name: { ja: GitHub Issues（REST API）, en: GitHub Issues (REST API) }
+  url: https://docs.github.com/en/rest/issues/issues
+  note:
+    ja: GitHub の Issue には優先度・期限・進捗率が無い（Projects のカスタムフィールドは拡張）。state と state_reason から progress を導く。
+    en: GitHub issues have no priority, due date or completion percentage (Projects custom fields are extensions). progress is derived from state and state_reason.
+fields:
+  name: { to: "title" }
+  description: { to: "body" }
+  project: { to: "repository", note: { ja: Project.identifier = owner/repo, en: Project.identifier = owner/repo } }
+  milestone: { to: "milestone" }
+  parent: { to: null, note: { ja: サブイシュー（sub-issues）が拡張候補, en: sub-issues are an extension candidate } }
+  relatedTo: { to: null }
+  refersTo: { to: null }
+  progress: { to: "state + state_reason", note: { ja: open → needs-action または in-process、closed+completed → completed、closed+not_planned / duplicate → cancelled, en: open → needs-action or in-process; closed+completed → completed; closed+not_planned or duplicate → cancelled } }
+  statusLabel: { to: "state (+ state_reason)" }
+  subtype: { to: "type", note: { ja: Issue Types（組織機能）または labels の一つ, en: issue type (organisation feature) or one of the labels } }
+  priority: { to: null }
+  assignee: { to: "assignees" }
+  author: { to: "user" }
+  start: { to: null }
+  due: { to: null, note: { ja: マイルストーンの期限（milestone.due_on）は Milestone.due に入る, en: the milestone due date (milestone.due_on) goes to Milestone.due } }
+  completedAt: { to: "closed_at", note: { ja: state=closed かつ state_reason=completed の場合のみ。not_planned / duplicate の closed_at は対応させない, en: only when state is closed and state_reason is completed; closed_at of not_planned or duplicate issues is not mapped } }
+  estimatedDuration: { to: null }
+  percentComplete: { to: null }
+  keywords: { to: "labels[].name" }
+  location: { to: null }
+  spatialId: { to: null }
+  isPrivate: { to: null, note: { ja: リポジトリの可視性で決まる, en: follows the repository visibility } }
+  source: { to: "html_url" }
+  externalId: { to: "number" }
+  dateCreated: { to: "created_at" }
+  dateModified: { to: "updated_at" }

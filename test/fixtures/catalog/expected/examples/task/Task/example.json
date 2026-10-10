@@ -1,0 +1,44 @@
+{
+  "id": "urn:ngsi-ld:Task:1234",
+  "type": "Task",
+  "name": "靖国通りのアンダーパスの冠水を確認する",
+  "description": "住民からの通報の現地確認。水位と通行可否を報告すること。",
+  "project": "urn:ngsi-ld:Project:heavy-rain-2026-07",
+  "milestone": "urn:ngsi-ld:Milestone:heavy-rain-2026-07-initial",
+  "parent": "urn:ngsi-ld:Task:1200",
+  "relatedTo": [
+    "urn:ngsi-ld:Task:1198"
+  ],
+  "refersTo": "urn:ngsi-ld:RoadRestriction:0001",
+  "progress": "in-process",
+  "statusLabel": "対応中",
+  "subtype": "現地確認",
+  "priority": 2,
+  "assignee": [
+    "urn:ngsi-ld:Team:field-team-a"
+  ],
+  "author": "urn:ngsi-ld:Person:staff-0012",
+  "start": "2026-07-08T10:30:00+09:00",
+  "due": "2026-07-08T12:00:00+09:00",
+  "estimatedDuration": "PT1H30M",
+  "percentComplete": 40,
+  "keywords": [
+    "冠水",
+    "現地確認"
+  ],
+  "location": {
+    "type": "Point",
+    "coordinates": [
+      139.7512,
+      35.6953
+    ]
+  },
+  "spatialId": [
+    "/25/0/29802971/13211383"
+  ],
+  "isPrivate": false,
+  "source": "https://tracker.example.jp/issues/1234",
+  "externalId": "1234",
+  "dateCreated": "2026-07-08T10:20:00+09:00",
+  "dateModified": "2026-07-08T11:05:00+09:00"
+}

@@ -1,0 +1,10 @@
+# Reported in https://github.com/geolonia/datamodels/issues/189
+organization: { ja: GTT プロジェクト, en: GTT Project }
+url: https://gtt-project.org/ns/fiware.html#task-profile
+version: 1.0.0
+since: 2026-10
+context: https://gtt-project.org/ns/fiware-task.jsonld
+terms:
+  category:
+    iri: https://gtt-project.org/ns/fiware#category
+    description: { ja: 課題のカテゴリー名, en: The issue category name }

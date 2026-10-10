@@ -1,0 +1,17 @@
+# Correspondence between JapaneseAddress and the address column of GSI's
+# designated emergency evacuation site and designated shelter data.
+standard:
+  name:
+    ja: 国土地理院「指定緊急避難場所データ」「指定避難所データ」の住所
+    en: "The address column of GSI's designated emergency evacuation site and designated shelter data"
+  url: https://hinanmap.gsi.go.jp/hinanjocp/hinanbasho/koukaidate.html
+  license:
+    ja: "国土地理院コンテンツ利用規約と、同サイトの「ご利用上の注意」"
+    en: "GSI's terms of use for its content (国土地理院コンテンツ利用規約) and the site's notes on use (ご利用上の注意)"
+  note:
+    ja: 住所は 1 列の連結表記だけ。構造化した項目は無い。
+    en: The address is one line only; there are no structured columns.
+fields:
+  addressCountry: { to: null, note: { ja: データには無い。常に JP, en: not in the data; always JP }, value: JP }
+  addressText: { to: 住所, column: 住所 }
+  localGovernmentCode: { to: null, note: { ja: データには無い。ファイル名の市町村コードから導ける, en: not in the data; derivable from the municipality code in the file name } }

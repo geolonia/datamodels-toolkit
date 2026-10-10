@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodels.jp/schema/task/Milestone/v1.0.0.json",
+  "title": "Milestone",
+  "description": "A planned target that groups tasks within a project: a version in Redmine, a milestone in GitHub or GitLab, a fix version in Jira. It has a name, a due date and a state.",
+  "x-version": "1.0.0",
+  "x-license-url": "https://datamodels.jp/LICENSE-CONTENT",
+  "x-model-tags": "task management",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "description": "Entity id (URN)"
+    },
+    "type": {
+      "type": "string",
+      "const": "Milestone",
+      "description": "Entity type"
+    },
+    "@context": {
+      "description": "JSON-LD context of the entity, optional: a context URL or a list of context URLs",
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "minItems": 1
+        }
+      ]
+    },
+    "name": {
+      "type": "string",
+      "description": "Name",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://uri.etsi.org/ngsi-ld/name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "http://purl.org/dc/terms/description"
+    },
+    "project": {
+      "type": "string",
+      "format": "uri",
+      "description": "The project this belongs to",
+      "x-ngsi": {
+        "type": "Relationship",
+        "target": "https://datamodels.jp/ns/task/Project"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/project"
+    },
+    "start": {
+      "type": "string",
+      "anyOf": [
+        {
+          "format": "date"
+        },
+        {
+          "format": "date-time"
+        }
+      ],
+      "description": "Planned start: a date, or a date and time",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/start"
+    },
+    "due": {
+      "type": "string",
+      "anyOf": [
+        {
+          "format": "date"
+        },
+        {
+          "format": "date-time"
+        }
+      ],
+      "description": "Due: the planned release or completion, a date or a date and time",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/due"
+    },
+    "milestoneStatus": {
+      "type": "string",
+      "enum": [
+        "open",
+        "locked",
+        "closed"
+      ],
+      "description": "State: open, locked (no new tasks may be added) or closed; status is protected in the core context, hence milestoneStatus",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/milestoneStatus"
+    },
+    "source": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of this object in the system of record",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/source"
+    },
+    "externalId": {
+      "type": "string",
+      "description": "Identifier in the system of record",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/externalId"
+    },
+    "dateCreated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Creation time in the system of record (distinct from the broker attribute createdAt)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateCreated"
+    },
+    "dateModified": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last modification time in the system of record",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateModified"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "name"
+  ],
+  "additionalProperties": false
+}

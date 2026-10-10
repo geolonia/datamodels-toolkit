@@ -1,0 +1,1180 @@
+[
+  {
+    "type": "Geometry",
+    "kind": "value",
+    "typeIri": "https://datamodels.jp/ns/common/Geometry",
+    "subject": "common",
+    "domain": "common",
+    "source": "minted",
+    "contextUrl": "https://datamodels.jp/context/common/v1.0.0.jsonld",
+    "contextAliasUrl": "https://datamodels.jp/context/common/v1.jsonld",
+    "schemaUrl": "https://datamodels.jp/schema/common/Geometry/v1.0.0.json",
+    "vocabularyUrl": "https://datamodels.jp/vocab/common/v1.0.0.jsonld",
+    "version": "1.0.0",
+    "status": "draft",
+    "title": {
+      "ja": "ジオメトリ",
+      "en": "Geometry"
+    },
+    "description": {
+      "ja": "location などの GeoProperty の値として使う GeoJSON ジオメトリ（RFC 7946）。点（Point）、線（LineString）、面（Polygon）、それぞれの複数形（MultiPoint、MultiLineString、MultiPolygon）、およびそれらをまとめた GeometryCollection。座標は経度・緯度（・高さ）の順で WGS 84。モデルごとに種類を絞ってよい（例 点だけ）。",
+      "en": "A GeoJSON geometry (RFC 7946) as the value of a GeoProperty such as location: Point, LineString, Polygon, their multi forms (MultiPoint, MultiLineString, MultiPolygon), or a GeometryCollection of these. Positions are longitude, latitude and optional altitude, in WGS 84. A model may narrow the allowed types, for example to Point only."
+    },
+    "sampleProperties": [],
+    "pageUrl": "https://datamodels.jp/models/common/Geometry/",
+    "pageUrlEn": "https://datamodels.jp/en/models/common/Geometry/",
+    "exampleUrls": [
+      "https://datamodels.jp/examples/common/Geometry/example.json"
+    ],
+    "mappingUrls": [
+      "https://datamodels.jp/mapping/common/Geometry/jichitai-opendata-location.yaml"
+    ],
+    "mappings": [
+      {
+        "url": "https://datamodels.jp/mapping/common/Geometry/jichitai-opendata-location.yaml",
+        "standard": {
+          "ja": "自治体標準オープンデータセット・データ項目定義書A（20260801版）の緯度・経度（デジタル庁）",
+          "en": "Municipal standard open dataset, data item definition sheet A (2026-08-01), latitude and longitude (Digital Agency)"
+        }
+      }
+    ],
+    "attributes": []
+  },
+  {
+    "type": "JapaneseAddress",
+    "kind": "value",
+    "typeIri": "https://datamodels.jp/ns/common/JapaneseAddress",
+    "subject": "common",
+    "domain": "common",
+    "source": "minted",
+    "contextUrl": "https://datamodels.jp/context/common/v1.0.0.jsonld",
+    "contextAliasUrl": "https://datamodels.jp/context/common/v1.jsonld",
+    "schemaUrl": "https://datamodels.jp/schema/common/JapaneseAddress/v1.0.0.json",
+    "vocabularyUrl": "https://datamodels.jp/vocab/common/v1.0.0.jsonld",
+    "version": "1.0.0",
+    "status": "draft",
+    "title": {
+      "ja": "日本の住所",
+      "en": "Japanese address"
+    },
+    "description": {
+      "ja": "address 属性の値として使う日本の住所。意味が同じ項目は schema.org の PostalAddress の語を使い、日本固有の構造（町字・丁目・番地・号）、JIS コードと全国地方公共団体コード、アドレス・ベース・レジストリの町字ID、住居表示フラグを追加したもの。どの項目も任意。構造化できない場合は addressText だけでもよい。",
+      "en": "A Japanese postal address as the value of an address Property. schema.org PostalAddress terms where the meaning matches, plus the Japanese structure (machiaza, chome, banchi, go), JIS and local-government codes, the Address Base Registry town id and the residential-indication flag. Every field is optional; addressText alone is acceptable when the address cannot be structured."
+    },
+    "sampleProperties": [
+      "addressCountry",
+      "postalCode",
+      "addressRegion",
+      "addressLocality",
+      "machiaza",
+      "chome",
+      "banchi",
+      "go",
+      "buildingName",
+      "residentialIndication",
+      "jisPrefectureCode",
+      "jisMunicipalityCode",
+      "localGovernmentCode",
+      "abrMachiazaId",
+      "addressText"
+    ],
+    "pageUrl": "https://datamodels.jp/models/common/JapaneseAddress/",
+    "pageUrlEn": "https://datamodels.jp/en/models/common/JapaneseAddress/",
+    "exampleUrls": [
+      "https://datamodels.jp/examples/common/JapaneseAddress/example.json"
+    ],
+    "mappingUrls": [
+      "https://datamodels.jp/mapping/common/JapaneseAddress/gif-address.yaml",
+      "https://datamodels.jp/mapping/common/JapaneseAddress/gsi-address.yaml",
+      "https://datamodels.jp/mapping/common/JapaneseAddress/jichitai-opendata-address.yaml"
+    ],
+    "mappings": [
+      {
+        "url": "https://datamodels.jp/mapping/common/JapaneseAddress/gif-address.yaml",
+        "standard": {
+          "ja": "デジタル庁 GIF コアデータモデル「住所」",
+          "en": "Digital Agency GIF core data model \"Address\""
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/common/JapaneseAddress/gsi-address.yaml",
+        "standard": {
+          "ja": "国土地理院「指定緊急避難場所データ」「指定避難所データ」の住所",
+          "en": "The address column of GSI's designated emergency evacuation site and designated shelter data"
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/common/JapaneseAddress/jichitai-opendata-address.yaml",
+        "standard": {
+          "ja": "自治体標準オープンデータセット・データ項目定義書A（20260801版）の所在地の項目（デジタル庁）",
+          "en": "Municipal standard open dataset, data item definition sheet A (2026-08-01), location columns (Digital Agency)"
+        }
+      }
+    ],
+    "attributes": [
+      {
+        "name": "addressCountry",
+        "iri": "https://schema.org/addressCountry",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "国。常に JP",
+          "en": "Country. Always JP"
+        }
+      },
+      {
+        "name": "postalCode",
+        "iri": "https://schema.org/postalCode",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "郵便番号（7桁、ハイフンあり・なしどちらも可）",
+          "en": "Postal code, 7 digits with or without hyphen"
+        }
+      },
+      {
+        "name": "addressRegion",
+        "iri": "https://schema.org/addressRegion",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "都道府県名",
+          "en": "Prefecture name"
+        }
+      },
+      {
+        "name": "addressLocality",
+        "iri": "https://schema.org/addressLocality",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "市区町村名。政令指定都市は市名と区名を含む（例: 横浜市中区）",
+          "en": "Municipality name. For designated cities includes the ward (e.g. 横浜市中区)"
+        }
+      },
+      {
+        "name": "machiaza",
+        "iri": "https://datamodels.jp/ns/common/machiaza",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "町字（町名・大字・字）。丁目は含めない",
+          "en": "Town or district name (町字: 町名, 大字, 字), without chome"
+        }
+      },
+      {
+        "name": "chome",
+        "iri": "https://datamodels.jp/ns/common/chome",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "丁目。数字のみ（「一丁目」→ \"1\"）",
+          "en": "Chome (丁目), digits only (\"一丁目\" → \"1\")"
+        }
+      },
+      {
+        "name": "banchi",
+        "iri": "https://datamodels.jp/ns/common/banchi",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "番地。住居表示実施区域では街区符号。それ以外では枝番を含む地番全体（例 4638-1）",
+          "en": "Banchi (番地): in a residential-indication area the block number (街区符号); elsewhere the whole lot number (地番), branch number included, for example 4638-1"
+        }
+      },
+      {
+        "name": "go",
+        "iri": "https://datamodels.jp/ns/common/go",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "号。住居表示実施区域では住居番号。地番の区域では空（枝番は banchi に含める）",
+          "en": "Go (号): in a residential-indication area the residence number (住居番号). Empty for a lot number (地番): its branch number stays in banchi"
+        }
+      },
+      {
+        "name": "buildingName",
+        "iri": "https://datamodels.jp/ns/common/buildingName",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "建物名・部屋番号など、号より下の表記",
+          "en": "Building name, room number and anything below go"
+        }
+      },
+      {
+        "name": "residentialIndication",
+        "iri": "https://datamodels.jp/ns/common/residentialIndication",
+        "type": "boolean",
+        "required": false,
+        "description": {
+          "ja": "住居表示実施区域なら true（banchi/go は街区符号/住居番号）、地番なら false",
+          "en": "true in a residential-indication area (banchi/go are block and residence numbers), false for lot numbers (地番)"
+        }
+      },
+      {
+        "name": "jisPrefectureCode",
+        "iri": "https://datamodels.jp/ns/common/jisPrefectureCode",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "都道府県コード（JIS X 0401、2桁）",
+          "en": "Prefecture code (JIS X 0401, 2 digits)"
+        }
+      },
+      {
+        "name": "jisMunicipalityCode",
+        "iri": "https://datamodels.jp/ns/common/jisMunicipalityCode",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "市区町村コード（JIS X 0402、都道府県コードを含む5桁）",
+          "en": "Municipality code (JIS X 0402, 5 digits including the prefecture code)"
+        }
+      },
+      {
+        "name": "localGovernmentCode",
+        "iri": "https://datamodels.jp/ns/common/localGovernmentCode",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "全国地方公共団体コード（JIS X 0402 の5桁 + 検査数字1桁）",
+          "en": "Local government code (全国地方公共団体コード: JIS X 0402 plus a check digit, 6 digits)"
+        }
+      },
+      {
+        "name": "abrMachiazaId",
+        "iri": "https://datamodels.jp/ns/common/abrMachiazaId",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "アドレス・ベース・レジストリの町字ID（7桁）。全国地方公共団体コードと組み合わせて町字を一意に識別する",
+          "en": "Address Base Registry town id (町字ID, 7 digits). Unique together with localGovernmentCode"
+        }
+      },
+      {
+        "name": "addressText",
+        "iri": "https://datamodels.jp/ns/common/addressText",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "住所の全文（正規化済みの一行表記）。構造化フィールドが揃わない場合の受け皿でもある",
+          "en": "Full address as one normalised line. Also the fallback when structured fields are unavailable"
+        }
+      }
+    ]
+  },
+  {
+    "type": "Milestone",
+    "kind": "entity",
+    "typeIri": "https://datamodels.jp/ns/task/Milestone",
+    "subject": "task",
+    "domain": "task",
+    "source": "minted",
+    "contextUrl": "https://datamodels.jp/context/task/v1.0.0.jsonld",
+    "contextAliasUrl": "https://datamodels.jp/context/task/v1.jsonld",
+    "schemaUrl": "https://datamodels.jp/schema/task/Milestone/v1.0.0.json",
+    "vocabularyUrl": "https://datamodels.jp/vocab/task/v1.0.0.jsonld",
+    "version": "1.0.0",
+    "status": "draft",
+    "title": {
+      "ja": "マイルストーン",
+      "en": "Milestone"
+    },
+    "description": {
+      "ja": "プロジェクトの中でタスクをまとめる予定の目標。Redmine のバージョン、GitHub や GitLab のマイルストーン、Jira の修正バージョンなど。名前、期限、状態を持つ。",
+      "en": "A planned target that groups tasks within a project: a version in Redmine, a milestone in GitHub or GitLab, a fix version in Jira. It has a name, a due date and a state."
+    },
+    "sampleProperties": [
+      "name",
+      "description",
+      "project",
+      "start",
+      "due",
+      "milestoneStatus",
+      "source",
+      "externalId",
+      "dateCreated",
+      "dateModified"
+    ],
+    "pageUrl": "https://datamodels.jp/models/task/Milestone/",
+    "pageUrlEn": "https://datamodels.jp/en/models/task/Milestone/",
+    "exampleUrls": [
+      "https://datamodels.jp/examples/task/Milestone/example-normalized.jsonld",
+      "https://datamodels.jp/examples/task/Milestone/example.json"
+    ],
+    "mappingUrls": [
+      "https://datamodels.jp/mapping/task/Milestone/github.yaml",
+      "https://datamodels.jp/mapping/task/Milestone/redmine.yaml"
+    ],
+    "mappings": [
+      {
+        "url": "https://datamodels.jp/mapping/task/Milestone/github.yaml",
+        "standard": {
+          "ja": "GitHub のマイルストーン",
+          "en": "GitHub milestone"
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/task/Milestone/redmine.yaml",
+        "standard": {
+          "ja": "Redmine のバージョン",
+          "en": "Redmine version"
+        }
+      }
+    ],
+    "attributes": [
+      {
+        "name": "name",
+        "iri": "https://uri.etsi.org/ngsi-ld/name",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": true,
+        "description": {
+          "ja": "名称",
+          "en": "Name"
+        }
+      },
+      {
+        "name": "description",
+        "iri": "http://purl.org/dc/terms/description",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "説明",
+          "en": "Description"
+        }
+      },
+      {
+        "name": "project",
+        "iri": "https://datamodels.jp/ns/task/project",
+        "ngsiType": "Relationship",
+        "type": "string",
+        "format": "uri",
+        "target": "https://datamodels.jp/ns/task/Project",
+        "required": false,
+        "description": {
+          "ja": "所属プロジェクト",
+          "en": "The project this belongs to"
+        }
+      },
+      {
+        "name": "start",
+        "iri": "https://datamodels.jp/ns/task/start",
+        "ngsiType": "Property",
+        "type": "string",
+        "formats": [
+          "date",
+          "date-time"
+        ],
+        "required": false,
+        "description": {
+          "ja": "予定期間の開始。日付、または日時",
+          "en": "Planned start: a date, or a date and time"
+        }
+      },
+      {
+        "name": "due",
+        "iri": "https://datamodels.jp/ns/task/due",
+        "ngsiType": "Property",
+        "type": "string",
+        "formats": [
+          "date",
+          "date-time"
+        ],
+        "required": false,
+        "description": {
+          "ja": "期限（予定したリリース・完了）。日付、または日時",
+          "en": "Due: the planned release or completion, a date or a date and time"
+        }
+      },
+      {
+        "name": "milestoneStatus",
+        "iri": "https://datamodels.jp/ns/task/milestoneStatus",
+        "ngsiType": "Property",
+        "type": "string",
+        "enum": [
+          "open",
+          "locked",
+          "closed"
+        ],
+        "required": false,
+        "description": {
+          "ja": "状態。open=受付中、locked=ロック中（新しいタスクを追加できない）、closed=完了。core context の status は予約語のため milestoneStatus",
+          "en": "State: open = accepting tasks, locked = no new tasks may be added, closed = done; status is protected in the core context, hence milestoneStatus"
+        }
+      },
+      {
+        "name": "source",
+        "iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/source",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "uri",
+        "required": false,
+        "description": {
+          "ja": "元システムにおけるこのオブジェクトの URL",
+          "en": "URL of this object in the system of record"
+        }
+      },
+      {
+        "name": "externalId",
+        "iri": "https://datamodels.jp/ns/task/externalId",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "元システムにおける識別子",
+          "en": "Identifier in the system of record"
+        }
+      },
+      {
+        "name": "dateCreated",
+        "iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateCreated",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "date-time",
+        "required": false,
+        "description": {
+          "ja": "元システムでの作成日時（ブローカーの createdAt とは別）",
+          "en": "Creation time in the system of record (distinct from the broker attribute createdAt)"
+        }
+      },
+      {
+        "name": "dateModified",
+        "iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateModified",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "date-time",
+        "required": false,
+        "description": {
+          "ja": "元システムでの更新日時",
+          "en": "Last modification time in the system of record"
+        }
+      }
+    ],
+    "adapters": {
+      "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Milestone.json"
+    }
+  },
+  {
+    "type": "Project",
+    "kind": "entity",
+    "typeIri": "https://datamodels.jp/ns/task/Project",
+    "subject": "task",
+    "domain": "task",
+    "source": "minted",
+    "contextUrl": "https://datamodels.jp/context/task/v1.0.0.jsonld",
+    "contextAliasUrl": "https://datamodels.jp/context/task/v1.jsonld",
+    "schemaUrl": "https://datamodels.jp/schema/task/Project/v1.0.0.json",
+    "vocabularyUrl": "https://datamodels.jp/vocab/task/v1.0.0.jsonld",
+    "version": "1.0.0",
+    "status": "draft",
+    "title": {
+      "ja": "プロジェクト",
+      "en": "Project"
+    },
+    "description": {
+      "ja": "タスクをまとめる単位。案件、災害対応の 1 オペレーション、キャンペーンなど、名前は用途によって変わっても共通の属性を持つ。",
+      "en": "A grouping of tasks: a project in a tracker, one disaster-response operation, a campaign. Called differently in different settings, with the same common attributes."
+    },
+    "sampleProperties": [
+      "name",
+      "description",
+      "identifier",
+      "parent",
+      "projectStatus",
+      "isPublic",
+      "homepage",
+      "start",
+      "end",
+      "location",
+      "keywords",
+      "source",
+      "externalId",
+      "dateCreated",
+      "dateModified"
+    ],
+    "pageUrl": "https://datamodels.jp/models/task/Project/",
+    "pageUrlEn": "https://datamodels.jp/en/models/task/Project/",
+    "exampleUrls": [
+      "https://datamodels.jp/examples/task/Project/example-normalized.jsonld",
+      "https://datamodels.jp/examples/task/Project/example.json"
+    ],
+    "mappingUrls": [
+      "https://datamodels.jp/mapping/task/Project/github.yaml",
+      "https://datamodels.jp/mapping/task/Project/redmine.yaml"
+    ],
+    "mappings": [
+      {
+        "url": "https://datamodels.jp/mapping/task/Project/github.yaml",
+        "standard": {
+          "ja": "GitHub リポジトリ",
+          "en": "GitHub repository"
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/task/Project/redmine.yaml",
+        "standard": {
+          "ja": "Redmine のプロジェクト",
+          "en": "Redmine project"
+        }
+      }
+    ],
+    "attributes": [
+      {
+        "name": "name",
+        "iri": "https://uri.etsi.org/ngsi-ld/name",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": true,
+        "description": {
+          "ja": "名称・件名",
+          "en": "Name or subject"
+        }
+      },
+      {
+        "name": "description",
+        "iri": "http://purl.org/dc/terms/description",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "説明",
+          "en": "Description"
+        }
+      },
+      {
+        "name": "identifier",
+        "iri": "https://schema.org/identifier",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "短い識別子（スラッグやコード。元システム内で一意）",
+          "en": "Short handle: a slug or code, unique within the source system"
+        }
+      },
+      {
+        "name": "parent",
+        "iri": "https://datamodels.jp/ns/task/parent",
+        "ngsiType": "Relationship",
+        "type": "string",
+        "format": "uri",
+        "target": "https://datamodels.jp/ns/task/Project",
+        "required": false,
+        "description": {
+          "ja": "親プロジェクト",
+          "en": "Parent project"
+        }
+      },
+      {
+        "name": "projectStatus",
+        "iri": "https://datamodels.jp/ns/task/projectStatus",
+        "ngsiType": "Property",
+        "type": "string",
+        "enum": [
+          "active",
+          "closed",
+          "archived"
+        ],
+        "required": false,
+        "description": {
+          "ja": "状態。active=進行中、closed=終了、archived=アーカイブ済み（使わなくなったが残している）。core context の status は予約語のため projectStatus",
+          "en": "State: active = in progress, closed = finished, archived = no longer used but kept; status is protected in the core context, hence projectStatus"
+        }
+      },
+      {
+        "name": "isPublic",
+        "iri": "https://datamodels.jp/ns/task/isPublic",
+        "ngsiType": "Property",
+        "type": "boolean",
+        "required": false,
+        "description": {
+          "ja": "公開プロジェクトなら true",
+          "en": "true when public"
+        }
+      },
+      {
+        "name": "homepage",
+        "iri": "https://schema.org/url",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "uri",
+        "required": false,
+        "description": {
+          "ja": "ホームページ",
+          "en": "Homepage"
+        }
+      },
+      {
+        "name": "start",
+        "iri": "https://datamodels.jp/ns/task/start",
+        "ngsiType": "Property",
+        "type": "string",
+        "formats": [
+          "date",
+          "date-time"
+        ],
+        "required": false,
+        "description": {
+          "ja": "予定期間の開始。日付、または日時",
+          "en": "Planned start: a date, or a date and time"
+        }
+      },
+      {
+        "name": "end",
+        "iri": "https://datamodels.jp/ns/task/end",
+        "ngsiType": "Property",
+        "type": "string",
+        "formats": [
+          "date",
+          "date-time"
+        ],
+        "required": false,
+        "description": {
+          "ja": "予定期間の終了。日付、または日時",
+          "en": "Planned end: a date, or a date and time"
+        }
+      },
+      {
+        "name": "location",
+        "iri": "https://uri.etsi.org/ngsi-ld/location",
+        "ngsiType": "GeoProperty",
+        "type": "object",
+        "valueModel": "https://datamodels.jp/ns/common/Geometry",
+        "required": false,
+        "description": {
+          "ja": "位置。点・線・面・それらの集合など任意の GeoJSON ジオメトリ",
+          "en": "Location as any GeoJSON geometry: point, line, polygon or a collection"
+        }
+      },
+      {
+        "name": "keywords",
+        "iri": "https://schema.org/keywords",
+        "ngsiType": "Property",
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "required": false,
+        "description": {
+          "ja": "キーワード・ラベル",
+          "en": "Keywords or labels"
+        }
+      },
+      {
+        "name": "source",
+        "iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/source",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "uri",
+        "required": false,
+        "description": {
+          "ja": "元システムにおけるこのオブジェクトの URL",
+          "en": "URL of this object in the system of record"
+        }
+      },
+      {
+        "name": "externalId",
+        "iri": "https://datamodels.jp/ns/task/externalId",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "元システムにおける識別子",
+          "en": "Identifier in the system of record"
+        }
+      },
+      {
+        "name": "dateCreated",
+        "iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateCreated",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "date-time",
+        "required": false,
+        "description": {
+          "ja": "元システムでの作成日時（ブローカーの createdAt とは別）",
+          "en": "Creation time in the system of record (distinct from the broker attribute createdAt)"
+        }
+      },
+      {
+        "name": "dateModified",
+        "iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateModified",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "date-time",
+        "required": false,
+        "description": {
+          "ja": "元システムでの更新日時",
+          "en": "Last modification time in the system of record"
+        }
+      }
+    ],
+    "adapters": {
+      "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Project.json"
+    }
+  },
+  {
+    "type": "Task",
+    "kind": "entity",
+    "typeIri": "https://datamodels.jp/ns/task/Task",
+    "subject": "task",
+    "domain": "task",
+    "source": "minted",
+    "contextUrl": "https://datamodels.jp/context/task/v1.0.0.jsonld",
+    "contextAliasUrl": "https://datamodels.jp/context/task/v1.jsonld",
+    "schemaUrl": "https://datamodels.jp/schema/task/Task/v1.0.0.json",
+    "vocabularyUrl": "https://datamodels.jp/vocab/task/v1.0.0.jsonld",
+    "version": "1.0.0",
+    "status": "draft",
+    "title": {
+      "ja": "タスク",
+      "en": "Task"
+    },
+    "description": {
+      "ja": "追跡される作業単位。課題管理システムの「チケット」「Issue」、カレンダーの ToDo、自治体の作業指示など。状態と優先度の値域は RFC 8984（JSCalendar）に合わせ、元システム固有の状態名や種別は statusLabel と subtype に保持する。位置は任意のジオメトリ。",
+      "en": "A tracked unit of work: a ticket or issue in a tracker, a calendar to-do, a municipal work order. State and priority follow RFC 8984 (JSCalendar); the source system's own status name and kind are kept in statusLabel and subtype. Location may be any geometry."
+    },
+    "sampleProperties": [
+      "name",
+      "description",
+      "project",
+      "milestone",
+      "parent",
+      "relatedTo",
+      "refersTo",
+      "progress",
+      "statusLabel",
+      "subtype",
+      "priority",
+      "assignee",
+      "author",
+      "start",
+      "due",
+      "completedAt",
+      "estimatedDuration",
+      "percentComplete",
+      "keywords",
+      "location",
+      "spatialId",
+      "isPrivate",
+      "source",
+      "externalId",
+      "dateCreated",
+      "dateModified"
+    ],
+    "pageUrl": "https://datamodels.jp/models/task/Task/",
+    "pageUrlEn": "https://datamodels.jp/en/models/task/Task/",
+    "exampleUrls": [
+      "https://datamodels.jp/examples/task/Task/example-normalized.jsonld",
+      "https://datamodels.jp/examples/task/Task/example.json"
+    ],
+    "mappingUrls": [
+      "https://datamodels.jp/mapping/task/Task/github-issues.yaml",
+      "https://datamodels.jp/mapping/task/Task/iudx-issuereporting.yaml",
+      "https://datamodels.jp/mapping/task/Task/jscalendar.yaml",
+      "https://datamodels.jp/mapping/task/Task/open311.yaml",
+      "https://datamodels.jp/mapping/task/Task/redmine.yaml"
+    ],
+    "mappings": [
+      {
+        "url": "https://datamodels.jp/mapping/task/Task/github-issues.yaml",
+        "standard": {
+          "ja": "GitHub Issues（REST API）",
+          "en": "GitHub Issues (REST API)"
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/task/Task/iudx-issuereporting.yaml",
+        "standard": {
+          "ja": "IssueReporting（Smart Data Models dataModel.IssueTracking、IUDX 由来）",
+          "en": "IssueReporting (Smart Data Models dataModel.IssueTracking, from IUDX)"
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/task/Task/jscalendar.yaml",
+        "standard": {
+          "ja": "JSCalendar Task（RFC 8984）",
+          "en": "JSCalendar Task (RFC 8984)"
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/task/Task/open311.yaml",
+        "standard": {
+          "ja": "Open311 GeoReport v2 service_requests（Smart Data Models dataModel.IssueTracking）",
+          "en": "Open311 GeoReport v2 service_requests (Smart Data Models dataModel.IssueTracking)"
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/task/Task/redmine.yaml",
+        "standard": {
+          "ja": "Redmine の Issue（redmine_gtt_fiware の出力を含む）",
+          "en": "Redmine issue (including redmine_gtt_fiware output)"
+        }
+      }
+    ],
+    "attributes": [
+      {
+        "name": "name",
+        "iri": "https://uri.etsi.org/ngsi-ld/name",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": true,
+        "description": {
+          "ja": "名称・件名",
+          "en": "Name or subject"
+        }
+      },
+      {
+        "name": "description",
+        "iri": "http://purl.org/dc/terms/description",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "説明",
+          "en": "Description"
+        }
+      },
+      {
+        "name": "project",
+        "iri": "https://datamodels.jp/ns/task/project",
+        "ngsiType": "Relationship",
+        "type": "string",
+        "format": "uri",
+        "target": "https://datamodels.jp/ns/task/Project",
+        "required": false,
+        "description": {
+          "ja": "所属プロジェクト（元システムにプロジェクトの概念がある場合）",
+          "en": "The project this belongs to, when the source system has projects"
+        }
+      },
+      {
+        "name": "milestone",
+        "iri": "https://datamodels.jp/ns/task/milestone",
+        "ngsiType": "Relationship",
+        "type": "string",
+        "format": "uri",
+        "target": "https://datamodels.jp/ns/task/Milestone",
+        "required": false,
+        "description": {
+          "ja": "予定しているマイルストーン（バージョン、リリース）",
+          "en": "The milestone (version, release) this is planned for"
+        }
+      },
+      {
+        "name": "parent",
+        "iri": "https://datamodels.jp/ns/task/parent",
+        "ngsiType": "Relationship",
+        "type": "string",
+        "format": "uri",
+        "target": "https://datamodels.jp/ns/task/Task",
+        "required": false,
+        "description": {
+          "ja": "親タスク（RFC 8984 relatedTo parent）",
+          "en": "Parent task (RFC 8984 relatedTo parent)"
+        }
+      },
+      {
+        "name": "relatedTo",
+        "iri": "https://datamodels.jp/ns/task/relatedTo",
+        "ngsiType": "Relationship",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uri"
+        },
+        "target": "https://datamodels.jp/ns/task/Task",
+        "multi": true,
+        "required": false,
+        "description": {
+          "ja": "関連するタスク（key-values 形式では対象が 1 つでも配列）。関係の種類（blocks, precedes, duplicates など）は拡張で表す",
+          "en": "Related tasks. Always an array in the key-values form, even with one target. The kind of relation (blocks, precedes, duplicates) is left to extensions"
+        }
+      },
+      {
+        "name": "refersTo",
+        "iri": "https://datamodels.jp/ns/task/refersTo",
+        "ngsiType": "Relationship",
+        "type": "string",
+        "format": "uri",
+        "target": "any",
+        "required": false,
+        "description": {
+          "ja": "このタスクが対象とするエンティティ（通報、設備、道路など）",
+          "en": "The entity this task is about (a report, an asset, a road)"
+        }
+      },
+      {
+        "name": "progress",
+        "iri": "https://datamodels.jp/ns/task/progress",
+        "ngsiType": "Property",
+        "type": "string",
+        "enum": [
+          "needs-action",
+          "in-process",
+          "completed",
+          "failed",
+          "cancelled"
+        ],
+        "required": false,
+        "description": {
+          "ja": "正規化した進行状態（RFC 8984 progress）。needs-action=未着手、in-process=対応中、completed=完了、failed=失敗、cancelled=取消。値域に合う値がないときは省き、statusLabel に元の呼び方を書く。",
+          "en": "Normalised state (RFC 8984 progress): needs-action = not started, in-process = in progress, completed = done, failed = failed, cancelled = cancelled. When no value fits, leave it out and give the local wording in statusLabel."
+        }
+      },
+      {
+        "name": "statusLabel",
+        "iri": "https://datamodels.jp/ns/task/statusLabel",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "元システムの状態名そのまま（「対応中」「解決」など）。progress を省いたときは必須",
+          "en": "The source system's own status name, unchanged (for example \"In progress\", \"Resolved\"). Required when progress is left out"
+        }
+      },
+      {
+        "name": "subtype",
+        "iri": "https://datamodels.jp/ns/task/subtype",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "元システムの種別（トラッカー、Issue タイプ、カテゴリなど）",
+          "en": "The source system's kind, for example a tracker, an issue type or a category"
+        }
+      },
+      {
+        "name": "priority",
+        "iri": "https://datamodels.jp/ns/task/priority",
+        "ngsiType": "Property",
+        "type": "integer",
+        "required": false,
+        "description": {
+          "ja": "優先度 0〜9。1 が最高、9 が最低、0 は未定義（RFC 8984）",
+          "en": "Priority 0 to 9: 1 highest, 9 lowest, 0 undefined (RFC 8984)"
+        }
+      },
+      {
+        "name": "assignee",
+        "iri": "https://datamodels.jp/ns/task/assignee",
+        "ngsiType": "Relationship",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uri"
+        },
+        "target": "agent",
+        "multi": true,
+        "required": false,
+        "description": {
+          "ja": "担当者・担当チーム（人・組織・チームのエンティティ。このサブジェクト外の URN でもよい）。key-values 形式では対象が 1 つでも配列",
+          "en": "Assignees: person, organisation or team entities, possibly outside this subject. Always an array in the key-values form, even with one target"
+        }
+      },
+      {
+        "name": "author",
+        "iri": "https://schema.org/author",
+        "ngsiType": "Relationship",
+        "type": "string",
+        "format": "uri",
+        "target": "agent",
+        "required": false,
+        "description": {
+          "ja": "作成者（人・組織・チームのエンティティ）",
+          "en": "Creator (a person, organisation or team entity)"
+        }
+      },
+      {
+        "name": "start",
+        "iri": "https://datamodels.jp/ns/task/start",
+        "ngsiType": "Property",
+        "type": "string",
+        "formats": [
+          "date",
+          "date-time"
+        ],
+        "required": false,
+        "description": {
+          "ja": "開始の予定。日付、または日時（RFC 8984 start）",
+          "en": "Planned start: a date, or a date and time (RFC 8984 start)"
+        }
+      },
+      {
+        "name": "due",
+        "iri": "https://datamodels.jp/ns/task/due",
+        "ngsiType": "Property",
+        "type": "string",
+        "formats": [
+          "date",
+          "date-time"
+        ],
+        "required": false,
+        "description": {
+          "ja": "期限。日付、または日時（RFC 8984 due）",
+          "en": "Due: a date, or a date and time (RFC 8984 due)"
+        }
+      },
+      {
+        "name": "completedAt",
+        "iri": "https://datamodels.jp/ns/task/completedAt",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "date-time",
+        "required": false,
+        "description": {
+          "ja": "progress が completed になった日時",
+          "en": "When progress became completed"
+        }
+      },
+      {
+        "name": "estimatedDuration",
+        "iri": "https://datamodels.jp/ns/task/estimatedDuration",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "見積時間。ISO 8601 期間（例: PT1H30M）（RFC 8984 estimatedDuration）",
+          "en": "Estimated effort as an ISO 8601 duration, e.g. PT1H30M (RFC 8984 estimatedDuration)"
+        }
+      },
+      {
+        "name": "percentComplete",
+        "iri": "https://datamodels.jp/ns/task/percentComplete",
+        "ngsiType": "Property",
+        "type": "integer",
+        "required": false,
+        "description": {
+          "ja": "進捗率 0〜100（RFC 8984 percentComplete）",
+          "en": "Completion 0 to 100 (RFC 8984 percentComplete)"
+        }
+      },
+      {
+        "name": "keywords",
+        "iri": "https://schema.org/keywords",
+        "ngsiType": "Property",
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "required": false,
+        "description": {
+          "ja": "キーワード・ラベル",
+          "en": "Keywords or labels"
+        }
+      },
+      {
+        "name": "location",
+        "iri": "https://uri.etsi.org/ngsi-ld/location",
+        "ngsiType": "GeoProperty",
+        "type": "object",
+        "valueModel": "https://datamodels.jp/ns/common/Geometry",
+        "required": false,
+        "description": {
+          "ja": "位置。点・線・面・それらの集合など任意の GeoJSON ジオメトリ",
+          "en": "Location as any GeoJSON geometry: point, line, polygon or a collection"
+        }
+      },
+      {
+        "name": "spatialId",
+        "iri": "https://datamodels.jp/ns/task/spatialId",
+        "ngsiType": "Property",
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "required": false,
+        "description": {
+          "ja": "タスクの範囲を覆う空間ID（ZFXY）。任意",
+          "en": "Spatial IDs (ZFXY) covering the task. Optional"
+        }
+      },
+      {
+        "name": "isPrivate",
+        "iri": "https://datamodels.jp/ns/task/isPrivate",
+        "ngsiType": "Property",
+        "type": "boolean",
+        "required": false,
+        "description": {
+          "ja": "非公開なら true。既定は false",
+          "en": "true when private; default false"
+        }
+      },
+      {
+        "name": "source",
+        "iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/source",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "uri",
+        "required": false,
+        "description": {
+          "ja": "元システムにおけるこのオブジェクトの URL",
+          "en": "URL of this object in the system of record"
+        }
+      },
+      {
+        "name": "externalId",
+        "iri": "https://datamodels.jp/ns/task/externalId",
+        "ngsiType": "Property",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "元システムにおける識別子",
+          "en": "Identifier in the system of record"
+        }
+      },
+      {
+        "name": "dateCreated",
+        "iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateCreated",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "date-time",
+        "required": false,
+        "description": {
+          "ja": "元システムでの作成日時（ブローカーの createdAt とは別）",
+          "en": "Creation time in the system of record (distinct from the broker attribute createdAt)"
+        }
+      },
+      {
+        "name": "dateModified",
+        "iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateModified",
+        "ngsiType": "Property",
+        "type": "string",
+        "format": "date-time",
+        "required": false,
+        "description": {
+          "ja": "元システムでの更新日時",
+          "en": "Last modification time in the system of record"
+        }
+      }
+    ],
+    "extensions": [
+      {
+        "id": "gtt-project",
+        "organization": {
+          "ja": "GTT プロジェクト",
+          "en": "GTT Project"
+        },
+        "url": "https://gtt-project.org/ns/fiware.html#task-profile",
+        "version": "1.0.0",
+        "contextUrl": "https://gtt-project.org/ns/fiware-task.jsonld",
+        "terms": [
+          {
+            "name": "category",
+            "iri": "https://gtt-project.org/ns/fiware#category",
+            "description": {
+              "ja": "課題のカテゴリー名",
+              "en": "The issue category name"
+            }
+          }
+        ],
+        "since": "2026-10"
+      }
+    ],
+    "adapters": {
+      "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Task.json"
+    }
+  }
+]

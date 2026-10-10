@@ -1,0 +1,17 @@
+{
+  "addressCountry": "JP",
+  "postalCode": "102-8688",
+  "addressRegion": "東京都",
+  "addressLocality": "千代田区",
+  "machiaza": "九段南",
+  "chome": "1",
+  "banchi": "2",
+  "go": "1",
+  "buildingName": "千代田区役所",
+  "residentialIndication": true,
+  "jisPrefectureCode": "13",
+  "jisMunicipalityCode": "13101",
+  "localGovernmentCode": "131016",
+  "abrMachiazaId": "0008001",
+  "addressText": "東京都千代田区九段南1丁目2番1号"
+}

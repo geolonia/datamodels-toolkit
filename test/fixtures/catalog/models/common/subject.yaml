@@ -1,0 +1,14 @@
+# Shared building blocks used by other subjects. One context, versioned.
+name: common
+version: 1.0.0
+title:
+  ja: 共通
+  en: Common
+# One line for the subject card on the model list.
+summary:
+  ja: 住所やジオメトリなど、他の分野が使う共通の値
+  en: "Values that other subjects share, such as addresses and geometries"
+description:
+  ja: 他のサブジェクトが属性の値として使う共通の部品（住所、ジオメトリなど）。単独のエンティティではなく、属性の値の中で使う値型です。
+  en: "Building blocks that other subjects use as attribute values, such as addresses and geometries. They are value types: used inside an attribute, not as entities of their own."
+source: minted

@@ -1,0 +1,17 @@
+standard:
+  name: { ja: "IssueReporting（Smart Data Models dataModel.IssueTracking、IUDX 由来）", en: "IssueReporting (Smart Data Models dataModel.IssueTracking, from IUDX)" }
+  url: https://github.com/smart-data-models/dataModel.IssueTracking/tree/master/IssueReporting
+  note:
+    ja: インドの市民苦情記録（区・部局・ランドマーク）。相互運用のための対応表であり、採用ではない。
+    en: An Indian citizen grievance record (ward, department, landmark). A correspondence for interoperability, not an adoption.
+fields:
+  name: { to: "title" }
+  description: { to: null }
+  subtype: { to: "category / subCategory" }
+  progress: { to: "resolutionStatus", note: { ja: 値は実装依存。resolved → completed, en: values are deployment-specific; resolved → completed } }
+  statusLabel: { to: "resolutionStatus" }
+  assignee: { to: "departmentId", note: { ja: "部局の識別子。エンティティ参照ではない", en: "a department identifier, not an entity reference" } }
+  start: { to: "observationDateTime" }
+  location: { to: "location", note: { ja: landmark と wardId は拡張, en: landmark and wardId are extensions } }
+  externalId: { to: "reportId" }
+  keywords: { to: null }

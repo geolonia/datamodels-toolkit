@@ -1,0 +1,30 @@
+# Correspondence between JapaneseAddress and the official Japanese address
+# model: the Digital Agency's GIF core data model 住所 (Address), as defined in
+# GIF_Core_DataModel.xsd (group Address_uniqueElementGroup).
+standard:
+  name:
+    ja: デジタル庁 GIF コアデータモデル「住所」
+    en: Digital Agency GIF core data model "Address"
+  url: https://github.com/digital-go-jp/GIF/tree/main/430_%E3%82%B3%E3%82%A2%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB
+  license:
+    ja: "スキーマは CC BY 4.0、リポジトリは CC0 1.0"
+    en: "CC BY 4.0 (schema), CC0 1.0 (repository)"
+  note:
+    ja: GIF の住所は町字（streetAddress）に丁目を含め、番地以下を cityBlock ひとつにまとめる。JapaneseAddress は丁目・番地・号を分けて持つため、GIF へ変換するときは連結する。
+    en: GIF keeps chome inside streetAddress (町字) and folds everything below into a single cityBlock. JapaneseAddress keeps chome, banchi and go apart, so a conversion to GIF concatenates them.
+fields:
+  addressCountry: { to: country, note: { ja: GIF は国コードリスト（CountryRegionCodeList）。JP に対応, en: GIF uses a country code list; JP corresponds } }
+  postalCode: { to: postalCode }
+  addressRegion: { to: prefecture }
+  addressLocality: { to: cityAndCounty, note: { ja: 郡名・政令市の区名を含む点は同じ, en: both include county and designated-city ward names } }
+  machiaza: { to: streetAddress, note: { ja: GIF の町字は丁目を含む。machiaza + chome に対応, en: GIF streetAddress includes chome; corresponds to machiaza + chome } }
+  chome: { to: streetAddress, note: { ja: "上記のとおり町字に含まれる", en: "included in streetAddress, see above" } }
+  banchi: { to: cityBlock, note: { ja: GIF は番地以下（街区符号・住居番号または地番）をひとつの項目にまとめる。banchi + go に対応, en: GIF folds everything below the town into one field; corresponds to banchi + go } }
+  go: { to: cityBlock }
+  buildingName: { to: buildingNameEtc }
+  addressText: { to: fullAddress }
+  localGovernmentCode: { to: localGovernmentCode }
+  abrMachiazaId: { to: streetAddressId, note: { ja: どちらもアドレス・ベース・レジストリの町字ID, en: both are the Address Base Registry town id } }
+  jisPrefectureCode: { to: null, note: { ja: GIF には無い。localGovernmentCode の先頭2桁から導ける, en: not in GIF; derivable from the first two digits of localGovernmentCode } }
+  jisMunicipalityCode: { to: null, note: { ja: GIF には無い。localGovernmentCode の先頭5桁から導ける, en: not in GIF; the first five digits of localGovernmentCode } }
+  residentialIndication: { to: null, note: { ja: GIF には無い, en: not in GIF } }
