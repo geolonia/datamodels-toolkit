@@ -116,8 +116,8 @@ A data model node: JSON Schemas, JSON-LD @contexts and vocabularies at ${node.ba
 - \`.github/workflows/publish.yml\`: checks pull requests, and publishes main to GitHub Pages.
 
 \`\`\`bash
-npx github:geolonia/datamodels-toolkit check
-npx github:geolonia/datamodels-toolkit build   # into _site/
+npx github:geolonia/datamodels-toolkit#${ACTION_VERSION} check
+npx github:geolonia/datamodels-toolkit#${ACTION_VERSION} build   # into _site/
 \`\`\`
 `;
 }

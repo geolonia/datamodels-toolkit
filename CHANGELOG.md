@@ -7,6 +7,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 ### Changed
 
 - `datamodels init` writes a workflow that pins the Action to the v0.1.0 release (its commit SHA, with the tag as a comment), instead of `main`. Dependabot can then propose newer releases.
+- The README that `datamodels init` writes runs the same release with `npx` (`#v0.1.0`), instead of the latest commit.
 
 ## [0.1.0] - 2026-10-10
 
