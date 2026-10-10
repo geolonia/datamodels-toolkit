@@ -91,6 +91,14 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   assert.match(model, /<h3 id="route">route<\/h3>/);
   assert.match(model, /<dt>Extends<\/dt><dd><a href="https:\/\/datamodels\.jp\/ns\/task\/Task">/);
   assert.match(model, /<title>RoadPatrol: data models by Example Inc\.<\/title>/);
+  // The anchor follows the IRI, not the attribute's name.
+  const sf = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const sj = JSON.parse(await readFile(sf, 'utf8'));
+  sj.properties.route['x-iri'] = `${BASE}/ns/road#lane`;
+  await writeFile(sf, JSON.stringify(sj));
+  await buildNode(dir);
+  const renamed = await read('ns/road.html');
+  assert.ok(renamed.includes('id="lane"') && !renamed.includes('id="route"'), 'the anchor of route is lane');
   // Only http(s) URLs from the sources become links.
   const schemaFile = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
   await writeFile(schemaFile, JSON.stringify({ ...JSON.parse(await readFile(schemaFile, 'utf8')), 'x-subclass-of': 'javascript:alert(1)' }));

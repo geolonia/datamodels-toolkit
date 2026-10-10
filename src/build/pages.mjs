@@ -33,15 +33,17 @@ export function pageData(subjects, { urls, node }) {
     const su = urls.subjectUrls(subject);
     const terms = [];
     const minted = new Set();
+    // The anchor of a term is the end of its IRI (after the namespace), which may differ from the attribute's name.
+    const anchor = (iri, name) => (iri.startsWith(su.namespace) ? iri.slice(su.namespace.length) : name);
     const subjectModels = subject.models.map((model) => {
       const mu = urls.modelUrls(subject, model);
-      if (!model.schema['x-alias-of']) terms.push({ name: model.type, kind: 'type', iri: mu.typeIri, page: mu.page, model: model.type, texts: texts(model.catalog.title, languages) });
+      if (!model.schema['x-alias-of']) terms.push({ name: model.type, anchor: anchor(mu.typeIri, model.type), kind: 'type', iri: mu.typeIri, page: mu.page, model: model.type, texts: texts(model.catalog.title, languages) });
       const required = new Set(model.schema.required ?? []);
       const attributes = attributesOf(model).map(([name, prop]) => {
         const iri = prop['x-iri'] ?? '';
-        if (iri.startsWith(su.namespace) && !minted.has(name)) {
-          minted.add(name);
-          terms.push({ name, kind: 'attribute', iri, page: `${mu.page}#${name}`, model: model.type, texts: texts(model.catalog.attributes?.[name], languages) });
+        if (iri.startsWith(su.namespace) && !minted.has(iri)) {
+          minted.add(iri);
+          terms.push({ name, anchor: anchor(iri, name), kind: 'attribute', iri, page: `${mu.page}#${name}`, model: model.type, texts: texts(model.catalog.attributes?.[name], languages) });
         }
         const type = prop.$ref || prop.allOf ? 'object' : prop.type ?? (prop.anyOf ? prop.anyOf.map((a) => a.format ?? a.type).filter(Boolean).join(' or ') : '');
         return { name, iri, type: [type, prop.format].filter(Boolean).join(', '), required: required.has(name), texts: texts(model.catalog.attributes?.[name], languages) };
