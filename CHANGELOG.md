@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-11
+
+The tools for keeping and growing a data model node: `release` keeps a published version online, `extend` starts a model from another node's model, and `check` compares every type and attribute with the `@context`.
+
 ### Added
 
 - `datamodels extend <model> <subject>/<Type>`: starts a model from a model of another node, such as datamodels.jp's, as the same type with more attributes or as a subtype (`--subclass`). It copies the schema, imports the @context, records `extends` and lists the node in `node.yaml`. In a terminal it asks for the model (#13).
@@ -42,5 +46,6 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.1.0...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.2.0...main
+[0.2.0]: https://github.com/geolonia/datamodels-toolkit/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/geolonia/datamodels-toolkit/releases/tag/v0.1.0
