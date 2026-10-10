@@ -32,6 +32,11 @@
 // directory), never over an existing file. In a terminal it asks for what the
 // options do not give; elsewhere a missing answer is a usage error. With
 // --github owner/name it also creates the repository and turns on Pages.
+//
+//   datamodels add <subject>/<Type> [dir] [--value]
+//
+// add writes a new model into a subject of the node in dir: schema.json,
+// catalog.yaml, an example, and the type in the subject's @context.
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
@@ -43,11 +48,13 @@ import { checkNode } from '../src/build/check.mjs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { initSettings, writeNode, publishToGitHub } from '../src/init.mjs';
+import { addModel } from '../src/add.mjs';
 
 const USAGES = {
   convert: `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`,
   build: `usage: datamodels build [dir] [--out dir]`,
   check: `usage: datamodels check [dir] [--offline]`,
+  add: `usage: datamodels add <subject>/<Type> [dir] [--value]`,
   init: `usage: datamodels init [dir] [--base-url URL] [--iris hash|slash] [--languages en,ja] [--publisher name] [--publisher-url URL] [--license id] [--subject name] [--github owner/name] [--yes]`,
 };
 const USAGE = Object.values(USAGES).join('\n');
@@ -59,7 +66,7 @@ const fail = (msg) => { throw new Exit(1, msg); };
 
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
-function program({ onConvert, onBuild, onCheck, onInit }) {
+function program({ onConvert, onBuild, onCheck, onInit, onAdd }) {
   // An option's value: present, not empty (--out=) and not another option.
   const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
   const cli = new Command('datamodels')
@@ -107,6 +114,13 @@ function program({ onConvert, onBuild, onCheck, onInit }) {
     .option('--github <owner/name>', 'create the public repository with gh, or use the existing remote, and turn on GitHub Pages', value('--github'))
     .option('--yes', 'never ask: use the options and the defaults')
     .action(onInit);
+  cli.command('add')
+    .description("add a model to a subject of the node: schema.json, catalog.yaml, an example and the type in the subject's @context")
+    .usage(USAGES.add.replace('usage: datamodels add ', ''))
+    .argument('<subject/Type>', 'the new model, for example road/RoadPatrol')
+    .argument('[dir]', 'the node: node.yaml and models/', '.')
+    .option('--value', 'a value type (a structure used inside attributes, like an address) instead of an entity type')
+    .action(onAdd);
   return cli;
 }
 
@@ -133,6 +147,7 @@ async function main(args) {
     onBuild: async (dir, options) => { code = await build(dir, options); },
     onCheck: async (dir, options) => { code = await check(dir, options); },
     onInit: async (dir, options) => { code = await init(dir, options); },
+    onAdd: async (target, dir, options) => { code = await add(target, dir, options); },
   });
   // datamodels --help lists the commands; datamodels help build is commander's.
   if (args.length === 1 && ['--help', '-h', 'help'].includes(args[0])) { cli.outputHelp(); return 0; }
@@ -206,6 +221,16 @@ async function check(dir, { offline }) {
   for (const p of problems) console.error(p);
   console.error(`${dir}: ${problems.length ? `${problems.length} problem(s)` : 'ok'}`);
   return problems.length ? 1 : 0;
+}
+
+async function add(target, dir, { value }) {
+  let r;
+  try { r = await addModel(dir, target, { kind: value ? 'value' : 'entity' }); } catch (e) { fail(e.message); }
+  for (const f of r.added) console.error(`  added ${f}`);
+  for (const f of r.changed) console.error(`  changed ${f}`);
+  if (r.released) console.error(`  note: v${r.released} of this subject was released, so its files cannot change; give the subject a new version (subject.yaml) before you build`);
+  console.error(`${target}: ${r.typeIri}. Next: its attributes in schema.json (each with x-iri) and catalog.yaml, then datamodels check.`);
+  return 0;
 }
 
 async function init(dir, options) {

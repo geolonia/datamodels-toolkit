@@ -11,6 +11,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 - The pages of a node, written with [Eleventy](https://www.11ty.dev/): plain HTML, monospace, no JavaScript; a page per subject with an anchor per term (the namespace document with hash IRIs) and a page per model with an anchor per attribute (#12).
 - `datamodels check`: a node's schemas and examples, its release snapshots, its published versions online, and the terms of the models it extends (#12). `--offline` skips the network.
 - `datamodels init`: starts a node with every file it needs (no template repository), in a new folder or an existing repository without overwriting anything; asks with [@clack/prompts](https://github.com/bombshell-dev/clack) only in a terminal; `--github owner/name` creates the repository and turns on Pages with `gh` (#11).
+- `datamodels add <subject>/<Type>`: a new model in a node that builds and passes `check` at once; `--value` for a value type (#13).
 - A GitHub Action (`action.yml`): checks and builds a node and deploys it to GitHub Pages (#14). Tested in CI on `test/fixtures/node`.
 - Hash IRIs (`/ns/<subject>#<Term>`), the default for nodes; `extends` in a model's `catalog.yaml` goes into `catalog.json` (#12).
 - `datamodels --help` lists the commands; `datamodels <command> --help` explains each option (#6).
