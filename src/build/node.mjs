@@ -42,7 +42,7 @@ export async function readNode(dir) {
 
 /**
  * Build the node in `dir` into `out` (default `<dir>/_site`): the files of
- * publishCatalog() and llms.txt. Returns { node, catalog, exactPaths, redirects }.
+ * publishCatalog() and llms.txt. Returns { node, subjects, catalog, exactPaths, redirects }.
  */
 export async function buildNode(dir, { out = join(dir, '_site'), now } = {}) {
   const node = await readNode(dir);
