@@ -34,6 +34,10 @@ test('init writes a node that passes check and builds', async () => {
   // Pinned to a release: a commit SHA with the tag as a comment, as Dependabot expects.
   assert.match(workflow, /uses: geolonia\/datamodels-toolkit@[0-9a-f]{40} # v\d+\.\d+\.\d+\n/);
   assert.match(workflow, /pages: write\n {6}id-token: write/);
+  // The commands in the README run the same release as the workflow.
+  const readme = await readFile(join(dir, 'README.md'), 'utf8');
+  assert.match(readme, /npx github:geolonia\/datamodels-toolkit#v\d+\.\d+\.\d+ check\n/);
+  assert.doesNotMatch(readme, /datamodels-toolkit (check|build)/);
 });
 
 test('init in an existing repository adds what is missing and keeps every file', async () => {
