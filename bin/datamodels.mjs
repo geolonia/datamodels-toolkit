@@ -18,6 +18,15 @@ import { toNormalized } from '../src/ngsi.mjs';
 import { siteReader, loadTarget, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
 
 const USAGE = `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`;
+// --help adds one line per option, in the words of the README.
+const HELP = `${USAGE}
+
+  --set attribute=value  a value the list does not carry, such as GSI's municipality code
+  --normalized           NGSI-LD normalized form instead of key-values
+  --out file.json        write to a file (default: standard output)
+  --site URL|dir         where to read the catalog (default ${SITE}), or a directory laid out like the site
+
+More on each option, with examples: https://github.com/geolonia/datamodels-toolkit#readme`;
 // An error the command reports in one line and exits with. Nothing calls
 // process.exit(): it can cut off output still being written to a pipe.
 class Exit extends Error { constructor(code, message) { super(message); this.code = code; } }
@@ -26,8 +35,9 @@ const fail = (msg) => { throw new Exit(1, msg); };
 
 async function main(args) {
   const command = args.shift();
-  if (command === '--help' || command === '-h' || command === 'help') { console.log(USAGE); return 0; }
+  if (command === '--help' || command === '-h' || command === 'help') { console.log(HELP); return 0; }
   if (command !== 'convert') usage(command ? `unknown command ${command}` : 'missing command');
+  if (args.includes('--help') || args.includes('-h')) { console.log(HELP); return 0; }
 
   // An option's operand: present and not another option.
   const operand = (name, i) => { const v = args[i + 1]; if (v === undefined || v.startsWith('-')) usage(`${name} needs a value`); args.splice(i, 2); return v; };
