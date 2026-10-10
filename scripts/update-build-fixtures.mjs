@@ -50,7 +50,9 @@ for (const url of files) {
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, Buffer.from(await res.arrayBuffer()));
 }
-const catalog = await (await fetch(`${SITE}/catalog.json`)).json();
+const catalogRes = await fetch(`${SITE}/catalog.json`);
+if (!catalogRes.ok) throw new Error(`${SITE}/catalog.json: ${catalogRes.status}`);
+const catalog = await catalogRes.json();
 const models = catalog.models.filter((m) => SUBJECTS.includes(m.subject));
 await writeFile(join(out, 'expected', 'catalog-models.json'), JSON.stringify(models, null, 2) + '\n');
 console.log(`${SUBJECTS.length} subjects, ${files.size} files and ${models.length} catalog entries in ${out}`);
