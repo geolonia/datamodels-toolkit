@@ -3,7 +3,7 @@
 // and the type in the subject's @context. The short form of geolonia/datamodels'
 // scripts/new-model.mjs, in the node's languages and without the files only
 // the shared catalog needs (notes, ADOPTERS).
-import { mkdir, readFile, writeFile, stat, rename, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile, stat, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
 import { readNode } from './build/node.mjs';
@@ -66,7 +66,8 @@ ${YAML.stringify({ title: perLanguage(type), description: perLanguage(`One ${typ
   // All or nothing, so a failed run can simply be repeated: the model is written
   // into a folder beside models/ (where no build reads it), the context is
   // replaced in one step, and only then the model folder is moved into place.
-  const staging = join(dir, `.datamodels-add-${process.pid}-${type}`);
+  // A folder of its own (mkdtemp), so only what this run created is ever removed.
+  const staging = await mkdtemp(join(dir, '.datamodels-add-'));
   // A .tmp file that was there before is not ours: 'wx' refuses it, and only our own is removed.
   const replace = async (file, text) => {
     await writeFile(`${file}.tmp`, text, { flag: 'wx' });
@@ -78,12 +79,18 @@ ${YAML.stringify({ title: perLanguage(type), description: perLanguage(`One ${typ
     await writeFile(join(staging, 'schema.json'), json(schema), { flag: 'wx' });
     await writeFile(join(staging, 'catalog.yaml'), catalog, { flag: 'wx' });
     await writeFile(join(staging, 'examples', 'example.json'), json(example), { flag: 'wx' });
+    // Another run may have changed the context since it was read: stop rather than drop its change.
+    if (await readFile(contextFile, 'utf8') !== contextText) throw new Error(`${contextFile} changed while ${type} was being added; nothing was added, run add again`);
     await replace(contextFile, json(context));
     contextReplaced = true;
     await rename(staging, modelDir);
   } catch (e) {
     await rm(staging, { recursive: true, force: true });
-    if (contextReplaced) await replace(contextFile, contextText).catch(() => {});
+    if (contextReplaced) {
+      try { await replace(contextFile, contextText); } catch (restore) {
+        throw new Error(`${type} was not added (${e.message}), and ${contextFile} could not be restored (${restore.message}): remove "${type}" from it by hand, then run add again`, { cause: e });
+      }
+    }
     throw e;
   }
   const at = `models/${subjectName}`;

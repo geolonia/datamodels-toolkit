@@ -78,6 +78,20 @@ test('add leaves nothing behind when it fails, so it can be run again', async ()
   assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
 });
 
+test('two adds at once never leave a model without its context entry', async () => {
+  for (let round = 0; round < 5; round++) {
+    const dir = await node();
+    const results = await Promise.allSettled([addModel(dir, 'road/RoadPatrol'), addModel(dir, 'road/Segment', { kind: 'value' }), addModel(dir, 'road/Lane')]);
+    for (const r of results) if (r.status === 'rejected') assert.match(r.reason.message, /changed while \w+ was being added; nothing was added|already exists/);
+    const folders = (await readdir(join(dir, 'models', 'road'), { withFileTypes: true })).filter((e) => e.isDirectory()).map((e) => e.name).sort();
+    const context = JSON.parse(await readFile(join(dir, 'models', 'road', 'context.jsonld'), 'utf8'))['@context'];
+    assert.deepEqual(Object.keys(context).filter((k) => /^[A-Z]/.test(k)).sort(), folders, `round ${round}: context and folders agree`);
+    assert.ok(folders.length >= 1);
+    assert.deepEqual((await readdir(dir)).filter((f) => f.startsWith('.datamodels-add')), []);
+    if (folders.length) assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
+  }
+});
+
 test('add refuses a wrong name, a missing subject and a model that exists', async () => {
   const dir = await node();
   await assert.rejects(addModel(dir, 'road/roadPatrol'), /must be UpperCamelCase/);
