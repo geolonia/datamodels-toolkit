@@ -59,9 +59,10 @@ export async function extendModel(dir, source, target, { index, subclass = false
   const theirs = await get(entry.schemaUrl);
 
   // This node imports the other node's @context, so it must list that node (node.yaml, nodes).
-  // The node's base URL is what comes before /context/: a node may live under a path (a GitHub Pages project site).
-  const cut = entry.contextUrl.lastIndexOf('/context/');
-  const nodeUrl = cut > 0 ? entry.contextUrl.slice(0, cut + 1) : new URL('/', entry.contextUrl).href;
+  // The other node's base URL is where its catalog.json is, a path included (a GitHub Pages project site).
+  // A node imports contexts from <node>/context/ only (the build checks it), so another place is refused here.
+  const nodeUrl = new URL('.', from).href;
+  if (!entry.contextUrl.startsWith(`${nodeUrl}context/`)) throw new Error(`${entry.contextUrl} is not under ${nodeUrl}context/, where ${from} publishes its @contexts, so a node cannot import it (docs/node.md)`);
   const listed = (node.nodes ?? []).some((n) => entry.contextUrl.startsWith(`${n.url.replace(/\/+$/, '')}/context/`));
   let nodeYaml;
   if (!listed) {

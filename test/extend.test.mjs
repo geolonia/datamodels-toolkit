@@ -114,6 +114,10 @@ test('a node under a path (a GitHub Pages project site) is listed with that path
   const r = await extendModel(dir, 'task/Task', 'road/OtherTask', { index: `${GH}/catalog.json`, subclass: true, fetch: fakeFetch(served) });
   assert.deepEqual(YAML.parse(await read(dir, 'node.yaml')).nodes, [{ url: `${GH}/`, index: `${GH}/catalog.json` }]);
   assert.deepEqual(r.changed, ['models/road/context.jsonld']);
+  // A context outside <node>/context/ cannot be imported by a node: refused.
+  const elsewhere = JSON.parse(JSON.stringify(served));
+  elsewhere[`${GH}/catalog.json`].models[0].contextUrl = `${GH}/ns/task.jsonld`;
+  await assert.rejects(extendModel(await node(), 'task/Task', 'road/RoadTask', { index: `${GH}/catalog.json`, fetch: fakeFetch(elsewhere) }), /task\.jsonld is not under https:\/\/owner\.github\.io\/repo\/context\/, where .* publishes its @contexts/);
 });
 
 test('what extend refuses, and nothing is written then', async () => {
