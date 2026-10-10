@@ -27,70 +27,68 @@ export async function addModel(dir, target, { kind = 'entity' } = {}) {
   if (!(await exists(join(subjectDir, 'subject.yaml')))) throw new Error(`no subject ${subjectName} in ${join(dir, 'models')} (datamodels init writes the first one)`);
   const subject = YAML.parse(await readFile(join(subjectDir, 'subject.yaml'), 'utf8'));
   const modelDir = join(subjectDir, type);
-  if (await exists(modelDir)) throw new Error(`${modelDir} already exists`);
 
   const urls = catalogUrls(node.baseUrl, { iris: node.iris });
   const mu = urls.modelUrls({ name: subjectName, version: subject.version }, { type, schema: {} });
   const namespace = urls.subjectUrls({ name: subjectName, version: subject.version }).namespace;
 
-  // The type goes into the subject's @context, with the prefix that names the namespace when there is one.
+  // context.jsonld changes in one step at the very end, under a lock: the
+  // .tmp file next to it, created exclusively before the context is read and
+  // renamed over it last. Two adds on one subject never lose each other's
+  // entry, and a failure leaves the context as it was.
   const contextFile = join(subjectDir, 'context.jsonld');
-  const contextText = await readFile(contextFile, 'utf8');
-  const context = JSON.parse(contextText);
-  const parts = Array.isArray(context['@context']) ? context['@context'] : [context['@context']];
-  // Every inline part, not only the one the type goes into: a type defined anywhere is taken.
-  if (parts.some((p) => p && typeof p === 'object' && Object.hasOwn(p, type))) throw new Error(`${contextFile} already defines ${type}`);
-  let terms = parts.findLast((p) => p && typeof p === 'object');
-  if (!terms) { terms = {}; if (Array.isArray(context['@context'])) context['@context'].push(terms); else context['@context'] = terms; }
-  const prefix = Object.entries(terms).find(([, v]) => v === namespace)?.[0];
-  terms[type] = prefix ? `${prefix}:${type}` : mu.typeIri;
+  const lock = `${contextFile}.tmp`;
+  try { await writeFile(lock, '', { flag: 'wx' }); } catch (e) {
+    if (e.code === 'EEXIST') throw new Error(`${lock} exists: another add is running on this subject, or one was stopped half-way; if none is running, remove that file and run add again`);
+    throw e;
+  }
+  let staging;
+  let moved = false;
+  try {
+    if (await exists(modelDir)) throw new Error(`${modelDir} already exists`);
+    // The type goes into the @context, with the prefix that names the namespace when there is one.
+    const context = JSON.parse(await readFile(contextFile, 'utf8'));
+    const parts = Array.isArray(context['@context']) ? context['@context'] : [context['@context']];
+    // Every inline part, not only the one the type goes into: a type defined anywhere is taken.
+    if (parts.some((p) => p && typeof p === 'object' && Object.hasOwn(p, type))) throw new Error(`${contextFile} already defines ${type}`);
+    let terms = parts.findLast((p) => p && typeof p === 'object');
+    if (!terms) { terms = {}; if (Array.isArray(context['@context'])) context['@context'].push(terms); else context['@context'] = terms; }
+    const prefix = Object.entries(terms).find(([, v]) => v === namespace)?.[0];
+    terms[type] = prefix ? `${prefix}:${type}` : mu.typeIri;
 
-  const perLanguage = (text) => Object.fromEntries(node.languages.map((l) => [l, text]));
-  const schema = {
-    $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: mu.schemaExact,
-    title: type,
-    ...(kind === 'value' ? { 'x-kind': 'value' } : {}),
-    type: 'object',
-    properties: kind === 'value' ? {} : {
-      id: { type: 'string', format: 'uri', description: 'Entity id (URN)' },
-      type: { type: 'string', const: type, description: 'Entity type' },
-    },
-    required: kind === 'value' ? [] : ['id', 'type'],
-  };
-  const catalog = `# Write the title and description in each language. Every attribute in schema.json
+    const perLanguage = (text) => Object.fromEntries(node.languages.map((l) => [l, text]));
+    const schema = {
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      $id: mu.schemaExact,
+      title: type,
+      ...(kind === 'value' ? { 'x-kind': 'value' } : {}),
+      type: 'object',
+      properties: kind === 'value' ? {} : {
+        id: { type: 'string', format: 'uri', description: 'Entity id (URN)' },
+        type: { type: 'string', const: type, description: 'Entity type' },
+      },
+      required: kind === 'value' ? [] : ['id', 'type'],
+    };
+    const catalog = `# Write the title and description in each language. Every attribute in schema.json
 # needs a description here, under attributes (name: { ${node.languages.map((l) => `${l}: …`).join(', ')} }).
 ${YAML.stringify({ title: perLanguage(type), description: perLanguage(`One ${type}.`), status: 'draft', attributes: {} }, { lineWidth: 0 })}`;
-  const example = kind === 'value' ? {} : { id: `urn:ngsi-ld:${type}:example-1`, type };
+    const example = kind === 'value' ? {} : { id: `urn:ngsi-ld:${type}:example-1`, type };
 
-  // All or nothing, so a failed run can simply be repeated: the model is written
-  // into a folder beside models/ (where no build reads it), the context is
-  // replaced in one step, and only then the model folder is moved into place.
-  // A folder of its own (mkdtemp), so only what this run created is ever removed.
-  const staging = await mkdtemp(join(dir, '.datamodels-add-'));
-  // A .tmp file that was there before is not ours: 'wx' refuses it, and only our own is removed.
-  const replace = async (file, text) => {
-    await writeFile(`${file}.tmp`, text, { flag: 'wx' });
-    try { await rename(`${file}.tmp`, file); } catch (e) { await rm(`${file}.tmp`, { force: true }); throw e; }
-  };
-  let contextReplaced = false;
-  try {
-    await mkdir(join(staging, 'examples'), { recursive: true });
+    // The model is written beside models/ (where no build reads it), in a folder of its own.
+    staging = await mkdtemp(join(dir, '.datamodels-add-'));
+    await mkdir(join(staging, 'examples'));
     await writeFile(join(staging, 'schema.json'), json(schema), { flag: 'wx' });
     await writeFile(join(staging, 'catalog.yaml'), catalog, { flag: 'wx' });
     await writeFile(join(staging, 'examples', 'example.json'), json(example), { flag: 'wx' });
-    // Another run may have changed the context since it was read: stop rather than drop its change.
-    if (await readFile(contextFile, 'utf8') !== contextText) throw new Error(`${contextFile} changed while ${type} was being added; nothing was added, run add again`);
-    await replace(contextFile, json(context));
-    contextReplaced = true;
+    await writeFile(lock, json(context));
     await rename(staging, modelDir);
+    moved = true;
+    // The last step: the new context replaces the old one, and the lock is gone with it.
+    await rename(lock, contextFile);
   } catch (e) {
-    await rm(staging, { recursive: true, force: true });
-    if (contextReplaced) {
-      try { await replace(contextFile, contextText); } catch (restore) {
-        throw new Error(`${type} was not added (${e.message}), and ${contextFile} could not be restored (${restore.message}): remove "${type}" from it by hand, then run add again`, { cause: e });
-      }
-    }
+    if (moved) await rm(modelDir, { recursive: true, force: true });
+    if (staging) await rm(staging, { recursive: true, force: true });
+    await rm(lock, { force: true });
     throw e;
   }
   const at = `models/${subjectName}`;

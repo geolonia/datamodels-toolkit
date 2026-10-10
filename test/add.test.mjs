@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -67,22 +67,32 @@ test('add leaves nothing behind when it fails, so it can be run again', async ()
   const dir = await node();
   const file = join(dir, 'models', 'road', 'context.jsonld');
   const before = await readFile(file, 'utf8');
-  // Something in the way of the new context: the write fails after the model was staged.
-  await mkdir(`${file}.tmp`);
-  await assert.rejects(addModel(dir, 'road/RoadPatrol'));
+  // A failure after the lock was taken: the node folder cannot take the staging folder.
+  await chmod(dir, 0o555);
+  try { await assert.rejects(addModel(dir, 'road/RoadPatrol'), /EACCES|EPERM/); } finally { await chmod(dir, 0o755); }
   assert.equal(await readFile(file, 'utf8'), before, 'the context is unchanged');
-  assert.deepEqual((await readdir(dir)).filter((f) => f.startsWith('.datamodels-add')), [], 'no staging folder');
-  assert.deepEqual((await readdir(join(dir, 'models', 'road'))).sort(), ['context.jsonld', 'context.jsonld.tmp', 'subject.yaml'], 'no model folder; what was there before stays');
-  await rm(`${file}.tmp`, { recursive: true });
+  assert.deepEqual((await readdir(join(dir, 'models', 'road'))).sort(), ['context.jsonld', 'subject.yaml'], 'no model folder, no lock left');
   await addModel(dir, 'road/RoadPatrol');
   assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
 });
 
+test('a lock left by a stopped add is named, and nothing is touched', async () => {
+  const dir = await node();
+  const file = join(dir, 'models', 'road', 'context.jsonld');
+  const before = await readFile(file, 'utf8');
+  await writeFile(`${file}.tmp`, '');
+  await assert.rejects(addModel(dir, 'road/RoadPatrol'), /context\.jsonld\.tmp exists: another add is running on this subject, or one was stopped half-way/);
+  assert.equal(await readFile(file, 'utf8'), before);
+  assert.deepEqual((await readdir(join(dir, 'models', 'road'))).sort(), ['context.jsonld', 'context.jsonld.tmp', 'subject.yaml'], 'the lock is not ours to remove');
+  await rm(`${file}.tmp`);
+  await addModel(dir, 'road/RoadPatrol');
+});
+
 test('two adds at once never leave a model without its context entry', async () => {
-  for (let round = 0; round < 5; round++) {
+  for (let round = 0; round < 20; round++) {
     const dir = await node();
-    const results = await Promise.allSettled([addModel(dir, 'road/RoadPatrol'), addModel(dir, 'road/Segment', { kind: 'value' }), addModel(dir, 'road/Lane')]);
-    for (const r of results) if (r.status === 'rejected') assert.match(r.reason.message, /changed while \w+ was being added; nothing was added|already exists/);
+    const results = await Promise.allSettled(['RoadPatrol', 'Segment', 'Lane', 'Sign'].map((t) => addModel(dir, `road/${t}`)));
+    for (const r of results) if (r.status === 'rejected') assert.match(r.reason.message, /another add is running on this subject/);
     const folders = (await readdir(join(dir, 'models', 'road'), { withFileTypes: true })).filter((e) => e.isDirectory()).map((e) => e.name).sort();
     const context = JSON.parse(await readFile(join(dir, 'models', 'road', 'context.jsonld'), 'utf8'))['@context'];
     assert.deepEqual(Object.keys(context).filter((k) => /^[A-Z]/.test(k)).sort(), folders, `round ${round}: context and folders agree`);
