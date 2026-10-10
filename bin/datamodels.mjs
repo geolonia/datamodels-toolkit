@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// datamodels: tools for the datamodels.jp catalog.
+// datamodels: tools for the datamodels.jp catalog and the nodes of the web of data models.
 //
 //   datamodels convert disaster/EvacuationSite jichitai-opendata-site 092011_evacuation_space.csv
 //   datamodels convert disaster/EvacuationSite gsi-emergency-site 13101_2.csv --set localGovernmentCode=13101
@@ -12,31 +12,44 @@
 // output), --site URL or directory (default https://datamodels.jp). A summary
 // (encoding, repairs, invalid rows) goes to standard error; the exit code is 1
 // when a row is invalid or a file cannot be read, 2 for a usage error.
+//
+//   datamodels build [dir] [--out dir]
+//
+// build writes the files a node publishes (node.yaml and models/ in dir,
+// default the current directory) into --out (default dir/_site). The exit
+// code is 1 when the node is invalid, 2 for a usage error.
 import { readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
 import { decodeCsv, parseCsv, convertRows, mappingProblems, mappedColumns, LINE } from '../src/convert.mjs';
 import { toNormalized } from '../src/ngsi.mjs';
 import { siteReader, loadTarget, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
+import { buildNode } from '../src/build/node.mjs';
 
-const USAGE = `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`;
+const USAGES = {
+  convert: `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`,
+  build: `usage: datamodels build [dir] [--out dir]`,
+};
+const USAGE = `${USAGES.convert}\n${USAGES.build}`;
 // An error the command reports in one line and exits with. Nothing calls
 // process.exit(): it can cut off output still being written to a pipe.
 class Exit extends Error { constructor(code, message) { super(message); this.code = code; } }
-const usage = (msg) => { throw new Exit(2, `${msg}\n${USAGE}`); };
+const usage = (msg, text = USAGE) => { throw new Exit(2, `${msg}\n${text}`); };
 const fail = (msg) => { throw new Exit(1, msg); };
 
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
-function program(onConvert) {
+function program({ onConvert, onBuild }) {
   // An option's value: present, not empty (--out=) and not another option.
   const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
   const cli = new Command('datamodels')
     .exitOverride()
     .configureOutput({ outputError: () => {} })
-    .configureHelp({ styleTitle: (title) => title.toLowerCase() });
+    .configureHelp({ styleTitle: (title) => title.toLowerCase() })
+    .addHelpText('after', '\nMore on each command, with examples: https://github.com/geolonia/datamodels-toolkit#readme');
   cli.command('convert')
     .description('turn a published list (CSV) into entities of a catalog model, validated against its JSON Schema')
-    .usage(USAGE.replace('usage: datamodels convert ', ''))
+    .usage(USAGES.convert.replace('usage: datamodels convert ', ''))
     .argument('<subject/Type>', 'the model, as on its page, for example disaster/EvacuationSite')
     .argument('<mapping>', "one of the model's mapping files")
     .argument('<file.csv>', 'the list, UTF-8 or Shift_JIS')
@@ -48,43 +61,53 @@ function program(onConvert) {
     .addHelpText('after', '\nMore on each option, with examples: https://github.com/geolonia/datamodels-toolkit#readme')
     // exitOverride, the output and the help style are inherited from cli.
     .action(onConvert);
+  cli.command('build')
+    .description("write the files a data model node publishes: catalog.json, @contexts, JSON Schemas, vocabularies, examples and llms.txt")
+    .usage(USAGES.build.replace('usage: datamodels build ', ''))
+    .argument('[dir]', 'the node: node.yaml and models/', '.')
+    .option('--out <dir>', 'where to write the files (default: <dir>/_site)', value('--out'))
+    .action(onBuild);
   return cli;
 }
 
-// commander's errors as this command's one-line errors (exit code 2).
-function usageError(e, cli) {
-  const convert = cli.commands.find((c) => c.name() === 'convert');
+// commander's errors as one-line errors with the usage of the command concerned (exit code 2).
+function usageError(e, cli, name) {
+  const command = cli.commands.find((c) => c.name() === name);
+  const text = USAGES[name] ?? USAGE;
   switch (e.code) {
     case 'commander.unknownCommand': return usage(`unknown command ${/'([^']+)'/.exec(e.message)?.[1] ?? ''}`);
-    case 'commander.unknownOption': return usage(`unknown option ${/'([^']+)'/.exec(e.message)?.[1] ?? ''}`);
-    case 'commander.missingArgument': return usage('missing arguments');
-    case 'commander.excessArguments': return usage(`unexpected arguments: ${convert.args.slice(3).join(' ')}`);
-    case 'commander.optionMissingArgument': return usage(`${/'(--[a-z]+)/.exec(e.message)?.[1] ?? 'an option'} needs a value`);
+    case 'commander.unknownOption': return usage(`unknown option ${/'([^']+)'/.exec(e.message)?.[1] ?? ''}`, text);
+    case 'commander.missingArgument': return usage('missing arguments', text);
+    case 'commander.excessArguments': return usage(`unexpected arguments: ${command.args.slice(command.registeredArguments.length).join(' ')}`, text);
+    case 'commander.optionMissingArgument': return usage(`${/'(--[a-z]+)/.exec(e.message)?.[1] ?? 'an option'} needs a value`, text);
     // Our own message, after commander's "option '…' argument '…' is invalid.".
-    case 'commander.invalidArgument': return usage(e.message.split('is invalid. ').pop());
-    default: return usage(e.message.replace(/^error: /, ''));
+    case 'commander.invalidArgument': return usage(e.message.split('is invalid. ').pop(), text);
+    default: return usage(e.message.replace(/^error: /, ''), text);
   }
 }
 
 async function main(args) {
   let code = 0;
-  const cli = program(async (target, mappingName, file, options) => { code = await convert(target, mappingName, file, options); });
-  // One command so far: datamodels --help shows its help.
-  if (['--help', '-h', 'help'].includes(args[0])) { cli.commands.find((c) => c.name() === 'convert').outputHelp(); return 0; }
+  const cli = program({
+    onConvert: async (target, mappingName, file, options) => { code = await convert(target, mappingName, file, options); },
+    onBuild: async (dir, options) => { code = await build(dir, options); },
+  });
+  // datamodels --help lists the commands; datamodels help build is commander's.
+  if (args.length === 1 && ['--help', '-h', 'help'].includes(args[0])) { cli.outputHelp(); return 0; }
   if (!args.length) usage('missing command');
   try {
     await cli.parseAsync(args, { from: 'user' });
   } catch (e) {
     if (e instanceof Exit) throw e;
     if (e.code === 'commander.helpDisplayed' || e.code === 'commander.help') return 0;
-    if (typeof e.code === 'string' && e.code.startsWith('commander.')) usageError(e, cli);
+    if (typeof e.code === 'string' && e.code.startsWith('commander.')) usageError(e, cli, args[0]);
     throw e;
   }
   return code;
 }
 
 async function convert(target, mappingName, file, { set: sets = [], normalized, out, site }) {
-  if (sets.some((kv) => kv.indexOf('=') < 1)) usage('--set needs attribute=value');
+  if (sets.some((kv) => kv.indexOf('=') < 1)) usage('--set needs attribute=value', USAGES.convert);
 
   let loaded;
   try { loaded = await loadTarget(siteReader(site), target, mappingName); } catch (e) { fail(e.message); }
@@ -96,7 +119,7 @@ async function convert(target, mappingName, file, { set: sets = [], normalized, 
   // A name the mapping converts nothing into would be ignored without a word.
   const settable = Object.keys(mapping.fields ?? {}).filter((k) => mapping.fields[k]?.via === undefined && mapping.fields[k]?.value === undefined && mapping.fields[k]?.transform !== 'flags');
   const unknown = Object.keys(set).filter((k) => !settable.includes(k));
-  if (unknown.length) usage(`--set ${unknown.join(', ')}: not a field that ${mappingName} fills (${settable.join(', ')})`);
+  if (unknown.length) usage(`--set ${unknown.join(', ')}: not a field that ${mappingName} fills (${settable.join(', ')})`, USAGES.convert);
 
   let text, encoding, rows;
   try { ({ text, encoding } = decodeCsv(await readFile(file))); rows = parseCsv(text); } catch (e) { fail(`${file}: ${e.message}`); }
@@ -126,6 +149,13 @@ async function convert(target, mappingName, file, { set: sets = [], normalized, 
   for (const x of invalid.slice(0, 20)) console.error(`  line ${x.line}: ${x.problems.join('; ')}`);
   if (invalid.length > 20) console.error(`  … ${invalid.length - 20} more`);
   return invalid.length ? 1 : 0;
+}
+
+async function build(dir, { out }) {
+  let r;
+  try { r = await buildNode(dir, out ? { out } : {}); } catch (e) { fail(e.message); }
+  console.error(`${dir}: ${r.subjects.length} subject(s), ${r.catalog.models.length} model(s), written to ${out ?? join(dir, '_site')}`);
+  return 0;
 }
 
 try { process.exitCode = await main(process.argv.slice(2)); } catch (e) {
