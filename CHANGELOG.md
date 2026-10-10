@@ -6,6 +6,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Added
 
+- `datamodels extend <model> <subject>/<Type>`: starts a model from a model of another node, such as datamodels.jp's, as the same type with more attributes or as a subtype (`--subclass`). It copies the schema, imports the @context, records `extends` and lists the node in `node.yaml`. In a terminal it asks for the model (#13).
 - `datamodels release <subject>`: keeps a published version online after the next one, as a snapshot in `models/<subject>/releases/vX.Y.Z/`. It refuses when the sources changed since the version was published. `check` notes a published version without a snapshot (#27).
 
 ### Changed
