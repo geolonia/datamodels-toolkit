@@ -25,6 +25,13 @@
 // release snapshots, published versions unchanged online, no term of an
 // extended model redefined. Exit code 1 on a problem; unreachable nodes are
 // only noted.
+//
+//   datamodels init [dir] [--base-url URL] [--publisher name] [--publisher-url URL] [--subject name] ...
+//
+// init writes the files of a new node into dir (default the current
+// directory), never over an existing file. In a terminal it asks for what the
+// options do not give; elsewhere a missing answer is a usage error. With
+// --github owner/name it also creates the repository and turns on Pages.
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
@@ -33,11 +40,15 @@ import { toNormalized } from '../src/ngsi.mjs';
 import { siteReader, loadTarget, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
 import { buildNode } from '../src/build/node.mjs';
 import { checkNode } from '../src/build/check.mjs';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { initSettings, writeNode, publishToGitHub } from '../src/init.mjs';
 
 const USAGES = {
   convert: `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`,
   build: `usage: datamodels build [dir] [--out dir]`,
   check: `usage: datamodels check [dir] [--offline]`,
+  init: `usage: datamodels init [dir] [--base-url URL] [--iris hash|slash] [--languages en,ja] [--publisher name] [--publisher-url URL] [--license id] [--subject name] [--github owner/name] [--yes]`,
 };
 const USAGE = Object.values(USAGES).join('\n');
 // An error the command reports in one line and exits with. Nothing calls
@@ -48,7 +59,7 @@ const fail = (msg) => { throw new Exit(1, msg); };
 
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
-function program({ onConvert, onBuild, onCheck }) {
+function program({ onConvert, onBuild, onCheck, onInit }) {
   // An option's value: present, not empty (--out=) and not another option.
   const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
   const cli = new Command('datamodels')
@@ -82,6 +93,20 @@ function program({ onConvert, onBuild, onCheck }) {
     .argument('[dir]', 'the node: node.yaml and models/', '.')
     .option('--offline', 'skip what needs the network: published files, extended models, schemas on other sites')
     .action(onCheck);
+  cli.command('init')
+    .description('start a data model node: node.yaml, the first subject, a README and the GitHub Pages workflow')
+    .usage(USAGES.init.replace('usage: datamodels init ', ''))
+    .argument('[dir]', 'where to write the files; files that exist are kept', '.')
+    .option('--base-url <URL>', 'the base URL of every IRI, for example https://models.example.org', value('--base-url'))
+    .option('--iris <form>', 'hash (/ns/<subject>#<Term>, default) or slash', value('--iris'))
+    .option('--languages <list>', 'the languages of titles and descriptions, comma-separated (default en)', value('--languages'))
+    .option('--publisher <name>', 'who publishes the node', value('--publisher'))
+    .option('--publisher-url <URL>', "the publisher's web site", value('--publisher-url'))
+    .option('--license <id>', 'the licence of the models, an SPDX identifier (default CC0-1.0)', value('--license'))
+    .option('--subject <name>', 'the first subject, for example road', value('--subject'))
+    .option('--github <owner/name>', 'create the public repository with gh, or use the existing remote, and turn on GitHub Pages', value('--github'))
+    .option('--yes', 'never ask: use the options and the defaults')
+    .action(onInit);
   return cli;
 }
 
@@ -107,6 +132,7 @@ async function main(args) {
     onConvert: async (target, mappingName, file, options) => { code = await convert(target, mappingName, file, options); },
     onBuild: async (dir, options) => { code = await build(dir, options); },
     onCheck: async (dir, options) => { code = await check(dir, options); },
+    onInit: async (dir, options) => { code = await init(dir, options); },
   });
   // datamodels --help lists the commands; datamodels help build is commander's.
   if (args.length === 1 && ['--help', '-h', 'help'].includes(args[0])) { cli.outputHelp(); return 0; }
@@ -180,6 +206,59 @@ async function check(dir, { offline }) {
   for (const p of problems) console.error(p);
   console.error(`${dir}: ${problems.length ? `${problems.length} problem(s)` : 'ok'}`);
   return problems.length ? 1 : 0;
+}
+
+async function init(dir, options) {
+  let answers = {
+    baseUrl: options.baseUrl, iris: options.iris, publisherName: options.publisher, publisherUrl: options.publisherUrl,
+    license: options.license, subject: options.subject, github: options.github,
+    languages: options.languages?.split(',').map((l) => l.trim()).filter(Boolean),
+  };
+  // Questions only in a terminal: CI and scripts never wait for an answer.
+  const interactive = !options.yes && process.stdin.isTTY && process.stdout.isTTY;
+  if (interactive) answers = await ask(answers);
+  const missing = [['baseUrl', '--base-url'], ['publisherName', '--publisher'], ['publisherUrl', '--publisher-url'], ['subject', '--subject']].filter(([k]) => !answers[k]).map(([, o]) => o);
+  if (missing.length) usage(`missing ${missing.join(', ')}`, USAGES.init);
+  const settings = initSettings(Object.fromEntries(Object.entries(answers).filter(([, v]) => v !== undefined)));
+  if (settings.problems.length) fail(`init: nothing written:\n${settings.problems.map((p) => `  ${p}`).join('\n')}`);
+  const { added, kept, appended } = await writeNode(dir, settings);
+  for (const f of added) console.error(`  added ${f}`);
+  for (const f of appended) console.error(`  added lines to ${f}`);
+  for (const f of kept) console.error(`  kept ${f} (it exists)`);
+  if (answers.github) {
+    const run = async (cmd, args, opts = {}) => (await promisify(execFile)(cmd, args, opts)).stdout;
+    let steps;
+    try { steps = await publishToGitHub(dir, answers.github, { run }); } catch (e) { fail(`--github: ${e.stderr?.trim() || e.message}`); }
+    for (const s of steps) console.error(`  ${s}`);
+  }
+  console.error(`${dir}: a data model node. Next: add a model under models/${settings.subject}/, then datamodels check and datamodels build.`);
+  return 0;
+}
+
+// The questions of init, with @clack/prompts; an answer given as an option is not asked again.
+async function ask(given) {
+  const p = await import('@clack/prompts');
+  const answer = async (value, question) => {
+    if (value !== undefined) return value;
+    const v = await question();
+    if (p.isCancel(v)) { p.cancel('Nothing written.'); throw new Exit(1, 'init cancelled'); }
+    return v;
+  };
+  const url = (v) => (/^https?:\/\/[^/\s]+/.test(v ?? '') ? undefined : 'An http(s) URL');
+  p.intro('datamodels init: a data model node');
+  const a = { ...given };
+  a.baseUrl = await answer(a.baseUrl, () => p.text({ message: 'Base URL of the node (part of every IRI; keep it once published)', placeholder: 'https://models.example.org', validate: url }));
+  a.iris = await answer(a.iris, () => p.select({ message: 'IRI form', options: [{ value: 'hash', label: 'hash: /ns/<subject>#<Term>', hint: 'any static host, GitHub Pages' }, { value: 'slash', label: 'slash: /ns/<subject>/<Term>', hint: 'needs w3id.org or a server that redirects' }] }));
+  a.languages = await answer(a.languages, async () => String(await p.text({ message: 'Languages, comma-separated', initialValue: 'en' })).split(',').map((l) => l.trim()).filter(Boolean));
+  a.publisherName = await answer(a.publisherName, () => p.text({ message: 'Publisher (who runs the node)', placeholder: 'Example Inc.' }));
+  a.publisherUrl = await answer(a.publisherUrl, () => p.text({ message: "Publisher's web site", placeholder: 'https://example.org/', validate: url }));
+  a.license = await answer(a.license, () => p.text({ message: 'Licence of the models (SPDX)', initialValue: 'CC0-1.0' }));
+  a.subject = await answer(a.subject, () => p.text({ message: 'First subject (a group of models), for example road', validate: (v) => (/^[a-z][a-z0-9-]*$/.test(v ?? '') ? undefined : 'Lower case letters, digits and hyphens') }));
+  if (a.github === undefined && await answer(undefined, () => p.confirm({ message: 'Create a public GitHub repository with gh and turn on GitHub Pages?', initialValue: false }))) {
+    a.github = await answer(undefined, () => p.text({ message: 'Repository (owner/name)', placeholder: 'example/models' }));
+  }
+  p.outro('Writing the files.');
+  return a;
 }
 
 try { process.exitCode = await main(process.argv.slice(2)); } catch (e) {

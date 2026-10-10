@@ -37,6 +37,20 @@ It reads `catalog.json`, the model's schema and the mapping file from the site, 
 
 It detects UTF-8 and Shift_JIS. It repairs only what it can prove, such as a local government code that lost its leading zero or lacks its check digit (the check digit decides), and lists every repair on standard error. Invalid rows are left out and listed by line. The exit code is 1 when a row is invalid or a file cannot be read, and 2 for a usage error.
 
+## init
+
+```bash
+datamodels init my-node      # asks in a terminal
+datamodels init --base-url https://models.example.org --publisher "Example Inc." \
+  --publisher-url https://example.org/ --subject road --languages ja,en --yes
+```
+
+Starts a data model node: `node.yaml`, the first subject in `models/`, a README, `.gitignore` and the workflow that checks pull requests and publishes to GitHub Pages ([GitHub Action](#github-action)). In a terminal it asks for what the options do not give; in CI and scripts it never asks, and a missing answer is a usage error. Defaults: hash IRIs, English, CC0-1.0.
+
+It also works in an existing repository, for example one made by the Backstage scaffolder: it adds only the files that are missing, never overwrites one, and adds its lines to an existing `.gitignore`. It lists what it added and what it kept.
+
+`--github owner/name` (or yes to the question) puts the node on GitHub with the `gh` CLI: in a folder without a remote it makes the first commit and creates the public repository; with a remote it keeps it. Either way it sets GitHub Pages to deploy from GitHub Actions.
+
 ## build
 
 ```bash
@@ -133,7 +147,7 @@ jobs:
         uses: geolonia/datamodels-toolkit@<commit SHA> # pin a version
 ```
 
-In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). A node upgrades by changing the pinned version; Dependabot can propose it. `datamodels init` will write this workflow ([#11](https://github.com/geolonia/datamodels-toolkit/issues/11)).
+In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). A node upgrades by changing the pinned version; Dependabot can propose it. `datamodels init` writes this workflow.
 
 ## Build library
 
