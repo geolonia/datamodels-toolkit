@@ -1,0 +1,32 @@
+standard:
+  name: { ja: JSCalendar Task（RFC 8984）, en: JSCalendar Task (RFC 8984) }
+  url: https://www.rfc-editor.org/rfc/rfc8984.html
+  note:
+    ja: 値域はこの標準に合わせている。JSCalendar の locations は名前付き地点の集合で座標は geo URI、こちらは GeoJSON ジオメトリ。participants は役割付きの集合で、assignee はその attendee/owner 相当。
+    en: Value spaces follow this standard. JSCalendar locations are a set of named places with geo-URI coordinates while location here is a GeoJSON geometry; participants carry roles, assignee corresponds to attendee/owner.
+fields:
+  name: { to: "title" }
+  description: { to: "description" }
+  project: { to: null, note: { ja: JSCalendar にはプロジェクトの概念が無い（カレンダー単位）, en: JSCalendar has no project; calendars group objects } }
+  parent: { to: "relatedTo[parent]" }
+  relatedTo: { to: "relatedTo", note: { ja: "first / next / child は拡張", en: "first, next and child relations are extensions" } }
+  refersTo: { to: null }
+  progress: { to: "progress", note: { ja: 値域は同一（cancelled も RFC 8984 の標準値）, en: identical value set (cancelled is a standard RFC 8984 value) } }
+  statusLabel: { to: null }
+  subtype: { to: null }
+  priority: { to: "priority" }
+  assignee: { to: "participants", note: { ja: roles に attendee または owner を持つ participant, en: participants with role attendee or owner } }
+  author: { to: null, note: { ja: JSCalendar は所有者を participant の owner 役割で表す, en: JSCalendar expresses the owner as a participant role } }
+  start: { to: "start", note: { ja: "JSCalendar の start は時差を含まない日時（LocalDateTime）で、タイムゾーンは timeZone に持つ。ここでは日付か、時差付きの日時。日付は、時刻 00:00:00 の start と showWithoutTime: true に当たる", en: "JSCalendar start is a LocalDateTime (no offset; the time zone is in timeZone). Here it is a date, or a date-time with an offset; a date corresponds to a start at 00:00:00 with showWithoutTime: true" } }
+  due: { to: "due", note: { ja: "JSCalendar の due は時差を含まない日時（LocalDateTime）。ここでは日付か、時差付きの日時", en: "JSCalendar due is a LocalDateTime (no offset); here it is a date, or a date-time with an offset" } }
+  completedAt: { to: "progressUpdated", note: { ja: progress が completed の場合のみ, en: only when progress is completed } }
+  estimatedDuration: { to: "estimatedDuration" }
+  percentComplete: { to: "percentComplete" }
+  keywords: { to: "keywords" }
+  location: { to: "locations", note: { ja: 点は coordinates（geo URI）に、線・面は対応なし, en: a point maps to coordinates (geo URI); lines and polygons have no counterpart } }
+  spatialId: { to: null }
+  isPrivate: { to: "privacy", note: { ja: private / secret, en: privacy private or secret } }
+  source: { to: "links", note: { ja: rel=alternate のリンク, en: a link with rel alternate } }
+  externalId: { to: "uid" }
+  dateCreated: { to: "created" }
+  dateModified: { to: "updated" }

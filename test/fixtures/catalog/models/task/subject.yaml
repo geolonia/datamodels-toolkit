@@ -1,0 +1,17 @@
+# Universal task management. Semantics follow RFC 8984 (JSCalendar) where they overlap.
+name: task
+version: 1.0.0
+title:
+  ja: タスク管理
+  en: Task management
+# One line for the subject card on the model list.
+summary:
+  ja: タスク、プロジェクト、マイルストーン
+  en: "Tasks, projects and milestones"
+description:
+  ja: 作業を管理するためのデータ。何を、誰が、いつまでにするか、どのマイルストーンに向けてか。課題管理システムのチケット、カレンダーの ToDo、自治体の作業指示に共通する部分を扱い、状態と優先度は RFC 8984（JSCalendar）に合わせます。システム固有の呼び方はエイリアスで使えます。
+  en: "Data for tracking work: what needs to be done, by whom, by when and for which milestone. It covers what issue trackers, calendar to-dos and municipal work orders have in common; status and priority follow RFC 8984 (JSCalendar). System-specific names can be used with aliases."
+source: minted
+origin:
+  repository: https://github.com/geolonia/datamodels/issues/22
+  note: Designed with the GTT project (Redmine geo task tracking, redmine_gtt_fiware) and the Takamatsu disaster-response models as the first two implementations.

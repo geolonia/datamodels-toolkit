@@ -1,0 +1,33 @@
+standard:
+  name: { ja: Redmine の Issue（redmine_gtt_fiware の出力を含む）, en: Redmine issue (including redmine_gtt_fiware output) }
+  url: https://www.redmine.org/projects/redmine/wiki/Rest_Issues
+  note:
+    ja: Redmine の優先度は順序付きリスト（低・通常・高・緊急・今すぐ）で、1〜9 に写す。ステータスは is_closed で needs-action / completed を、それ以外は運用に応じて in-process を割り当てる。カスタムフィールドは拡張。GTT（redmine_gtt_fiware）は Issue を tm:Task のエイリアスまたはサブクラスとして対応付けられる。
+    en: Redmine priorities are an ordered list (low, normal, high, urgent, immediate) mapped onto 1 to 9. Status maps through is_closed to needs-action or completed; in-process is assigned by the operator's status configuration. Custom fields are extensions. GTT (redmine_gtt_fiware) can align its frozen Issue vocabulary to Task by alias (Issue → tm:Task) or by declaring Issue a subclass.
+fields:
+  name: { to: "subject" }
+  description: { to: "description" }
+  project: { to: "project_id" }
+  milestone: { to: "fixed_version_id", note: { ja: 対象バージョン, en: target version } }
+  parent: { to: "parent_issue_id" }
+  relatedTo: { to: "relations[].issue_to_id", note: { ja: "relation_type（relates, blocks, precedes, duplicates）は核に含めない", en: "relation_type is not in the core" } }
+  refersTo: { to: null, note: { ja: GTT の refersTo（購読元エンティティ）に対応, en: corresponds to GTT refersTo (the subscribed entity) } }
+  progress: { to: "status.is_closed", note: { ja: "closed なら completed、それ以外は needs-action または in-process", en: "closed → completed, otherwise needs-action or in-process" } }
+  statusLabel: { to: "status.name" }
+  subtype: { to: "tracker.name" }
+  priority: { to: "priority.position", note: { ja: 順位を 1〜9 に写す, en: position mapped onto 1 to 9 } }
+  assignee: { to: "assigned_to_id" }
+  author: { to: "author_id" }
+  start: { to: "start_date", note: { ja: "日付（YYYY-MM-DD）のまま入れる", en: "a date (YYYY-MM-DD), kept as it is" } }
+  due: { to: "due_date", note: { ja: "日付（YYYY-MM-DD）のまま入れる", en: "a date (YYYY-MM-DD), kept as it is" } }
+  completedAt: { to: "closed_on" }
+  estimatedDuration: { to: "estimated_hours", note: { ja: 時間を ISO 8601 期間に変換（1.5 → PT1H30M）, en: hours converted to an ISO 8601 duration (1.5 → PT1H30M) } }
+  percentComplete: { to: "done_ratio" }
+  keywords: { to: null, note: { ja: Redmine 核には無い。タグ系プラグインは拡張, en: not in Redmine core; tag plugins are extensions } }
+  location: { to: "geom", note: { ja: "redmine_gtt の geometry（点・線・面、3D）", en: "redmine_gtt geometry (point, line, polygon, 3D)" } }
+  spatialId: { to: null }
+  isPrivate: { to: "is_private" }
+  source: { to: "<base_url>/issues/<id>" }
+  externalId: { to: "id" }
+  dateCreated: { to: "created_on" }
+  dateModified: { to: "updated_on" }

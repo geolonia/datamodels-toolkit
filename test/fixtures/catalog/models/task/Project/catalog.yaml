@@ -1,0 +1,54 @@
+title:
+  ja: "プロジェクト"
+  en: "Project"
+description:
+  ja: "タスクをまとめる単位。案件、災害対応の 1 オペレーション、キャンペーンなど、名前は用途によって変わっても共通の属性を持つ。"
+  en: "A grouping of tasks: a project in a tracker, one disaster-response operation, a campaign. Called differently in different settings, with the same common attributes."
+status: draft
+tags: [task-management, rfc8984]
+attributes:
+  name:
+    ja: "名称・件名"
+    en: "Name or subject"
+  description:
+    ja: "説明"
+    en: "Description"
+  identifier:
+    ja: "短い識別子（スラッグやコード。元システム内で一意）"
+    en: "Short handle: a slug or code, unique within the source system"
+  parent:
+    ja: "親プロジェクト"
+    en: "Parent project"
+  projectStatus:
+    ja: "状態。active=進行中、closed=終了、archived=アーカイブ済み（使わなくなったが残している）。core context の status は予約語のため projectStatus"
+    en: "State: active = in progress, closed = finished, archived = no longer used but kept; status is protected in the core context, hence projectStatus"
+  isPublic:
+    ja: "公開プロジェクトなら true"
+    en: "true when public"
+  homepage:
+    ja: "ホームページ"
+    en: "Homepage"
+  start:
+    ja: "予定期間の開始。日付、または日時"
+    en: "Planned start: a date, or a date and time"
+  end:
+    ja: "予定期間の終了。日付、または日時"
+    en: "Planned end: a date, or a date and time"
+  location:
+    ja: "位置。点・線・面・それらの集合など任意の GeoJSON ジオメトリ"
+    en: "Location as any GeoJSON geometry: point, line, polygon or a collection"
+  keywords:
+    ja: "キーワード・ラベル"
+    en: "Keywords or labels"
+  source:
+    ja: "元システムにおけるこのオブジェクトの URL"
+    en: "URL of this object in the system of record"
+  externalId:
+    ja: "元システムにおける識別子"
+    en: "Identifier in the system of record"
+  dateCreated:
+    ja: "元システムでの作成日時（ブローカーの createdAt とは別）"
+    en: "Creation time in the system of record (distinct from the broker attribute createdAt)"
+  dateModified:
+    ja: "元システムでの更新日時"
+    en: "Last modification time in the system of record"

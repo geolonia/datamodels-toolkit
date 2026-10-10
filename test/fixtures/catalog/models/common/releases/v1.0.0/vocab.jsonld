@@ -1,0 +1,215 @@
+{
+  "@context": {
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "label": {
+      "@id": "rdfs:label",
+      "@container": "@language"
+    },
+    "comment": {
+      "@id": "rdfs:comment",
+      "@container": "@language"
+    },
+    "subClassOf": {
+      "@id": "rdfs:subClassOf",
+      "@type": "@id"
+    },
+    "isDefinedBy": {
+      "@id": "rdfs:isDefinedBy",
+      "@type": "@id"
+    },
+    "seeAlso": {
+      "@id": "rdfs:seeAlso",
+      "@type": "@id"
+    },
+    "versionInfo": "owl:versionInfo"
+  },
+  "@graph": [
+    {
+      "@id": "https://datamodels.jp/ns/common/",
+      "@type": "owl:Ontology",
+      "label": {
+        "ja": "共通",
+        "en": "Common"
+      },
+      "comment": {
+        "ja": "他のサブジェクトが属性の値として使う共通の部品（住所、ジオメトリなど）。単独のエンティティではなく、属性の値の中で使う値型です。",
+        "en": "Building blocks that other subjects use as attribute values, such as addresses and geometries. They are value types: used inside an attribute, not as entities of their own."
+      },
+      "versionInfo": "1.0.0",
+      "seeAlso": "https://datamodels.jp/context/common/v1.0.0.jsonld"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/Geometry",
+      "@type": "rdfs:Class",
+      "label": {
+        "ja": "ジオメトリ",
+        "en": "Geometry"
+      },
+      "comment": {
+        "ja": "location などの GeoProperty の値として使う GeoJSON ジオメトリ（RFC 7946）。点（Point）、線（LineString）、面（Polygon）、それぞれの複数形（MultiPoint、MultiLineString、MultiPolygon）、およびそれらをまとめた GeometryCollection。座標は経度・緯度（・高さ）の順で WGS 84。モデルごとに種類を絞ってよい（例 点だけ）。",
+        "en": "A GeoJSON geometry (RFC 7946) as the value of a GeoProperty such as location: Point, LineString, Polygon, their multi forms (MultiPoint, MultiLineString, MultiPolygon), or a GeometryCollection of these. Positions are longitude, latitude and optional altitude, in WGS 84. A model may narrow the allowed types, for example to Point only."
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/Geometry/"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/JapaneseAddress",
+      "@type": "rdfs:Class",
+      "label": {
+        "ja": "日本の住所",
+        "en": "Japanese address"
+      },
+      "comment": {
+        "ja": "address 属性の値として使う日本の住所。意味が同じ項目は schema.org の PostalAddress の語を使い、日本固有の構造（町字・丁目・番地・号）、JIS コードと全国地方公共団体コード、アドレス・ベース・レジストリの町字ID、住居表示フラグを追加したもの。どの項目も任意。構造化できない場合は addressText だけでもよい。",
+        "en": "A Japanese postal address as the value of an address Property. schema.org PostalAddress terms where the meaning matches, plus the Japanese structure (machiaza, chome, banchi, go), JIS and local-government codes, the Address Base Registry town id and the residential-indication flag. Every field is optional; addressText alone is acceptable when the address cannot be structured."
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/abrMachiazaId",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "abrMachiazaId"
+      },
+      "comment": {
+        "ja": "アドレス・ベース・レジストリの町字ID（7桁）。全国地方公共団体コードと組み合わせて町字を一意に識別する",
+        "en": "Address Base Registry town id (町字ID, 7 digits). Unique together with localGovernmentCode"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#abrMachiazaId"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/addressText",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "addressText"
+      },
+      "comment": {
+        "ja": "住所の全文（正規化済みの一行表記）。構造化フィールドが揃わない場合の受け皿でもある",
+        "en": "Full address as one normalised line. Also the fallback when structured fields are unavailable"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#addressText"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/banchi",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "banchi"
+      },
+      "comment": {
+        "ja": "番地。住居表示実施区域では街区符号。それ以外では枝番を含む地番全体（例 4638-1）",
+        "en": "Banchi (番地): in a residential-indication area the block number (街区符号); elsewhere the whole lot number (地番), branch number included, for example 4638-1"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#banchi"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/buildingName",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "buildingName"
+      },
+      "comment": {
+        "ja": "建物名・部屋番号など、号より下の表記",
+        "en": "Building name, room number and anything below go"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#buildingName"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/chome",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "chome"
+      },
+      "comment": {
+        "ja": "丁目。数字のみ（「一丁目」→ \"1\"）",
+        "en": "Chome (丁目), digits only (\"一丁目\" → \"1\")"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#chome"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/go",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "go"
+      },
+      "comment": {
+        "ja": "号。住居表示実施区域では住居番号。地番の区域では空（枝番は banchi に含める）",
+        "en": "Go (号): in a residential-indication area the residence number (住居番号). Empty for a lot number (地番): its branch number stays in banchi"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#go"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/jisMunicipalityCode",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "jisMunicipalityCode"
+      },
+      "comment": {
+        "ja": "市区町村コード（JIS X 0402、都道府県コードを含む5桁）",
+        "en": "Municipality code (JIS X 0402, 5 digits including the prefecture code)"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#jisMunicipalityCode"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/jisPrefectureCode",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "jisPrefectureCode"
+      },
+      "comment": {
+        "ja": "都道府県コード（JIS X 0401、2桁）",
+        "en": "Prefecture code (JIS X 0401, 2 digits)"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#jisPrefectureCode"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/localGovernmentCode",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "localGovernmentCode"
+      },
+      "comment": {
+        "ja": "全国地方公共団体コード（JIS X 0402 の5桁 + 検査数字1桁）",
+        "en": "Local government code (全国地方公共団体コード: JIS X 0402 plus a check digit, 6 digits)"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#localGovernmentCode"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/machiaza",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "machiaza"
+      },
+      "comment": {
+        "ja": "町字（町名・大字・字）。丁目は含めない",
+        "en": "Town or district name (町字: 町名, 大字, 字), without chome"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#machiaza"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/residentialIndication",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "residentialIndication"
+      },
+      "comment": {
+        "ja": "住居表示実施区域なら true（banchi/go は街区符号/住居番号）、地番なら false",
+        "en": "true in a residential-indication area (banchi/go are block and residence numbers), false for lot numbers (地番)"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#residentialIndication"
+    }
+  ]
+}

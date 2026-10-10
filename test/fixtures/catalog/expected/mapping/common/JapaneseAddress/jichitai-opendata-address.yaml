@@ -1,0 +1,58 @@
+# Correspondence between JapaneseAddress and the address columns shared by the
+# Digital Agency's 自治体標準オープンデータセット (data item definition sheet A).
+standard:
+  name:
+    ja: 自治体標準オープンデータセット・データ項目定義書A（20260801版）の所在地の項目（デジタル庁）
+    en: "Municipal standard open dataset, data item definition sheet A (2026-08-01), location columns (Digital Agency)"
+  url: https://www.digital.go.jp/resources/open_data/municipal-standard-data-set-test
+  license:
+    ja: "公共データ利用規約（第1.0版）（PDL1.0、CC BY 4.0 と互換）"
+    en: "Public Data License (Version 1.0) (PDL1.0), compatible with CC BY 4.0"
+  note:
+    ja: "定義書Aのうち、01 公共施設、02 文化財、03 指定緊急避難場所、05 子育て施設、07 公衆無線LAN、08 AED、09 介護サービス事業所、10 医療機関、11 観光施設、12 イベント、13 公衆トイレ、14 消防水利施設の 12 のデータセットが同じ所在地の項目を持つ（15 食品等営業許可は連結表記・所在地の全国地方公共団体コード・町字ID のみ）。項目名は日本語名（英語名）で示す。項目番号はデータセットごとに異なる。"
+    en: "Of definition sheet A, 12 datasets share the same location columns: 01 public facilities, 02 cultural properties, 03 designated emergency evacuation sites, 05 childcare facilities, 07 public Wi-Fi, 08 AEDs, 09 care service providers, 10 medical institutions, 11 tourist facilities, 12 events, 13 public toilets, 14 fire water supplies (15 food business permits has only the full address, the location's local government code and the town id). Columns are given as the Japanese name (English item name); item numbers differ per dataset."
+fields:
+  addressCountry: { to: null, note: { ja: データセットには無い。常に JP, en: not in the datasets; always JP }, value: JP }
+  postalCode:
+    to: 郵便番号 (contactPointPostalCode)
+    note:
+      ja: 定義上は連絡先の郵便番号で、所在地と異なることがある。そのため変換では postalCode に入れない。12 イベント、13 公衆トイレ、14 消防水利施設には無い
+      en: by definition the contact point's postal code, which may differ from the location's, so the converter does not put it into postalCode; not in 12 events, 13 public toilets, 14 fire water supplies
+  addressRegion: { to: 所在地_都道府県 (prefecture), column: 所在地_都道府県 }
+  addressLocality: { to: 所在地_市区町村 (city), note: { ja: 郡名・政令市の区名を含む点は同じ, en: both include county and designated-city ward names }, column: 所在地_市区町村, transform: municipality }
+  machiaza:
+    to: 所在地_町字 (streetAddress)
+    note:
+      ja: データセットの町字は丁目を含む（例 青葉町一丁目）。machiaza + chome に対応
+      en: "the dataset's town includes chome (e.g. 青葉町一丁目); corresponds to machiaza + chome"
+  chome: { to: 所在地_町字 (streetAddress), note: { ja: 上記のとおり町字に含まれる。漢数字は算用数字にする（一丁目 → 1）, en: "included in the town, see above; convert kanji numerals (一丁目 → 1)" } }
+  banchi:
+    to: 所在地_番地以下 (cityBlock)
+    note:
+      ja: 番地以下をひとつの項目にまとめる（例 ○-○）。banchi + go に対応
+      en: "everything below the town in one column (e.g. ○-○); corresponds to banchi + go"
+  go: { to: 所在地_番地以下 (cityBlock) }
+  buildingName: { to: 建物名等(方書) (buildingNameEtc), column: 建物名等(方書) }
+  addressText:
+    to: 所在地_連結表記 (fullAddress)
+    note:
+      ja: 都道府県から建物名等までを連結した表記。データセットでは必須の項目なので、構造化した項目が空でもこれは入る
+      en: prefecture through building name as one line. Required in the datasets, so it is there even when the structured columns are empty
+    column: 所在地_連結表記
+  localGovernmentCode:
+    to: 所在地_全国地方公共団体コード (locatedLocalGovernmentCode)
+    note:
+      ja: 先頭の「全国地方公共団体コード」（localGovernmentCode）はデータを公開する団体のコードで、所在地が管轄外にあると異なる。住所には所在地のほうを使う
+      en: "the first column, 全国地方公共団体コード (localGovernmentCode), is the publishing government's code and differs when the location lies outside its area; use the location's code for the address"
+    column: 所在地_全国地方公共団体コード
+    transform: code6
+  abrMachiazaId:
+    to: 町字ID (streetAddressId)
+    note:
+      ja: どちらもアドレス・ベース・レジストリの町字ID。記入例は 0008-001 のようにハイフンを含むので、取り除いて 7 桁にする
+      en: "both are the Address Base Registry town id. The dataset's example writes it with a hyphen (0008-001); remove it for the 7 digits"
+    column: 町字ID
+    transform: machiazaId
+  jisPrefectureCode: { to: null, note: { ja: データセットには無い。localGovernmentCode の先頭2桁から導ける, en: not in the datasets; the first two digits of localGovernmentCode } }
+  jisMunicipalityCode: { to: null, note: { ja: データセットには無い。localGovernmentCode の先頭5桁, en: not in the datasets; the first five digits of localGovernmentCode } }
+  residentialIndication: { to: null, note: { ja: データセットには無い, en: not in the datasets } }

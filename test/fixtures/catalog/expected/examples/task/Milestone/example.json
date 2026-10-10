@@ -1,0 +1,14 @@
+{
+  "id": "urn:ngsi-ld:Milestone:heavy-rain-2026-07-initial",
+  "type": "Milestone",
+  "name": "初動対応（発災から 72 時間）",
+  "description": "被害状況の確認と通行規制の設定を終えるまでの段階",
+  "project": "urn:ngsi-ld:Project:heavy-rain-2026-07",
+  "start": "2026-07-08T07:00:00+09:00",
+  "due": "2026-07-11",
+  "milestoneStatus": "open",
+  "source": "https://tracker.example.jp/versions/7",
+  "externalId": "7",
+  "dateCreated": "2026-07-08T06:30:00+09:00",
+  "dateModified": "2026-07-08T09:15:00+09:00"
+}

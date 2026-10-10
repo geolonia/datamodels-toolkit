@@ -1,0 +1,14 @@
+standard:
+  name: { ja: Redmine のバージョン, en: Redmine version }
+  url: https://www.redmine.org/projects/redmine/wiki/Rest_Versions
+fields:
+  name: { to: "name" }
+  description: { to: "description" }
+  project: { to: "project.id" }
+  start: { to: null, note: { ja: Redmine はバージョンの開始日を持たず、課題の開始日から計算する, en: "Redmine stores no start date for a version; it computes one from the issues' start dates" } }
+  due: { to: "due_date", note: { ja: "日付（YYYY-MM-DD）のまま入れる", en: "a date (YYYY-MM-DD), kept as it is" } }
+  milestoneStatus: { to: "status", note: { ja: "open、locked、closed をそのまま", en: "open, locked and closed unchanged" } }
+  source: { to: "<base_url>/versions/<id>" }
+  externalId: { to: "id" }
+  dateCreated: { to: "created_on" }
+  dateModified: { to: "updated_on" }

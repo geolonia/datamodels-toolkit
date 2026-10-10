@@ -1,0 +1,46 @@
+{
+  "id": "urn:ngsi-ld:Project:heavy-rain-2026-07",
+  "type": "Project",
+  "name": "令和8年7月大雨 災害対応",
+  "description": "7/8〜 大雨に伴う区の災害対応オペレーション",
+  "identifier": "heavy-rain-2026-07",
+  "projectStatus": "active",
+  "isPublic": false,
+  "homepage": "https://tracker.example.jp/projects/heavy-rain-2026-07",
+  "start": "2026-07-08T07:00:00+09:00",
+  "location": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          139.73,
+          35.67
+        ],
+        [
+          139.78,
+          35.67
+        ],
+        [
+          139.78,
+          35.705
+        ],
+        [
+          139.73,
+          35.705
+        ],
+        [
+          139.73,
+          35.67
+        ]
+      ]
+    ]
+  },
+  "keywords": [
+    "大雨",
+    "災害対応"
+  ],
+  "source": "https://tracker.example.jp/projects/heavy-rain-2026-07",
+  "externalId": "42",
+  "dateCreated": "2026-07-08T06:00:00+09:00",
+  "dateModified": "2026-07-08T11:05:00+09:00"
+}

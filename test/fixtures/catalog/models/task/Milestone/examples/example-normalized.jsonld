@@ -1,0 +1,60 @@
+{
+  "@context": [
+    "https://datamodels.jp/context/task/v1.jsonld",
+    "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context-v1.8.jsonld"
+  ],
+  "id": "urn:ngsi-ld:Milestone:heavy-rain-2026-07-initial",
+  "type": "Milestone",
+  "name": {
+    "type": "Property",
+    "value": "初動対応（発災から 72 時間）"
+  },
+  "description": {
+    "type": "Property",
+    "value": "被害状況の確認と通行規制の設定を終えるまでの段階"
+  },
+  "project": {
+    "type": "Relationship",
+    "object": "urn:ngsi-ld:Project:heavy-rain-2026-07"
+  },
+  "start": {
+    "type": "Property",
+    "value": {
+      "@type": "DateTime",
+      "@value": "2026-07-08T07:00:00+09:00"
+    }
+  },
+  "due": {
+    "type": "Property",
+    "value": {
+      "@type": "Date",
+      "@value": "2026-07-11"
+    }
+  },
+  "milestoneStatus": {
+    "type": "Property",
+    "value": "open"
+  },
+  "source": {
+    "type": "Property",
+    "value": "https://tracker.example.jp/versions/7"
+  },
+  "externalId": {
+    "type": "Property",
+    "value": "7"
+  },
+  "dateCreated": {
+    "type": "Property",
+    "value": {
+      "@type": "DateTime",
+      "@value": "2026-07-08T06:30:00+09:00"
+    }
+  },
+  "dateModified": {
+    "type": "Property",
+    "value": {
+      "@type": "DateTime",
+      "@value": "2026-07-08T09:15:00+09:00"
+    }
+  }
+}

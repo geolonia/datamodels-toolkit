@@ -17,6 +17,10 @@
   "bin": {
     "datamodels": "bin/datamodels.mjs"
   },
+  "exports": {
+    "./build": "./src/build/index.mjs",
+    "./package.json": "./package.json"
+  },
   "files": [
     "bin",
     "src",
@@ -27,7 +31,8 @@
   },
   "scripts": {
     "test": "node --test",
-    "fixtures": "node scripts/update-fixtures.mjs"
+    "fixtures": "node scripts/update-fixtures.mjs",
+    "fixtures:build": "node scripts/update-build-fixtures.mjs"
   },
   "repository": {
     "type": "git",

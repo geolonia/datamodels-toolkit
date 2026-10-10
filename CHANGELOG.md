@@ -6,6 +6,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Added
 
+- `@geolonia/datamodels/build`: builds a catalog's machine-readable files from a models folder, the code of datamodels.jp with the base URL and the languages as options (#10). Its output for datamodels.jp's sources is byte for byte what the site serves.
 - `datamodels --help` and `datamodels convert --help` explain each option (#6).
 
 ### Changed
