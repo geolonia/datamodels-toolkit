@@ -51,6 +51,15 @@ It also works in an existing repository, for example one made by the Backstage s
 
 `--github owner/name` (or yes to the question) puts the node on GitHub with the `gh` CLI: in a folder without a remote it makes the first commit and creates the public repository; with a remote it keeps it. Either way it sets GitHub Pages to deploy from GitHub Actions.
 
+## add
+
+```bash
+datamodels add road/RoadPatrol           # an entity type
+datamodels add road/Segment --value      # a value type, used inside attributes
+```
+
+Adds a model to a subject of the node: `schema.json` (with `id` and `type` for an entity), `catalog.yaml` with a title and description in each of the node's languages, `examples/example.json`, and the type in the subject's `@context`. The skeleton builds and passes `check` at once; then add its attributes, each with an `x-iri` and a description in `catalog.yaml`.
+
 ## build
 
 ```bash
