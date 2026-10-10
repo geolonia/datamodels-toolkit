@@ -1,0 +1,39 @@
+name: Action
+
+# Runs this repository's GitHub Action (action.yml) on the small node in
+# test/fixtures/node: check and build, without deploying.
+#
+# No `paths` filter on purpose: a filtered workflow never reports on PRs it
+# skips, which blocks them forever if this check is required.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: Action
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check and build the fixture node
+        uses: ./
+        with:
+          directory: test/fixtures/node
+          deploy: 'false'
+          offline: 'true'
+
+      - name: The site is there
+        run: |
+          test -f "$RUNNER_TEMP/datamodels-site/catalog.json"
+          test -f "$RUNNER_TEMP/datamodels-site/ns/road.html"
+          test -f "$RUNNER_TEMP/datamodels-site/models/road/RoadPatrol/index.html"

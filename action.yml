@@ -1,0 +1,71 @@
+# A data model node on GitHub Pages (#14): check the node, build its files and
+# pages, and deploy them. It runs this package from the Action's own checkout,
+# so a node upgrades by changing the version it pins.
+#
+# The calling job needs `pages: write` and `id-token: write` to deploy, and the
+# `github-pages` environment; see the README for the whole workflow. Inputs
+# reach the shell only through environment variables, never inside a command.
+name: Data model node
+description: Check and build a data model node (node.yaml and models/) and deploy it to GitHub Pages.
+author: Geolonia
+branding:
+  icon: database
+  color: gray-dark
+
+inputs:
+  directory:
+    description: The node, the folder with node.yaml and models/.
+    default: '.'
+  deploy:
+    description: Deploy to GitHub Pages ('true') or only check and build ('false', for pull requests).
+    default: 'true'
+  offline:
+    description: Check without the network ('true'), skipping published files and extended models.
+    default: 'false'
+
+outputs:
+  page_url:
+    description: The URL of the deployed site.
+    value: ${{ steps.deploy.outputs.page_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: '24'
+
+    - name: Install the toolkit
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+
+    - name: Check
+      shell: bash
+      env:
+        TOOLKIT: ${{ github.action_path }}
+        NODE_DIR: ${{ inputs.directory }}
+        OFFLINE: ${{ inputs.offline }}
+      run: |
+        args=(check "$NODE_DIR")
+        if [ "$OFFLINE" = true ]; then args+=(--offline); fi
+        node "$TOOLKIT/bin/datamodels.mjs" "${args[@]}"
+
+    - name: Build
+      shell: bash
+      env:
+        TOOLKIT: ${{ github.action_path }}
+        NODE_DIR: ${{ inputs.directory }}
+      run: node "$TOOLKIT/bin/datamodels.mjs" build "$NODE_DIR" --out "$RUNNER_TEMP/datamodels-site"
+
+    - name: Upload the site
+      if: inputs.deploy == 'true'
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      with:
+        path: ${{ runner.temp }}/datamodels-site
+
+    - name: Deploy to GitHub Pages
+      id: deploy
+      if: inputs.deploy == 'true'
+      uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

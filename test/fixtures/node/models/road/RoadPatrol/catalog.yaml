@@ -1,0 +1,5 @@
+title: { en: Road patrol }
+description: { en: One patrol run. }
+status: experimental
+attributes:
+  route: { en: The route patrolled }
