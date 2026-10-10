@@ -177,6 +177,36 @@ test('a term from a context imported by URL: checked online, noted offline or wh
   assert.match(o.notes.join('\n'), /road\/context\.jsonld: https:\/\/shared\.example\.org\/context\/common\/v1\.0\.0\.jsonld could not be read \(ENOTFOUND\)/);
 });
 
+test('imports of an imported context are followed: datamodels.jp subjects import its common context', async () => {
+  const dir = await node();
+  await listNodes(dir, [{ url: 'https://datamodels.jp/', index: INDEX }]);
+  const common = 'https://datamodels.jp/context/common/v1.0.0.jsonld';
+  const files = {
+    ...datamodelsJp([common, { task: 'https://datamodels.jp/ns/task/', Task: 'task:Task' }]),
+    [common]: { '@context': { common: 'https://datamodels.jp/ns/common/', address: 'common:address' } },
+  };
+  const schemaFile = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const schema = JSON.parse(await readFile(schemaFile, 'utf8'));
+  schema.properties.address = { type: 'object', 'x-iri': 'https://datamodels.jp/ns/common/address' };
+  await writeFile(schemaFile, JSON.stringify(schema));
+  const yaml = join(dir, 'models', 'road', 'RoadPatrol', 'catalog.yaml');
+  await writeFile(yaml, (await readFile(yaml, 'utf8')).replace('  route: { en: The route }', '  route: { en: The route }\n  address: { en: Where }'));
+  const ctx = join(dir, 'models', 'road', 'context.jsonld');
+  // address comes from the common context, which the task context imports.
+  await writeFile(ctx, JSON.stringify({ '@context': [TASK_CONTEXT, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' }] }));
+  assert.deepEqual(await checkNode(dir, { fetch: fakeFetch(files) }), { problems: [], notes: [] });
+  // Redefining it here is caught by the extends check too, through the same import.
+  await writeFile(ctx, JSON.stringify({ '@context': [TASK_CONTEXT, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route', address: 'road:address' }] }));
+  schema.properties.address['x-iri'] = `${BASE}/ns/road#address`;
+  await writeFile(schemaFile, JSON.stringify(schema));
+  assert.deepEqual((await checkNode(dir, { fetch: fakeFetch(files) })).problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: redefines address (https://datamodels.jp/ns/common/address there, ${BASE}/ns/road#address here)`]);
+  // The common context cannot be read: noted.
+  const { [common]: _, ...withoutCommon } = files;
+  const r = await checkNode(dir, { fetch: fakeFetch(withoutCommon) });
+  assert.deepEqual(r.problems, []);
+  assert.match(r.notes.join('\n'), /road\/context\.jsonld: https:\/\/datamodels\.jp\/context\/common\/v1\.0\.0\.jsonld could not be read \(.*HTTP 404\)/);
+});
+
 test('a schema that references another model of the node', async () => {
   const dir = await node();
   // A value type, and RoadPatrol's route referencing it by its URL.

@@ -45,6 +45,25 @@ export function contextTerms(context, inherited = {}) {
 const FULL_IRI = /^(https?|urn):/;
 
 /**
+ * The term definitions an @context brings in by URL, with the imports of
+ * those contexts too (datamodels.jp's subject contexts import its common
+ * one), in JSON-LD order: a later definition wins. Throws with the URL that
+ * could not be read.
+ */
+export async function importedDefs(context, getJson, seen = new Set()) {
+  let defs = {};
+  for (const url of [context].flat().filter((p) => typeof p === 'string')) {
+    if (seen.has(url)) continue;
+    seen.add(url);
+    let theirs;
+    try { theirs = (await getJson(url))?.['@context']; } catch (e) { throw new Error(`${url} could not be read (${e.cause?.code ?? e.message})`); }
+    if (theirs == null) throw new Error(`${url} has no @context`);
+    defs = { ...defs, ...(await importedDefs(theirs, getJson, seen)), ...contextDefs(theirs) };
+  }
+  return defs;
+}
+
+/**
  * Every type and attribute of a subject's models is a term of its @context and
  * expands to the model's IRI for it: otherwise JSON-LD drops the attribute, or
  * gives it another meaning than the schema and the pages say. `imported`: the
@@ -125,13 +144,9 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
     for (const s of subjects) {
       const imports = [s.context['@context']].flat().filter((p) => typeof p === 'string');
       let imported = {};
-      for (const url of imports) {
-        if (offline) { imported = null; break; }
-        try {
-          const theirs = (await getJson(url))?.['@context'];
-          if (theirs == null || typeof theirs !== 'object') throw new Error('no term definitions');
-          imported = { ...imported, ...contextDefs(theirs) };
-        } catch (e) { notes.push(`${s.name}/context.jsonld: ${url} could not be read (${e.cause?.code ?? e.message})`); imported = null; break; }
+      if (imports.length && offline) imported = null;
+      else if (imports.length) {
+        try { imported = await importedDefs(s.context['@context'], getJson); } catch (e) { notes.push(`${s.name}/context.jsonld: ${e.message}`); imported = null; }
       }
       const found = termProblems(s, urls, imported);
       problems.push(...found.problems);
@@ -181,9 +196,11 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
           // A context file without @context would make every term look new, so nothing could be compared.
           if (theirContext == null) { problems.push(`${where}: ${contextUrl} has no @context`); continue; }
           if (typeof theirContext !== 'object') { notes.push(`${where}: not checked, the @context of ${contextUrl} only imports another one`); continue; }
-          const theirs = contextTerms(theirContext);
+          // Its terms, with those of the contexts it imports (datamodels.jp's common one, say).
+          const all = { ...(await importedDefs(theirContext, getJson)), ...contextDefs(theirContext) };
+          const theirs = contextTerms(all);
           // Prefixes of the extended context may be used here without being defined again.
-          const ours = contextTerms(s.context['@context'], contextDefs(theirContext));
+          const ours = contextTerms(s.context['@context'], all);
           for (const [term, iri] of ours) if (theirs.has(term) && theirs.get(term) !== iri) problems.push(`${where}: redefines ${term} (${theirs.get(term)} there, ${iri} here)`);
         } catch (e) {
           notes.push(`${where}: not checked, ${e.cause?.code ?? e.message}`);
