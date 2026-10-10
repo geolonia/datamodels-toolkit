@@ -60,6 +60,9 @@ test('usage errors exit with 2 and name the problem', async () => {
     [['convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--set', 'nothing=x', '--site', SITE_DIR], /--set nothing: not a field that gsi-emergency-site fills/],
     [['convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--sit', SITE_DIR], /unknown option --sit/],
     [['convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, 'more'], /unexpected arguments: more/],
+    // An option's value that is another option, or no value at all.
+    [['convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--out', '--normalized'], /^--out needs a value\nusage: /],
+    [['convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--site'], /^--site needs a value\nusage: /],
   ]) {
     const r = await datamodels(...args);
     assert.equal(r.code, 2, args.join(' '));

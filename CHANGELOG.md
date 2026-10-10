@@ -10,6 +10,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Changed
 
+- The command line is built on [commander](https://github.com/tj/commander.js) (#9), ready for more commands. `--help` also lists the arguments; error messages and exit codes stay the same.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
 ## 0.1.0 - not released yet
