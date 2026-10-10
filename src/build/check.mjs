@@ -1,8 +1,10 @@
 // The checks a node runs in CI before it publishes (#12): its schemas and
-// examples are valid, its release snapshots match the sources, an exact
+// examples are valid, every type and attribute is a term of its @context with
+// the same IRI (#26), its release snapshots match the sources, an exact
 // version already online did not change, and no model redefines a term of a
 // model it extends. Other nodes that cannot be reached are noted and skipped:
 // a node that is down never fails someone else's build (docs/node.md, section 5).
+import { readFileSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,6 +15,10 @@ import { catalogUrls } from './urls.mjs';
 
 // A schema on another site that could not be read: noted and skipped, never a problem of this node.
 class Unavailable extends Error {}
+
+// The NGSI-LD core context (v1.8): every broker knows its terms (location,
+// observedAt, …) without a node defining them, and they cannot be redefined.
+const CORE_CONTEXT = JSON.parse(readFileSync(new URL('./ngsi-ld-core-context-v1.8.jsonld', import.meta.url), 'utf8'))['@context'];
 
 /** The term definitions of an @context (object or array; imported URLs are not followed). */
 export function contextDefs(context) {
@@ -34,6 +40,45 @@ export function contextTerms(context, inherited = {}) {
     return prefix && !iri.slice(i + 1).startsWith('//') ? prefix + iri.slice(i + 1) : iri;
   };
   return new Map(Object.keys(own).filter((k) => !k.startsWith('@')).map((k) => [k, expand(raw(defs[k]))]).filter(([, v]) => v));
+}
+
+const FULL_IRI = /^(https?|urn):/;
+
+/**
+ * Every type and attribute of a subject's models is a term of its @context and
+ * expands to the model's IRI for it: otherwise JSON-LD drops the attribute, or
+ * gives it another meaning than the schema and the pages say. `imported`: the
+ * term definitions of the contexts it imports by URL, or null when they could
+ * not be read (then a term that is not found is only noted). Returns { problems, notes }.
+ */
+export function termProblems(subject, urls, imported = {}) {
+  const problems = [];
+  const notes = [];
+  const context = subject.context['@context'];
+  const core = contextTerms(CORE_CONTEXT);
+  const own = contextTerms(context, imported ?? {});
+  const known = new Map([...core, ...(imported ? contextTerms(imported) : []), ...own]);
+  const ctx = `${subject.name}/context.jsonld`;
+  for (const [term, iri] of own) if (core.has(term) && core.get(term) !== iri) problems.push(`${ctx}: redefines the NGSI-LD core term ${term} (${core.get(term)})`);
+  // A term found nowhere: a problem, unless it may be in an imported context that could not be read.
+  const missing = (where, what) => (imported ? problems : notes).push(`${where}: ${what} is not in the @context${imported ? '' : ', or in a context it imports that could not be read'}`);
+  const expandsTo = (where, name, iri, expected) => {
+    if (!FULL_IRI.test(iri)) (imported ? problems : notes).push(`${where}: the @context maps ${name} to ${iri}, which is not a full IRI (is its prefix defined?)`);
+    else if (iri !== expected) problems.push(`${where}: ${name} is ${expected ?? '(no x-iri)'} in the schema, but the @context expands it to ${iri}`);
+  };
+  for (const m of subject.models) {
+    const where = `${subject.name}/${m.type}`;
+    if (m.kind === 'entity') {
+      if (!known.has(m.type)) missing(where, `the type ${m.type}`);
+      else expandsTo(where, m.type, known.get(m.type), urls.modelUrls(subject, m).typeIri);
+    }
+    for (const [name, prop] of Object.entries(m.schema.properties ?? {})) {
+      if (name === 'id' || name === 'type') continue;
+      if (!known.has(name)) missing(where, `the attribute ${name}`);
+      else expandsTo(where, name, known.get(name), prop?.['x-iri']);
+    }
+  }
+  return { problems, notes };
 }
 
 /**
@@ -75,6 +120,23 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
         continue;
       }
       if (m.examples['example.json'] && !validate(m.examples['example.json'])) problems.push(`${where}/examples/example.json: ${ajv.errorsText(validate.errors)}`);
+    }
+
+    // Types and attributes against the @context; contexts it imports by URL are read online only.
+    for (const s of subjects) {
+      const imports = [s.context['@context']].flat().filter((p) => typeof p === 'string');
+      let imported = {};
+      for (const url of imports) {
+        if (offline) { imported = null; break; }
+        try {
+          const theirs = (await getJson(url))?.['@context'];
+          if (theirs == null || typeof theirs !== 'object') throw new Error('no term definitions');
+          imported = { ...imported, ...contextDefs(theirs) };
+        } catch (e) { notes.push(`${s.name}/context.jsonld: ${url} could not be read (${e.cause?.code ?? e.message})`); imported = null; break; }
+      }
+      const found = termProblems(s, urls, imported);
+      problems.push(...found.problems);
+      notes.push(...found.notes);
     }
 
     if (offline) { notes.push('offline: the published files and the models this node extends were not checked'); return { problems, notes }; }

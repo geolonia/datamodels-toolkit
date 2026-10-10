@@ -29,6 +29,12 @@ async function node() {
   return dir;
 }
 
+/** List `nodes` in node.yaml, so their contexts may be imported. */
+async function listNodes(dir, nodes) {
+  const file = join(dir, 'node.yaml');
+  await writeFile(file, `${await readFile(file, 'utf8')}nodes:\n${nodes.map((n) => `  - { url: ${n.url}, index: ${n.index} }\n`).join('')}`);
+}
+
 /** A stand-in for fetch: `files` maps URLs to bodies (objects as JSON); anything else is a 404, or `fail` throws. */
 const fakeFetch = (files, { fail = [] } = {}) => async (url) => {
   if (fail.some((f) => url.startsWith(f))) throw new TypeError('fetch failed', { cause: { code: 'ENOTFOUND' } });
@@ -91,11 +97,23 @@ test('extends: a redefined term or a missing model is a problem, an unreachable 
   const dir = await node();
   let r = await checkNode(dir, { fetch: fakeFetch(datamodelsJp({ task: 'https://datamodels.jp/ns/task/', route: 'task:route' })) });
   assert.deepEqual(r.problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: redefines route (https://datamodels.jp/ns/task/route there, ${BASE}/ns/road#route here)`]);
-  // A prefix of the extended context may be used without defining it again.
+  // Reusing a term of the extended model: its context is imported, so its prefix is defined.
   const ctx = join(dir, 'models', 'road', 'context.jsonld');
-  await writeFile(ctx, JSON.stringify({ '@context': { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'task:route' } }));
+  const schemaFile = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const schema = JSON.parse(await readFile(schemaFile, 'utf8'));
+  schema.properties.route['x-iri'] = 'https://datamodels.jp/ns/task/route';
+  await writeFile(schemaFile, JSON.stringify(schema));
+  await listNodes(dir, [{ url: 'https://datamodels.jp/', index: INDEX }]);
+  await writeFile(ctx, JSON.stringify({ '@context': [TASK_CONTEXT, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'task:route' }] }));
   r = await checkNode(dir, { fetch: fakeFetch(datamodelsJp({ task: 'https://datamodels.jp/ns/task/', route: 'task:route' })) });
   assert.deepEqual(r.problems, []);
+  // Without the import, task: is no prefix, and route would expand to the IRI "task:route".
+  await writeFile(ctx, JSON.stringify({ '@context': { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'task:route' } }));
+  r = await checkNode(dir, { fetch: fakeFetch(datamodelsJp({ task: 'https://datamodels.jp/ns/task/', route: 'task:route' })) });
+  assert.deepEqual(r.problems, ['road/RoadPatrol: the @context maps route to task:route, which is not a full IRI (is its prefix defined?)']);
+  await writeFile(ctx, JSON.stringify({ '@context': { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' } }));
+  schema.properties.route['x-iri'] = `${BASE}/ns/road#route`;
+  await writeFile(schemaFile, JSON.stringify(schema));
   r = await checkNode(dir, { fetch: fakeFetch({ [INDEX]: { models: [] } }) });
   assert.deepEqual(r.problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: not listed in ${INDEX}`]);
   r = await checkNode(dir, { fetch: fakeFetch({}, { fail: ['https://datamodels.jp/'] }) });
@@ -107,6 +125,58 @@ test('extends: a redefined term or a missing model is a problem, an unreachable 
   assert.match(r.notes[0], /extends .*: not checked, .*(timed out|aborted)/i);
 });
 
+test('every type and attribute is a term of the @context, with the IRI of the schema (#26)', async () => {
+  const dir = await node();
+  const ctx = join(dir, 'models', 'road', 'context.jsonld');
+  const schemaFile = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const schema = JSON.parse(await readFile(schemaFile, 'utf8'));
+  const write = (context) => writeFile(ctx, JSON.stringify({ '@context': context }));
+  const problems = async () => (await checkNode(dir, { offline: true })).problems;
+  // Missing from the @context: JSON-LD would drop route.
+  await write({ road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol' });
+  assert.deepEqual(await problems(), ['road/RoadPatrol: the attribute route is not in the @context']);
+  // Another IRI than the schema's x-iri.
+  await write({ road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'https://other.example/route' });
+  assert.deepEqual(await problems(), [`road/RoadPatrol: route is ${BASE}/ns/road#route in the schema, but the @context expands it to https://other.example/route`]);
+  // The type, missing or under another IRI.
+  await write({ road: `${BASE}/ns/road#`, route: 'road:route' });
+  assert.deepEqual(await problems(), ['road/RoadPatrol: the type RoadPatrol is not in the @context']);
+  await write({ road: `${BASE}/ns/road#`, RoadPatrol: 'road:Patrol', route: 'road:route' });
+  assert.deepEqual(await problems(), [`road/RoadPatrol: RoadPatrol is ${BASE}/ns/road#RoadPatrol in the schema, but the @context expands it to ${BASE}/ns/road#Patrol`]);
+  // A core term needs no definition; redefining one is a problem.
+  schema.properties.location = { type: 'object', 'x-iri': 'https://uri.etsi.org/ngsi-ld/location' };
+  await writeFile(schemaFile, JSON.stringify(schema));
+  const yaml = join(dir, 'models', 'road', 'RoadPatrol', 'catalog.yaml');
+  await writeFile(yaml, (await readFile(yaml, 'utf8')).replace('  route: { en: The route }', '  route: { en: The route }\n  location: { en: Where }'));
+  await write({ road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' });
+  assert.deepEqual(await problems(), []);
+  await write({ road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route', location: 'road:location' });
+  assert.deepEqual(await problems(), [
+    'road/context.jsonld: redefines the NGSI-LD core term location (https://uri.etsi.org/ngsi-ld/location)',
+    `road/RoadPatrol: location is https://uri.etsi.org/ngsi-ld/location in the schema, but the @context expands it to ${BASE}/ns/road#location`,
+  ]);
+});
+
+test('a term from a context imported by URL: checked online, noted offline or when it cannot be read', async () => {
+  const dir = await node();
+  const shared = 'https://shared.example.org/context/common/v1.0.0.jsonld';
+  await listNodes(dir, [{ url: 'https://shared.example.org/', index: 'https://shared.example.org/catalog.json' }]);
+  await writeFile(join(dir, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': [shared, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol' }] }));
+  const sharedRoute = { [shared]: { '@context': { route: `${BASE}/ns/road#route` } } };
+  // Online: route is found in the imported context.
+  assert.deepEqual(await checkNode(dir, { fetch: fakeFetch({ ...datamodelsJp(), ...sharedRoute }) }), { problems: [], notes: [] });
+  // There under another IRI: a problem.
+  const r = await checkNode(dir, { fetch: fakeFetch({ ...datamodelsJp(), [shared]: { '@context': { route: 'https://other.example/route' } } }) });
+  assert.deepEqual(r.problems, [`road/RoadPatrol: route is ${BASE}/ns/road#route in the schema, but the @context expands it to https://other.example/route`]);
+  // Offline, or the import cannot be read: a term not found here is only noted.
+  let o = await checkNode(dir, { offline: true });
+  assert.deepEqual(o.problems, []);
+  assert.match(o.notes.join('\n'), /road\/RoadPatrol: the attribute route is not in the @context, or in a context it imports that could not be read/);
+  o = await checkNode(dir, { fetch: fakeFetch(datamodelsJp(), { fail: ['https://shared.example.org/'] }) });
+  assert.deepEqual(o.problems, []);
+  assert.match(o.notes.join('\n'), /road\/context\.jsonld: https:\/\/shared\.example\.org\/context\/common\/v1\.0\.0\.jsonld could not be read \(ENOTFOUND\)/);
+});
+
 test('a schema that references another model of the node', async () => {
   const dir = await node();
   // A value type, and RoadPatrol's route referencing it by its URL.
@@ -114,6 +184,7 @@ test('a schema that references another model of the node', async () => {
   await mkdir(seg, { recursive: true });
   await writeFile(join(seg, 'schema.json'), JSON.stringify({ $id: `${BASE}/schema/road/Segment/v0.1.0.json`, 'x-kind': 'value', type: 'object', properties: { from: { type: 'string', 'x-iri': `${BASE}/ns/road#from` } } }));
   await writeFile(join(seg, 'catalog.yaml'), 'title: { en: Segment }\ndescription: { en: A part of a road. }\nattributes:\n  from: { en: Start }\n');
+  await writeFile(join(dir, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route', from: 'road:from' } }));
   const m = join(dir, 'models', 'road', 'RoadPatrol');
   const schema = JSON.parse(await readFile(join(m, 'schema.json'), 'utf8'));
   schema.properties.route = { $ref: `${BASE}/schema/road/Segment/v0.1.0.json`, 'x-iri': `${BASE}/ns/road#route` };
@@ -143,6 +214,7 @@ test('a schema on another site that cannot be read is a note, not a problem', as
   await writeFile(join(m, 'schema.json'), JSON.stringify(schema));
   const yaml = join(m, 'catalog.yaml');
   await writeFile(yaml, (await readFile(yaml, 'utf8')).replace('  route: { en: The route }', '  route: { en: The route }\n  address: { en: Where }'));
+  await writeFile(join(dir, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route', address: 'road:address' } }));
   let r = await checkNode(dir, { offline: true });
   assert.deepEqual(r.problems, []);
   assert.match(r.notes.join('\n'), /road\/RoadPatrol\/schema\.json: not validated, https:\/\/datamodels\.jp\/schema\/common\/JapaneseAddress\/v1\.0\.0\.json is on another site/);
