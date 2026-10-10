@@ -33,11 +33,15 @@ export function contextTerms(context, inherited = {}) {
   const own = contextDefs(context);
   const defs = { ...inherited, ...own };
   const raw = (v) => (typeof v === 'string' ? v : v?.['@id']);
-  const expand = (iri) => {
+  // A prefix may itself be a compact IRI (section: 'base:section/'): expanded in turn, a cycle left as it is.
+  const expand = (iri, seen = new Set()) => {
     if (typeof iri !== 'string') return undefined;
     const i = iri.indexOf(':');
-    const prefix = i > 0 ? raw(defs[iri.slice(0, i)]) : undefined;
-    return prefix && !iri.slice(i + 1).startsWith('//') ? prefix + iri.slice(i + 1) : iri;
+    const name = i > 0 ? iri.slice(0, i) : undefined;
+    if (!name || iri.slice(i + 1).startsWith('//') || seen.has(name)) return iri;
+    const prefix = raw(defs[name]);
+    if (typeof prefix !== 'string') return iri;
+    return expand(prefix, new Set([...seen, name])) + iri.slice(i + 1);
   };
   return new Map(Object.keys(own).filter((k) => !k.startsWith('@')).map((k) => [k, expand(raw(defs[k]))]).filter(([, v]) => v));
 }
