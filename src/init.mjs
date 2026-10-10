@@ -3,8 +3,8 @@
 // 2026-10-10). In a folder that already has files, for example a repository
 // made by the Backstage scaffolder, it only adds what is missing: a file that
 // exists is left as it is, and .gitignore gets the lines it lacks.
-import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { mkdir, readFile, readdir, writeFile, stat } from 'node:fs/promises';
+import { dirname, join, relative, sep } from 'node:path';
 import YAML from 'yaml';
 import { settingsProblems } from './build/node.mjs';
 
@@ -15,13 +15,14 @@ export const ACTION_REF = 'main';
 const CHECKOUT = 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1';
 const GITIGNORE = ['_site/', 'node_modules/'];
 const SUBJECT_NAME = /^[a-z][a-z0-9-]*$/;
+const REPO_NAME = /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/;
 
 /**
  * The settings and the first subject from the answers, checked. Returns
  * { node, subject, problems }. Answers: baseUrl, iris (hash), languages
- * ([en]), publisherName, publisherUrl, license (CC0-1.0), subject.
+ * ([en]), publisherName, publisherUrl, license (CC0-1.0), subject, github (owner/name).
  */
-export function initSettings({ baseUrl, iris = 'hash', languages = ['en'], publisherName, publisherUrl, license = 'CC0-1.0', subject }) {
+export function initSettings({ baseUrl, iris = 'hash', languages = ['en'], publisherName, publisherUrl, license = 'CC0-1.0', subject, github }) {
   const node = {
     baseUrl: typeof baseUrl === 'string' ? baseUrl.replace(/\/+$/, '') : baseUrl,
     iris, languages,
@@ -30,6 +31,8 @@ export function initSettings({ baseUrl, iris = 'hash', languages = ['en'], publi
   };
   const problems = settingsProblems(node);
   if (typeof subject !== 'string' || !SUBJECT_NAME.test(subject)) problems.push('the first subject needs a name in lower case letters, digits and hyphens, for example road');
+  // Checked here too, so a wrong --github stops init before it writes anything.
+  if (github !== undefined && !REPO_NAME.test(github)) problems.push(`--github needs owner/name, got ${JSON.stringify(github)}`);
   return { node, subject, problems };
 }
 
@@ -146,25 +149,62 @@ export async function writeNode(dir, settings) {
   return { added, kept, appended };
 }
 
+/** owner/name of a GitHub remote URL (https or ssh), or null. */
+export function githubRepoOf(url) {
+  const m = /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([A-Za-z0-9-]+\/[A-Za-z0-9._-]+?)(?:\.git)?\/?$/.exec(String(url).trim());
+  return m ? m[1] : null;
+}
+
+// Paths in `git status --porcelain -z`; a rename or copy is followed by its old path.
+function statusPaths(out) {
+  const parts = out.split('\0').filter(Boolean);
+  const paths = [];
+  for (let i = 0; i < parts.length; i++) {
+    paths.push(parts[i].slice(3));
+    if (/^[RC]/.test(parts[i])) i++;
+  }
+  return paths;
+}
+
 /**
- * Put the node on GitHub with the gh CLI: in a folder without a remote, make
- * the first commit and create the public repository `repo` (owner/name); in
- * one that has a remote, only turn on GitHub Pages for it. `run(cmd, args,
- * opts)` runs a command without a shell and returns its standard output.
- * Returns the steps taken, in words.
+ * Put the node on GitHub with the gh CLI. In a folder without a remote, commit
+ * only the files init wrote (`files`) and create the public repository `repo`
+ * (owner/name); anything else in the folder stops it, so nothing else is
+ * published. In a folder whose remote is that repository, only turn on GitHub
+ * Pages. `run(cmd, args, opts)` runs a command without a shell and returns its
+ * standard output. Returns the steps taken, in words.
  */
-export async function publishToGitHub(dir, repo, { run }) {
-  if (!/^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(repo)) throw new Error(`--github needs owner/name, got ${JSON.stringify(repo)}`);
+export async function publishToGitHub(dir, repo, { run, files = [] }) {
+  if (!REPO_NAME.test(repo)) throw new Error(`--github needs owner/name, got ${JSON.stringify(repo)}`);
   const steps = [];
   await run('gh', ['auth', 'status']);
   const hasGit = await exists(join(dir, '.git'));
-  const remote = hasGit ? (await run('git', ['remote'], { cwd: dir })).trim() : '';
-  if (remote) {
-    steps.push(`kept the remote (${remote.split('\n')[0]}); no repository created`);
+  const remotes = hasGit ? (await run('git', ['remote'], { cwd: dir })).split('\n').map((r) => r.trim()).filter(Boolean) : [];
+  if (remotes.length) {
+    // Pages goes to the repository the folder pushes to, so --github must name it.
+    const urls = [];
+    for (const r of remotes) urls.push((await run('git', ['remote', 'get-url', r], { cwd: dir })).trim());
+    if (!urls.some((u) => githubRepoOf(u)?.toLowerCase() === repo.toLowerCase())) throw new Error(`the folder's remote (${urls.join(', ')}) is not github.com/${repo}; give --github the repository it points to`);
+    steps.push(`kept the remote (github.com/${repo}); no repository created`);
   } else {
-    if (!hasGit) { await run('git', ['init', '-b', 'main'], { cwd: dir }); steps.push('git init'); }
-    await run('git', ['add', '-A'], { cwd: dir });
-    // Commit only when something is staged: an existing repository may have nothing new.
+    const ours = new Set(files);
+    // Generated or ignored folders that .gitignore keeps out of the commit.
+    const ignored = (p) => GITIGNORE.some((g) => p.startsWith(g));
+    if (hasGit) {
+      // The workflow publishes main: a push from another branch would never deploy.
+      const branch = (await run('git', ['branch', '--show-current'], { cwd: dir })).trim();
+      if (branch !== 'main') throw new Error(`the workflow publishes the branch main, but this repository is on ${branch || 'no branch'}; switch to main first (git branch -m main)`);
+      const other = statusPaths(await run('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all'], { cwd: dir })).filter((p) => !ours.has(p));
+      if (other.length) throw new Error(`other changes in the folder would be published with the node: ${other.slice(0, 5).join(', ')}${other.length > 5 ? ', …' : ''}. Commit or remove them first`);
+    } else {
+      const all = (await readdir(dir, { recursive: true, withFileTypes: true })).filter((e) => e.isFile()).map((e) => relative(dir, join(e.parentPath, e.name)).split(sep).join('/'));
+      const other = all.filter((p) => !ours.has(p) && !ignored(p));
+      if (other.length) throw new Error(`the folder has other files that would be published with the node: ${other.slice(0, 5).join(', ')}${other.length > 5 ? ', …' : ''}. Move them out, or make the repository yourself`);
+      await run('git', ['init', '-b', 'main'], { cwd: dir });
+      steps.push('git init');
+    }
+    // Only the files init wrote; nothing else is in the folder by now.
+    if (files.length) await run('git', ['add', '--', ...files], { cwd: dir });
     const staged = (await run('git', ['diff', '--cached', '--name-only'], { cwd: dir })).trim();
     if (staged) { await run('git', ['commit', '-m', 'Start a data model node (datamodels init)'], { cwd: dir }); steps.push('first commit'); }
     await run('gh', ['repo', 'create', repo, '--public', '--source', dir, '--remote', 'origin', '--push']);

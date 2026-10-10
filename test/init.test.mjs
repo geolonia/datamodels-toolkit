@@ -81,25 +81,64 @@ function fakeRun({ answers = {}, fail = [] } = {}) {
   return { calls, run: fn };
 }
 
-test('--github: a new folder becomes a repository with Pages; an existing remote is kept', async () => {
+async function newNode() {
   const dir = await mkdtemp(join(tmpdir(), 'datamodels-init-'));
-  await writeNode(dir, initSettings({ baseUrl: 'https://example.github.io/models', publisherName: 'Example', publisherUrl: 'https://example.org/', subject: 'road' }));
-  let f = fakeRun({ answers: { 'git diff --cached --name-only': 'node.yaml\n' } });
-  await publishToGitHub(dir, 'example/models', f);
+  const { added } = await writeNode(dir, initSettings({ baseUrl: 'https://example.github.io/models', publisherName: 'Example', publisherUrl: 'https://example.org/', subject: 'road' }));
+  return { dir, files: added };
+}
+
+test('--github in a new folder: commits only the files of init, creates the repository, turns on Pages', async () => {
+  const { dir, files } = await newNode();
+  const f = fakeRun({ answers: { 'git diff --cached --name-only': 'node.yaml\n' } });
+  await publishToGitHub(dir, 'example/models', { ...f, files });
   assert.deepEqual(f.calls, [
-    'gh auth status', 'git init -b main', 'git add -A', 'git diff --cached --name-only',
+    'gh auth status', 'git init -b main', `git add -- ${files.join(' ')}`, 'git diff --cached --name-only',
     'git commit -m Start a data model node (datamodels init)',
     `gh repo create example/models --public --source ${dir} --remote origin --push`,
     'gh api -X POST repos/example/models/pages -f build_type=workflow',
   ]);
+  // Another file in the folder would be published too: stop before git init.
+  await writeFile(join(dir, '.env'), 'X=1\n');
+  const g = fakeRun();
+  await assert.rejects(publishToGitHub(dir, 'example/models', { ...g, files }), /other files that would be published with the node: \.env/);
+  assert.deepEqual(g.calls, ['gh auth status']);
+});
 
-  // A repository made elsewhere (Backstage, by hand): no new repository, Pages switched to Actions.
+test('--github in a repository without a remote: only on main, and only with no other changes', async () => {
+  const { dir, files } = await newNode();
   await mkdir(join(dir, '.git'));
-  f = fakeRun({ answers: { 'git remote': 'origin\n' }, fail: ['gh api -X POST'] });
-  const steps = await publishToGitHub(dir, 'example/models', f);
-  assert.deepEqual(f.calls, ['gh auth status', 'git remote', 'gh api -X POST repos/example/models/pages -f build_type=workflow', 'gh api -X PUT repos/example/models/pages -f build_type=workflow']);
-  assert.match(steps[0], /kept the remote \(origin\)/);
+  const status = `?? node.yaml\0?? notes.txt\0`;
+  let f = fakeRun({ answers: { 'git branch --show-current': 'master\n' } });
+  await assert.rejects(publishToGitHub(dir, 'example/models', { ...f, files }), /publishes the branch main, but this repository is on master/);
+  f = fakeRun({ answers: { 'git branch --show-current': 'main\n', 'git status --porcelain=v1 -z --untracked-files=all': status } });
+  await assert.rejects(publishToGitHub(dir, 'example/models', { ...f, files }), /other changes in the folder would be published with the node: notes\.txt/);
+  assert.ok(!f.calls.some((c) => c.startsWith('git add') || c.startsWith('gh repo create')), 'nothing staged or created');
+  f = fakeRun({ answers: { 'git branch --show-current': 'main\n', 'git status --porcelain=v1 -z --untracked-files=all': `?? node.yaml\0` } });
+  await publishToGitHub(dir, 'example/models', { ...f, files });
+  assert.ok(f.calls.includes(`gh repo create example/models --public --source ${dir} --remote origin --push`));
+});
+
+test('--github with a remote: only the repository the remote points to, Pages switched to Actions', async () => {
+  const { dir, files } = await newNode();
+  await mkdir(join(dir, '.git'));
+  // A repository made elsewhere (Backstage, by hand).
+  let f = fakeRun({ answers: { 'git remote': 'origin\n', 'git remote get-url origin': 'git@github.com:example/models.git\n' }, fail: ['gh api -X POST'] });
+  const steps = await publishToGitHub(dir, 'example/models', { ...f, files });
+  assert.deepEqual(f.calls, ['gh auth status', 'git remote', 'git remote get-url origin', 'gh api -X POST repos/example/models/pages -f build_type=workflow', 'gh api -X PUT repos/example/models/pages -f build_type=workflow']);
+  assert.match(steps[0], /kept the remote \(github\.com\/example\/models\)/);
+  // A remote that is another repository: Pages would go to the wrong one.
+  f = fakeRun({ answers: { 'git remote': 'origin\n', 'git remote get-url origin': 'https://github.com/example/other.git\n' } });
+  await assert.rejects(publishToGitHub(dir, 'example/models', { ...f, files }), /remote \(https:\/\/github\.com\/example\/other\.git\) is not github\.com\/example\/models/);
+  assert.ok(!f.calls.some((c) => c.startsWith('gh api')), 'Pages untouched');
 
   await assert.rejects(publishToGitHub(dir, 'models', fakeRun()), /--github needs owner\/name/);
   await assert.rejects(publishToGitHub(dir, 'example/models', fakeRun({ fail: ['gh auth status'] })), /gh auth status failed/);
+});
+
+test('a wrong --github stops init before it writes anything', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'datamodels-init-'));
+  const r = await datamodels('init', dir, ...OPTIONS, '--github', 'models');
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /init: nothing written:\n {2}--github needs owner\/name, got "models"/);
+  assert.deepEqual(await readdir(dir), []);
 });
