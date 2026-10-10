@@ -67,5 +67,7 @@ ${YAML.stringify({ title: perLanguage(type), description: perLanguage(`One ${typ
   await writeFile(join(modelDir, 'examples', 'example.json'), json(example), { flag: 'wx' });
   await writeFile(contextFile, json(context));
   const at = `models/${subjectName}`;
-  return { added: [`${at}/${type}/schema.json`, `${at}/${type}/catalog.yaml`, `${at}/${type}/examples/example.json`], changed: [`${at}/context.jsonld`], typeIri: mu.typeIri };
+  // A released version never changes: the build stops until the subject has a new version.
+  const released = await exists(join(subjectDir, 'releases', `v${subject.version}`));
+  return { added: [`${at}/${type}/schema.json`, `${at}/${type}/catalog.yaml`, `${at}/${type}/examples/example.json`], changed: [`${at}/context.jsonld`], typeIri: mu.typeIri, released: released ? subject.version : null };
 }

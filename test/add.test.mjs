@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -42,6 +42,15 @@ test('add with slash IRIs, and with a context that has no prefix for the namespa
   await addModel(dir, 'road/RoadPatrol');
   const context = JSON.parse(await readFile(join(dir, 'models', 'road', 'context.jsonld'), 'utf8'))['@context'];
   assert.deepEqual(context, ['https://datamodels.jp/context/common/v1.jsonld', { RoadPatrol: `${BASE}/ns/road/RoadPatrol` }]);
+});
+
+test('add says when the subject\'s version was already released', async () => {
+  const dir = await node();
+  assert.equal((await addModel(dir, 'road/RoadPatrol')).released, null);
+  await mkdir(join(dir, 'models', 'road', 'releases', 'v0.1.0'), { recursive: true });
+  const r = await datamodels('add', 'road/Segment', dir, '--value');
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stderr, /note: v0\.1\.0 of this subject was released, so its files cannot change/);
 });
 
 test('add refuses a wrong name, a missing subject and a model that exists', async () => {

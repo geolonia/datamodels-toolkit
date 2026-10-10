@@ -228,6 +228,7 @@ async function add(target, dir, { value }) {
   try { r = await addModel(dir, target, { kind: value ? 'value' : 'entity' }); } catch (e) { fail(e.message); }
   for (const f of r.added) console.error(`  added ${f}`);
   for (const f of r.changed) console.error(`  changed ${f}`);
+  if (r.released) console.error(`  note: v${r.released} of this subject was released, so its files cannot change; give the subject a new version (subject.yaml) before you build`);
   console.error(`${target}: ${r.typeIri}. Next: its attributes in schema.json (each with x-iri) and catalog.yaml, then datamodels check.`);
   return 0;
 }
