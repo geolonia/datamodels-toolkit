@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -51,6 +51,31 @@ test('add says when the subject\'s version was already released', async () => {
   const r = await datamodels('add', 'road/Segment', dir, '--value');
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stderr, /note: v0\.1\.0 of this subject was released, so its files cannot change/);
+});
+
+test('add refuses a type that any part of the @context defines', async () => {
+  const dir = await node();
+  const file = join(dir, 'models', 'road', 'context.jsonld');
+  const before = JSON.stringify({ '@context': [{ RoadPatrol: 'https://elsewhere.example/RoadPatrol' }, {}] });
+  await writeFile(file, before);
+  await assert.rejects(addModel(dir, 'road/RoadPatrol'), /already defines RoadPatrol/);
+  assert.equal(await readFile(file, 'utf8'), before);
+  assert.deepEqual(await readdir(join(dir, 'models', 'road')), ['context.jsonld', 'subject.yaml']);
+});
+
+test('add leaves nothing behind when it fails, so it can be run again', async () => {
+  const dir = await node();
+  const file = join(dir, 'models', 'road', 'context.jsonld');
+  const before = await readFile(file, 'utf8');
+  // Something in the way of the new context: the write fails after the model was staged.
+  await mkdir(`${file}.tmp`);
+  await assert.rejects(addModel(dir, 'road/RoadPatrol'));
+  assert.equal(await readFile(file, 'utf8'), before, 'the context is unchanged');
+  assert.deepEqual((await readdir(dir)).filter((f) => f.startsWith('.datamodels-add')), [], 'no staging folder');
+  assert.deepEqual((await readdir(join(dir, 'models', 'road'))).sort(), ['context.jsonld', 'context.jsonld.tmp', 'subject.yaml'], 'no model folder; what was there before stays');
+  await rm(`${file}.tmp`, { recursive: true });
+  await addModel(dir, 'road/RoadPatrol');
+  assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
 });
 
 test('add refuses a wrong name, a missing subject and a model that exists', async () => {

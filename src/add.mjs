@@ -3,7 +3,7 @@
 // and the type in the subject's @context. The short form of geolonia/datamodels'
 // scripts/new-model.mjs, in the node's languages and without the files only
 // the shared catalog needs (notes, ADOPTERS).
-import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, stat, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
 import { readNode } from './build/node.mjs';
@@ -35,11 +35,13 @@ export async function addModel(dir, target, { kind = 'entity' } = {}) {
 
   // The type goes into the subject's @context, with the prefix that names the namespace when there is one.
   const contextFile = join(subjectDir, 'context.jsonld');
-  const context = JSON.parse(await readFile(contextFile, 'utf8'));
+  const contextText = await readFile(contextFile, 'utf8');
+  const context = JSON.parse(contextText);
   const parts = Array.isArray(context['@context']) ? context['@context'] : [context['@context']];
+  // Every inline part, not only the one the type goes into: a type defined anywhere is taken.
+  if (parts.some((p) => p && typeof p === 'object' && Object.hasOwn(p, type))) throw new Error(`${contextFile} already defines ${type}`);
   let terms = parts.findLast((p) => p && typeof p === 'object');
   if (!terms) { terms = {}; if (Array.isArray(context['@context'])) context['@context'].push(terms); else context['@context'] = terms; }
-  if (type in terms) throw new Error(`${contextFile} already defines ${type}`);
   const prefix = Object.entries(terms).find(([, v]) => v === namespace)?.[0];
   terms[type] = prefix ? `${prefix}:${type}` : mu.typeIri;
 
@@ -61,11 +63,29 @@ export async function addModel(dir, target, { kind = 'entity' } = {}) {
 ${YAML.stringify({ title: perLanguage(type), description: perLanguage(`One ${type}.`), status: 'draft', attributes: {} }, { lineWidth: 0 })}`;
   const example = kind === 'value' ? {} : { id: `urn:ngsi-ld:${type}:example-1`, type };
 
-  await mkdir(join(modelDir, 'examples'), { recursive: true });
-  await writeFile(join(modelDir, 'schema.json'), json(schema), { flag: 'wx' });
-  await writeFile(join(modelDir, 'catalog.yaml'), catalog, { flag: 'wx' });
-  await writeFile(join(modelDir, 'examples', 'example.json'), json(example), { flag: 'wx' });
-  await writeFile(contextFile, json(context));
+  // All or nothing, so a failed run can simply be repeated: the model is written
+  // into a folder beside models/ (where no build reads it), the context is
+  // replaced in one step, and only then the model folder is moved into place.
+  const staging = join(dir, `.datamodels-add-${process.pid}-${type}`);
+  // A .tmp file that was there before is not ours: 'wx' refuses it, and only our own is removed.
+  const replace = async (file, text) => {
+    await writeFile(`${file}.tmp`, text, { flag: 'wx' });
+    try { await rename(`${file}.tmp`, file); } catch (e) { await rm(`${file}.tmp`, { force: true }); throw e; }
+  };
+  let contextReplaced = false;
+  try {
+    await mkdir(join(staging, 'examples'), { recursive: true });
+    await writeFile(join(staging, 'schema.json'), json(schema), { flag: 'wx' });
+    await writeFile(join(staging, 'catalog.yaml'), catalog, { flag: 'wx' });
+    await writeFile(join(staging, 'examples', 'example.json'), json(example), { flag: 'wx' });
+    await replace(contextFile, json(context));
+    contextReplaced = true;
+    await rename(staging, modelDir);
+  } catch (e) {
+    await rm(staging, { recursive: true, force: true });
+    if (contextReplaced) await replace(contextFile, contextText).catch(() => {});
+    throw e;
+  }
   const at = `models/${subjectName}`;
   // A released version never changes: the build stops until the subject has a new version.
   const released = await exists(join(subjectDir, 'releases', `v${subject.version}`));
