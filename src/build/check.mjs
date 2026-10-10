@@ -10,7 +10,6 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { buildNode } from './node.mjs';
 import { catalogUrls } from './urls.mjs';
-import { verifyRelease } from './releases.mjs';
 
 /** The term definitions of an @context (object or array; imported URLs are not followed). */
 export function contextDefs(context) {
@@ -46,6 +45,7 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
   const notes = [];
   const out = await mkdtemp(join(tmpdir(), 'datamodels-check-'));
   try {
+    // The build also stops on a release snapshot (models/<subject>/releases/vX.Y.Z/) that differs from the sources.
     let built;
     try { built = await buildNode(dir, { out, pages: false }); } catch (e) { return { problems: [e.message], notes }; }
     const { node, subjects, exactPaths } = built;
@@ -69,9 +69,6 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
       try { validate = await ajv.compileAsync(m.schema); } catch (e) { problems.push(`${where}/schema.json: ${e.message}`); continue; }
       if (m.examples['example.json'] && !validate(m.examples['example.json'])) problems.push(`${where}/examples/example.json: ${ajv.errorsText(validate.errors)}`);
     }
-
-    // Release snapshots (models/<subject>/releases/vX.Y.Z/), where the node keeps them.
-    for (const s of subjects) problems.push(...await verifyRelease(s, { urls, languages: node.languages }));
 
     if (offline) { notes.push('offline: the published files and the models this node extends were not checked'); return { problems, notes }; }
 
