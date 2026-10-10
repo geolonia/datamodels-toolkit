@@ -1,0 +1,137 @@
+{
+  "@context": [
+    "https://datamodels.jp/context/task/v1.jsonld",
+    "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context-v1.8.jsonld"
+  ],
+  "id": "urn:ngsi-ld:Task:1234",
+  "type": "Task",
+  "name": {
+    "type": "Property",
+    "value": "靖国通りのアンダーパスの冠水を確認する"
+  },
+  "description": {
+    "type": "Property",
+    "value": "住民からの通報の現地確認。水位と通行可否を報告すること。"
+  },
+  "project": {
+    "type": "Relationship",
+    "object": "urn:ngsi-ld:Project:heavy-rain-2026-07"
+  },
+  "milestone": {
+    "type": "Relationship",
+    "object": "urn:ngsi-ld:Milestone:heavy-rain-2026-07-initial"
+  },
+  "parent": {
+    "type": "Relationship",
+    "object": "urn:ngsi-ld:Task:1200"
+  },
+  "relatedTo": [
+    {
+      "type": "Relationship",
+      "object": "urn:ngsi-ld:Task:1198",
+      "datasetId": "urn:ngsi-ld:dataset:relatedTo:1"
+    }
+  ],
+  "refersTo": {
+    "type": "Relationship",
+    "object": "urn:ngsi-ld:RoadRestriction:0001"
+  },
+  "progress": {
+    "type": "Property",
+    "value": "in-process"
+  },
+  "statusLabel": {
+    "type": "Property",
+    "value": "対応中"
+  },
+  "subtype": {
+    "type": "Property",
+    "value": "現地確認"
+  },
+  "priority": {
+    "type": "Property",
+    "value": 2
+  },
+  "assignee": [
+    {
+      "type": "Relationship",
+      "object": "urn:ngsi-ld:Team:field-team-a",
+      "datasetId": "urn:ngsi-ld:dataset:assignee:1"
+    }
+  ],
+  "author": {
+    "type": "Relationship",
+    "object": "urn:ngsi-ld:Person:staff-0012"
+  },
+  "start": {
+    "type": "Property",
+    "value": {
+      "@type": "DateTime",
+      "@value": "2026-07-08T10:30:00+09:00"
+    }
+  },
+  "due": {
+    "type": "Property",
+    "value": {
+      "@type": "DateTime",
+      "@value": "2026-07-08T12:00:00+09:00"
+    }
+  },
+  "estimatedDuration": {
+    "type": "Property",
+    "value": "PT1H30M"
+  },
+  "percentComplete": {
+    "type": "Property",
+    "value": 40
+  },
+  "keywords": {
+    "type": "Property",
+    "value": [
+      "冠水",
+      "現地確認"
+    ]
+  },
+  "location": {
+    "type": "GeoProperty",
+    "value": {
+      "type": "Point",
+      "coordinates": [
+        139.7512,
+        35.6953
+      ]
+    }
+  },
+  "spatialId": {
+    "type": "Property",
+    "value": [
+      "/25/0/29802971/13211383"
+    ]
+  },
+  "isPrivate": {
+    "type": "Property",
+    "value": false
+  },
+  "source": {
+    "type": "Property",
+    "value": "https://tracker.example.jp/issues/1234"
+  },
+  "externalId": {
+    "type": "Property",
+    "value": "1234"
+  },
+  "dateCreated": {
+    "type": "Property",
+    "value": {
+      "@type": "DateTime",
+      "@value": "2026-07-08T10:20:00+09:00"
+    }
+  },
+  "dateModified": {
+    "type": "Property",
+    "value": {
+      "@type": "DateTime",
+      "@value": "2026-07-08T11:05:00+09:00"
+    }
+  }
+}

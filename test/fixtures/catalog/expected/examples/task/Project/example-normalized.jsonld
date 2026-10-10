@@ -1,0 +1,98 @@
+{
+  "@context": [
+    "https://datamodels.jp/context/task/v1.jsonld",
+    "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context-v1.8.jsonld"
+  ],
+  "id": "urn:ngsi-ld:Project:heavy-rain-2026-07",
+  "type": "Project",
+  "name": {
+    "type": "Property",
+    "value": "令和8年7月大雨 災害対応"
+  },
+  "description": {
+    "type": "Property",
+    "value": "7/8〜 大雨に伴う区の災害対応オペレーション"
+  },
+  "identifier": {
+    "type": "Property",
+    "value": "heavy-rain-2026-07"
+  },
+  "projectStatus": {
+    "type": "Property",
+    "value": "active"
+  },
+  "isPublic": {
+    "type": "Property",
+    "value": false
+  },
+  "homepage": {
+    "type": "Property",
+    "value": "https://tracker.example.jp/projects/heavy-rain-2026-07"
+  },
+  "start": {
+    "type": "Property",
+    "value": {
+      "@type": "DateTime",
+      "@value": "2026-07-08T07:00:00+09:00"
+    }
+  },
+  "location": {
+    "type": "GeoProperty",
+    "value": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            139.73,
+            35.67
+          ],
+          [
+            139.78,
+            35.67
+          ],
+          [
+            139.78,
+            35.705
+          ],
+          [
+            139.73,
+            35.705
+          ],
+          [
+            139.73,
+            35.67
+          ]
+        ]
+      ]
+    }
+  },
+  "keywords": {
+    "type": "Property",
+    "value": [
+      "大雨",
+      "災害対応"
+    ]
+  },
+  "source": {
+    "type": "Property",
+    "value": "https://tracker.example.jp/projects/heavy-rain-2026-07"
+  },
+  "externalId": {
+    "type": "Property",
+    "value": "42"
+  },
+  "dateCreated": {
+    "type": "Property",
+    "value": {
+      "@type": "DateTime",
+      "@value": "2026-07-08T06:00:00+09:00"
+    }
+  },
+  "dateModified": {
+    "type": "Property",
+    "value": {
+      "@type": "DateTime",
+      "@value": "2026-07-08T11:05:00+09:00"
+    }
+  }
+}

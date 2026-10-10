@@ -1,0 +1,16 @@
+standard:
+  name: { ja: GitHub リポジトリ, en: GitHub repository }
+  url: https://docs.github.com/en/rest/repos/repos
+fields:
+  name: { to: "name" }
+  description: { to: "description" }
+  identifier: { to: "full_name" }
+  parent: { to: null, note: { ja: "fork の parent は意味が違う（複製元）", en: "a fork's parent means the copied-from repository, a different relation" } }
+  projectStatus: { to: "archived", note: { ja: "true → archived、それ以外 active", en: "true → archived, otherwise active" } }
+  isPublic: { to: "private", note: { ja: 否定, en: negated } }
+  homepage: { to: "html_url" }
+  keywords: { to: "topics" }
+  source: { to: "html_url" }
+  externalId: { to: "id" }
+  dateCreated: { to: "created_at" }
+  dateModified: { to: "updated_at" }

@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodels.jp/schema/task/Project/v1.0.0.json",
+  "title": "Project",
+  "description": "A grouping of tasks: a project in a tracker, one disaster-response operation, a campaign. Called differently in different settings, with the same common attributes.",
+  "x-version": "1.0.0",
+  "x-license-url": "https://datamodels.jp/LICENSE-CONTENT",
+  "x-model-tags": "task management",
+  "x-derived-from": "https://www.rfc-editor.org/rfc/rfc8984.html",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "description": "Entity id (URN)"
+    },
+    "type": {
+      "type": "string",
+      "const": "Project",
+      "description": "Entity type"
+    },
+    "@context": {
+      "description": "JSON-LD context of the entity, optional: a context URL or a list of context URLs",
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "minItems": 1
+        }
+      ]
+    },
+    "name": {
+      "type": "string",
+      "description": "Name or subject",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://uri.etsi.org/ngsi-ld/name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "http://purl.org/dc/terms/description"
+    },
+    "identifier": {
+      "type": "string",
+      "description": "Short handle: a slug or code, unique within the source system",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://schema.org/identifier"
+    },
+    "parent": {
+      "type": "string",
+      "format": "uri",
+      "description": "Parent project",
+      "x-ngsi": {
+        "type": "Relationship",
+        "target": "https://datamodels.jp/ns/task/Project"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/parent"
+    },
+    "projectStatus": {
+      "type": "string",
+      "enum": [
+        "active",
+        "closed",
+        "archived"
+      ],
+      "description": "State; status is protected in the core context, hence projectStatus",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/projectStatus"
+    },
+    "isPublic": {
+      "type": "boolean",
+      "description": "true when public",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/isPublic"
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri",
+      "description": "Homepage",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://schema.org/url"
+    },
+    "start": {
+      "type": "string",
+      "anyOf": [
+        {
+          "format": "date"
+        },
+        {
+          "format": "date-time"
+        }
+      ],
+      "description": "Planned start: a date, or a date and time",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/start"
+    },
+    "end": {
+      "type": "string",
+      "anyOf": [
+        {
+          "format": "date"
+        },
+        {
+          "format": "date-time"
+        }
+      ],
+      "description": "Planned end: a date, or a date and time",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/end"
+    },
+    "location": {
+      "$ref": "https://datamodels.jp/schema/common/Geometry/v1.0.0.json",
+      "description": "Location as any GeoJSON geometry: point, line, polygon or a collection",
+      "x-ngsi": {
+        "type": "GeoProperty",
+        "model": "https://datamodels.jp/ns/common/Geometry"
+      },
+      "x-iri": "https://uri.etsi.org/ngsi-ld/location"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Keywords or labels",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://schema.org/keywords"
+    },
+    "source": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of this object in the system of record",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/source"
+    },
+    "externalId": {
+      "type": "string",
+      "description": "Identifier in the system of record",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/task/externalId"
+    },
+    "dateCreated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Creation time in the system of record (distinct from the broker attribute createdAt)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateCreated"
+    },
+    "dateModified": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last modification time in the system of record",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateModified"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "name"
+  ],
+  "additionalProperties": false
+}

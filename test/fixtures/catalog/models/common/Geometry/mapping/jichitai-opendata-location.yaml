@@ -1,0 +1,27 @@
+# Correspondence between Geometry and the coordinate columns shared by the
+# Digital Agency's 自治体標準オープンデータセット (data item definition sheet A).
+standard:
+  name:
+    ja: 自治体標準オープンデータセット・データ項目定義書A（20260801版）の緯度・経度（デジタル庁）
+    en: "Municipal standard open dataset, data item definition sheet A (2026-08-01), latitude and longitude (Digital Agency)"
+  url: https://www.digital.go.jp/resources/open_data/municipal-standard-data-set-test
+  license:
+    ja: "公共データ利用規約（第1.0版）（PDL1.0、CC BY 4.0 と互換）"
+    en: "Public Data License (Version 1.0) (PDL1.0), compatible with CC BY 4.0"
+  note:
+    ja: "定義書Aの 01〜03、05、07〜15 のデータセットが、場所を「緯度」「経度」の 2 列で持つ。記載ルールは GIF コアデータパーツの「地理座標」に従い、値は10進数の度の文字列（例 43.064310）。これは type が Point の Geometry になる。座標の順は GeoJSON では経度が先。"
+    en: "Datasets 01–03, 05 and 07–15 of definition sheet A give the location as two columns, 緯度 (latitude) and 経度 (longitude), written by the rules of GIF's core data part 地理座標 as decimal degrees in a string (e.g. 43.064310). This becomes a Geometry of type Point. GeoJSON puts longitude first."
+fields:
+  type: { to: null, note: { ja: 常に Point, en: always Point }, value: Point }
+  coordinates:
+    to: 経度 (longitude), 緯度 (latitude)
+    note:
+      ja: "[経度, 緯度] の順の数値にする（文字列から変換）"
+      en: "numbers in the order [longitude, latitude] (converted from the strings)"
+    column: [経度, 緯度]
+    transform: numbers
+  "coordinates[2]":
+    to: null
+    note:
+      ja: "「高度の種別」「高度の値」（heightType, height）は階数・標高・地表高のいずれかで、GeoJSON の3番目の座標（楕円体高）とは意味が違う。座標には入れない"
+      en: "高度の種別 / 高度の値 (heightType, height) are a floor number, an elevation above mean sea level or a height above ground, not the third GeoJSON coordinate; leave them out of the coordinates"

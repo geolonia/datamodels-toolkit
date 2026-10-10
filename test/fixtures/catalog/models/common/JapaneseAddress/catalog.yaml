@@ -1,0 +1,54 @@
+title:
+  ja: "日本の住所"
+  en: "Japanese address"
+description:
+  ja: "address 属性の値として使う日本の住所。意味が同じ項目は schema.org の PostalAddress の語を使い、日本固有の構造（町字・丁目・番地・号）、JIS コードと全国地方公共団体コード、アドレス・ベース・レジストリの町字ID、住居表示フラグを追加したもの。どの項目も任意。構造化できない場合は addressText だけでもよい。"
+  en: "A Japanese postal address as the value of an address Property. schema.org PostalAddress terms where the meaning matches, plus the Japanese structure (machiaza, chome, banchi, go), JIS and local-government codes, the Address Base Registry town id and the residential-indication flag. Every field is optional; addressText alone is acceptable when the address cannot be structured."
+status: draft
+tags: [address, japan, common]
+attributes:
+  addressCountry:
+    ja: "国。常に JP"
+    en: "Country. Always JP"
+  postalCode:
+    ja: "郵便番号（7桁、ハイフンあり・なしどちらも可）"
+    en: "Postal code, 7 digits with or without hyphen"
+  addressRegion:
+    ja: "都道府県名"
+    en: "Prefecture name"
+  addressLocality:
+    ja: "市区町村名。政令指定都市は市名と区名を含む（例: 横浜市中区）"
+    en: "Municipality name. For designated cities includes the ward (e.g. 横浜市中区)"
+  machiaza:
+    ja: "町字（町名・大字・字）。丁目は含めない"
+    en: "Town or district name (町字: 町名, 大字, 字), without chome"
+  chome:
+    ja: "丁目。数字のみ（「一丁目」→ \"1\"）"
+    en: "Chome (丁目), digits only (\"一丁目\" → \"1\")"
+  banchi:
+    ja: "番地。住居表示実施区域では街区符号。それ以外では枝番を含む地番全体（例 4638-1）"
+    en: "Banchi (番地): in a residential-indication area the block number (街区符号); elsewhere the whole lot number (地番), branch number included, for example 4638-1"
+  go:
+    ja: "号。住居表示実施区域では住居番号。地番の区域では空（枝番は banchi に含める）"
+    en: "Go (号): in a residential-indication area the residence number (住居番号). Empty for a lot number (地番): its branch number stays in banchi"
+  buildingName:
+    ja: "建物名・部屋番号など、号より下の表記"
+    en: "Building name, room number and anything below go"
+  residentialIndication:
+    ja: "住居表示実施区域なら true（banchi/go は街区符号/住居番号）、地番なら false"
+    en: "true in a residential-indication area (banchi/go are block and residence numbers), false for lot numbers (地番)"
+  jisPrefectureCode:
+    ja: "都道府県コード（JIS X 0401、2桁）"
+    en: "Prefecture code (JIS X 0401, 2 digits)"
+  jisMunicipalityCode:
+    ja: "市区町村コード（JIS X 0402、都道府県コードを含む5桁）"
+    en: "Municipality code (JIS X 0402, 5 digits including the prefecture code)"
+  localGovernmentCode:
+    ja: "全国地方公共団体コード（JIS X 0402 の5桁 + 検査数字1桁）"
+    en: "Local government code (全国地方公共団体コード: JIS X 0402 plus a check digit, 6 digits)"
+  abrMachiazaId:
+    ja: "アドレス・ベース・レジストリの町字ID（7桁）。全国地方公共団体コードと組み合わせて町字を一意に識別する"
+    en: "Address Base Registry town id (町字ID, 7 digits). Unique together with localGovernmentCode"
+  addressText:
+    ja: "住所の全文（正規化済みの一行表記）。構造化フィールドが揃わない場合の受け皿でもある"
+    en: "Full address as one normalised line. Also the fallback when structured fields are unavailable"

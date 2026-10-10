@@ -37,6 +37,18 @@ It reads `catalog.json`, the model's schema and the mapping file from the site, 
 
 It detects UTF-8 and Shift_JIS. It repairs only what it can prove, such as a local government code that lost its leading zero or lacks its check digit (the check digit decides), and lists every repair on standard error. Invalid rows are left out and listed by line. The exit code is 1 when a row is invalid or a file cannot be read, and 2 for a usage error.
 
+## Build library
+
+`@geolonia/datamodels/build` builds the machine-readable files of a catalog from a models folder: every published version, the @contexts, vocabularies, JSON Schemas, examples, mapping files and `catalog.json`. It is the code datamodels.jp runs, with the base URL and the required languages as options, so a node of the [web of data models](https://github.com/geolonia/datamodels/issues/200) builds its files the same way ([what a node publishes](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
+
+```js
+import { catalogUrls, loadSubjects, publishCatalog } from '@geolonia/datamodels/build';
+
+const urls = catalogUrls('https://models.example.org');
+const subjects = await loadSubjects('models', { urls, languages: ['en'], subjectFields: ['title', 'description'] });
+await publishCatalog(subjects, { urls, outDir: 'dist', languages: ['en'], head: { license: 'CC0-1.0' } });
+```
+
 ## Development
 
 ```bash
@@ -45,6 +57,8 @@ npm test
 ```
 
 The tests read `test/fixtures/site/`, a copy of the files datamodels.jp serves for the mappings they use. After the catalog changes one of those models or mappings, refresh it with `npm run fixtures` and commit the result.
+
+`test/fixtures/catalog/` holds the sources of two subjects of [geolonia/datamodels](https://github.com/geolonia/datamodels) and the files datamodels.jp serves for them; the build library must produce exactly those files. Refresh it with `npm run fixtures:build -- <path to a datamodels checkout>` when the catalog changes those subjects.
 
 ## Issues and contributions
 

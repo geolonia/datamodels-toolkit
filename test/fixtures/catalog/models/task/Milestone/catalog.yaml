@@ -1,0 +1,39 @@
+title:
+  ja: "マイルストーン"
+  en: "Milestone"
+description:
+  ja: "プロジェクトの中でタスクをまとめる予定の目標。Redmine のバージョン、GitHub や GitLab のマイルストーン、Jira の修正バージョンなど。名前、期限、状態を持つ。"
+  en: "A planned target that groups tasks within a project: a version in Redmine, a milestone in GitHub or GitLab, a fix version in Jira. It has a name, a due date and a state."
+status: draft
+tags: [task-management]
+attributes:
+  name:
+    ja: "名称"
+    en: "Name"
+  description:
+    ja: "説明"
+    en: "Description"
+  project:
+    ja: "所属プロジェクト"
+    en: "The project this belongs to"
+  start:
+    ja: "予定期間の開始。日付、または日時"
+    en: "Planned start: a date, or a date and time"
+  due:
+    ja: "期限（予定したリリース・完了）。日付、または日時"
+    en: "Due: the planned release or completion, a date or a date and time"
+  milestoneStatus:
+    ja: "状態。open=受付中、locked=ロック中（新しいタスクを追加できない）、closed=完了。core context の status は予約語のため milestoneStatus"
+    en: "State: open = accepting tasks, locked = no new tasks may be added, closed = done; status is protected in the core context, hence milestoneStatus"
+  source:
+    ja: "元システムにおけるこのオブジェクトの URL"
+    en: "URL of this object in the system of record"
+  externalId:
+    ja: "元システムにおける識別子"
+    en: "Identifier in the system of record"
+  dateCreated:
+    ja: "元システムでの作成日時（ブローカーの createdAt とは別）"
+    en: "Creation time in the system of record (distinct from the broker attribute createdAt)"
+  dateModified:
+    ja: "元システムでの更新日時"
+    en: "Last modification time in the system of record"

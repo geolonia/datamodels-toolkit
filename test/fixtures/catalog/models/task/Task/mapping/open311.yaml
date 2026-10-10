@@ -1,0 +1,23 @@
+standard:
+  name: { ja: Open311 GeoReport v2 service_requests（Smart Data Models dataModel.IssueTracking）, en: Open311 GeoReport v2 service_requests (Smart Data Models dataModel.IssueTracking) }
+  url: https://github.com/smart-data-models/dataModel.IssueTracking
+  note:
+    ja: 相互運用のための対応表であり、採用ではない。Open311 は北米の 311 窓口の通報記録で、担当・期限・進捗率・親子関係を持たない。
+    en: A correspondence for interoperability, not an adoption. Open311 is the record of a North American 311 hotline report; it has no assignee, due date, completion or hierarchy.
+fields:
+  name: { to: "service_name" }
+  description: { to: "description" }
+  project: { to: null, note: { ja: jurisdiction_id が最も近い, en: jurisdiction_id is the closest } }
+  refersTo: { to: null }
+  progress: { to: "status", note: { ja: "open → needs-action、closed → completed", en: "open → needs-action, closed → completed" } }
+  statusLabel: { to: "status_notes" }
+  subtype: { to: "service_code" }
+  assignee: { to: "agency_responsible", note: { ja: "文字列。エンティティ参照ではない", en: "a string, not an entity reference" } }
+  start: { to: "requested_datetime" }
+  due: { to: "expected_datetime" }
+  completedAt: { to: "updated_datetime", note: { ja: closed のときのみ近似, en: approximation when closed } }
+  location: { to: "lat, long", note: { ja: "点のみ。address / address_id / zipcode は住所（common JapaneseAddress の拡張候補）", en: "point only; address, address_id and zipcode are address fields (candidate for a common JapaneseAddress extension)" } }
+  source: { to: null }
+  externalId: { to: "service_request_id" }
+  dateCreated: { to: "requested_datetime" }
+  dateModified: { to: "updated_datetime" }

@@ -1,0 +1,16 @@
+standard:
+  name: { ja: Redmine のプロジェクト, en: Redmine project }
+  url: https://www.redmine.org/projects/redmine/wiki/Rest_Projects
+fields:
+  name: { to: "name" }
+  description: { to: "description" }
+  identifier: { to: "identifier" }
+  parent: { to: "parent.id" }
+  projectStatus: { to: "status", note: { ja: "1 → active、5 → closed、9 → archived", en: "1 → active, 5 → closed, 9 → archived" } }
+  isPublic: { to: "is_public" }
+  homepage: { to: "homepage" }
+  location: { to: "geom", note: { ja: redmine_gtt のプロジェクト境界, en: redmine_gtt project boundary } }
+  source: { to: "<base_url>/projects/<identifier>" }
+  externalId: { to: "id" }
+  dateCreated: { to: "created_on" }
+  dateModified: { to: "updated_on" }

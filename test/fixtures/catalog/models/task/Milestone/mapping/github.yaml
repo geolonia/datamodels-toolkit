@@ -1,0 +1,14 @@
+standard:
+  name: { ja: GitHub のマイルストーン, en: GitHub milestone }
+  url: https://docs.github.com/en/rest/issues/milestones
+fields:
+  name: { to: "title" }
+  description: { to: "description" }
+  project: { to: "url", note: { ja: "リポジトリは url の repos/owner/repo の部分。Project.identifier = owner/repo", en: "the repository is the repos/owner/repo part of url; Project.identifier = owner/repo" } }
+  start: { to: null }
+  due: { to: "due_on", note: { ja: "API の due_on は日時だが、GitHub の画面で設定するのは日付だけで、時刻に意味はない", en: "the API gives a date-time, but the GitHub UI sets only a date, so the time of day carries no meaning" } }
+  milestoneStatus: { to: "state", note: { ja: "open → open、closed → closed。locked は無い", en: "open → open, closed → closed; there is no locked" } }
+  source: { to: "html_url" }
+  externalId: { to: "number" }
+  dateCreated: { to: "created_at" }
+  dateModified: { to: "updated_at" }
