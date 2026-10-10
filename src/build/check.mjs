@@ -11,6 +11,9 @@ import addFormats from 'ajv-formats';
 import { buildNode } from './node.mjs';
 import { catalogUrls } from './urls.mjs';
 
+// A schema on another site that could not be read: noted and skipped, never a problem of this node.
+class Unavailable extends Error {}
+
 /** The term definitions of an @context (object or array; imported URLs are not followed). */
 export function contextDefs(context) {
   return Object.assign({}, ...(Array.isArray(context) ? context : [context]).filter((p) => p && typeof p === 'object'));
@@ -59,15 +62,18 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
     // Schemas and examples. A schema of this node is read from the build; one on another site only online.
     const ajv = new Ajv2020({ allErrors: true, strict: false, loadSchema: async (uri) => {
       if (uri.startsWith(`${urls.baseUrl}/`)) return JSON.parse(await readFile(join(out, uri.slice(urls.baseUrl.length + 1)), 'utf8'));
-      if (offline) throw new Error(`${uri} is on another site (not read with --offline)`);
-      return getJson(uri);
+      if (offline) throw new Unavailable(`${uri} is on another site, not read with --offline`);
+      try { return await getJson(uri); } catch (e) { throw new Unavailable(`${uri} could not be read (${e.cause?.code ?? e.message})`); }
     } });
     addFormats(ajv);
     for (const s of subjects) for (const m of s.models) {
       const where = `${s.name}/${m.type}`;
       let validate;
       // A schema another one referenced is already loaded (from the build, the same bytes): use it.
-      try { validate = (m.schema.$id && ajv.getSchema(m.schema.$id)) || await ajv.compileAsync(m.schema); } catch (e) { problems.push(`${where}/schema.json: ${e.message}`); continue; }
+      try { validate = (m.schema.$id && ajv.getSchema(m.schema.$id)) || await ajv.compileAsync(m.schema); } catch (e) {
+        if (e instanceof Unavailable) notes.push(`${where}/schema.json: not validated, ${e.message}`); else problems.push(`${where}/schema.json: ${e.message}`);
+        continue;
+      }
       if (m.examples['example.json'] && !validate(m.examples['example.json'])) problems.push(`${where}/examples/example.json: ${ajv.errorsText(validate.errors)}`);
     }
 
@@ -76,11 +82,14 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
     // An exact version that is already online must be served unchanged; one that is not online yet is new.
     for (const path of exactPaths) {
       const url = `${urls.baseUrl}${path}`;
-      let res;
-      try { res = await fetch(url); } catch (e) { notes.push(`${url}: not reachable (${e.cause?.code ?? e.message}), not compared`); continue; }
-      if (res.status === 404) continue;
-      if (!res.ok) { notes.push(`${url}: HTTP ${res.status}, not compared`); continue; }
-      const online = Buffer.from(await res.arrayBuffer());
+      let online;
+      try {
+        const res = await fetch(url);
+        if (res.status === 404) continue;
+        if (!res.ok) { notes.push(`${url}: HTTP ${res.status}, not compared`); continue; }
+        // The body too: a server can send its headers and then stall or break off.
+        online = Buffer.from(await res.arrayBuffer());
+      } catch (e) { notes.push(`${url}: not reachable (${e.cause?.code ?? e.message}), not compared`); continue; }
       if (!online.equals(await readFile(join(out, path.slice(1))))) problems.push(`${url}: a published version changed. A published file never changes; give the subject a new version instead.`);
     }
 
@@ -97,7 +106,10 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
           // An index lists the current version; an older one is at the same path with its own version (docs/node.md, section 1).
           const contextUrl = entry.version === ext.version ? entry.contextUrl : entry.contextUrl.replace(`/v${entry.version}.jsonld`, `/v${ext.version}.jsonld`);
           if (contextUrl === entry.contextUrl && entry.version !== ext.version) { notes.push(`${where}: not checked, ${ext.index} lists v${entry.version} and the @context of v${ext.version} could not be found`); continue; }
-          const theirContext = (await getJson(contextUrl))['@context'];
+          const theirContext = (await getJson(contextUrl))?.['@context'];
+          // A context file without @context would make every term look new, so nothing could be compared.
+          if (theirContext == null) { problems.push(`${where}: ${contextUrl} has no @context`); continue; }
+          if (typeof theirContext !== 'object') { notes.push(`${where}: not checked, the @context of ${contextUrl} only imports another one`); continue; }
           const theirs = contextTerms(theirContext);
           // Prefixes of the extended context may be used here without being defined again.
           const ours = contextTerms(s.context['@context'], contextDefs(theirContext));

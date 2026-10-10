@@ -135,6 +135,38 @@ test('extends an older version than the index lists', async () => {
   assert.deepEqual((await checkNode(dir, { fetch: fakeFetch(files) })).problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: redefines route (https://datamodels.jp/ns/task/route there, ${BASE}/ns/road#route here)`]);
 });
 
+test('a schema on another site that cannot be read is a note, not a problem', async () => {
+  const dir = await node();
+  const m = join(dir, 'models', 'road', 'RoadPatrol');
+  const schema = JSON.parse(await readFile(join(m, 'schema.json'), 'utf8'));
+  schema.properties.address = { $ref: 'https://datamodels.jp/schema/common/JapaneseAddress/v1.0.0.json', 'x-iri': `${BASE}/ns/road#address` };
+  await writeFile(join(m, 'schema.json'), JSON.stringify(schema));
+  const yaml = join(m, 'catalog.yaml');
+  await writeFile(yaml, (await readFile(yaml, 'utf8')).replace('  route: { en: The route }', '  route: { en: The route }\n  address: { en: Where }'));
+  let r = await checkNode(dir, { offline: true });
+  assert.deepEqual(r.problems, []);
+  assert.match(r.notes.join('\n'), /road\/RoadPatrol\/schema\.json: not validated, https:\/\/datamodels\.jp\/schema\/common\/JapaneseAddress\/v1\.0\.0\.json is on another site/);
+  r = await checkNode(dir, { fetch: fakeFetch(datamodelsJp(), { fail: ['https://datamodels.jp/schema/'] }) });
+  assert.deepEqual(r.problems, []);
+  assert.match(r.notes.join('\n'), /schema\.json: not validated, .*JapaneseAddress.* could not be read \(ENOTFOUND\)/);
+});
+
+test('a published file whose body breaks off is a note', async () => {
+  const dir = await node();
+  const broken = (url) => (url.startsWith(`${BASE}/context/`)
+    ? Promise.resolve({ ok: true, status: 200, arrayBuffer: () => Promise.reject(new TypeError('terminated', { cause: { code: 'UND_ERR_SOCKET' } })) })
+    : fakeFetch(datamodelsJp())(url));
+  const r = await checkNode(dir, { fetch: broken });
+  assert.deepEqual(r.problems, []);
+  assert.match(r.notes.join('\n'), /context\/road\/v0\.1\.0\.jsonld: not reachable \(UND_ERR_SOCKET\), not compared/);
+});
+
+test('an extended context without @context is a problem', async () => {
+  const dir = await node();
+  const r = await checkNode(dir, { fetch: fakeFetch({ ...datamodelsJp(), [TASK_CONTEXT]: {} }) });
+  assert.deepEqual(r.problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: ${TASK_CONTEXT} has no @context`]);
+});
+
 test('datamodels check exits with 1 on a problem', async () => {
   const dir = await node();
   let r = await datamodels('check', dir, '--offline');
