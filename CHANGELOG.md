@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Added
+
+- `datamodels release <subject>`: keeps a published version online after the next one, as a snapshot in `models/<subject>/releases/vX.Y.Z/`. It refuses when the sources changed since the version was published. `check` notes a published version without a snapshot (#27).
+
 ### Changed
 
 - `datamodels init` writes a workflow that pins the Action to the v0.1.0 release (its commit SHA, with the tag as a comment), instead of `main`. Dependabot can then propose newer releases.

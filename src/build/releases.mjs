@@ -13,16 +13,20 @@ import { buildVocabulary } from './vocab.mjs';
 const json = (o) => JSON.stringify(o, null, 2) + '\n';
 async function isDir(p) { try { return (await stat(p)).isDirectory(); } catch { return false; } }
 
-/** What the snapshot of the subject's current version must contain: [{ file, content, what }]. */
-function releaseContents(subject, options) {
+/**
+ * What the snapshot of the subject's current version must contain: { dir,
+ * entries: [{ file, content, what, url }] }, `url` where the file is published.
+ */
+export function releaseContents(subject, options) {
   const dir = join(subject.dir, 'releases', `v${subject.version}`);
   const at = `${subject.name} v${subject.version}`;
+  const v = options.urls.versionUrls(subject.name, subject.version);
   return {
     dir,
     entries: [
-      { file: join(dir, 'context.jsonld'), content: json(subject.context), what: `${at} context` },
-      { file: join(dir, 'vocab.jsonld'), content: json(buildVocabulary(subject, options)), what: `${at} vocabulary` },
-      ...subject.models.map((model) => ({ file: join(dir, 'schema', `${model.type}.json`), content: json(model.schema), what: `${at} ${model.type} schema` })),
+      { file: join(dir, 'context.jsonld'), content: json(subject.context), what: `${at} context`, url: v.context },
+      { file: join(dir, 'vocab.jsonld'), content: json(buildVocabulary(subject, options)), what: `${at} vocabulary`, url: v.vocab },
+      ...subject.models.map((model) => ({ file: join(dir, 'schema', `${model.type}.json`), content: json(model.schema), what: `${at} ${model.type} schema`, url: v.schema(model.type) })),
     ],
   };
 }

@@ -49,12 +49,14 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { initSettings, writeNode, publishToGitHub } from '../src/init.mjs';
 import { addModel } from '../src/add.mjs';
+import { releaseSubject } from '../src/release.mjs';
 
 const USAGES = {
   convert: `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`,
   build: `usage: datamodels build [dir] [--out dir]`,
   check: `usage: datamodels check [dir] [--offline]`,
   add: `usage: datamodels add <subject>/<Type> [dir] [--value]`,
+  release: `usage: datamodels release <subject> [dir] [--offline]`,
   init: `usage: datamodels init [dir] [--base-url URL] [--iris hash|slash] [--languages en,ja] [--publisher name] [--publisher-url URL] [--license id] [--subject name] [--github owner/name] [--yes]`,
 };
 const USAGE = Object.values(USAGES).join('\n');
@@ -66,7 +68,7 @@ const fail = (msg) => { throw new Exit(1, msg); };
 
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
-function program({ onConvert, onBuild, onCheck, onInit, onAdd }) {
+function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease }) {
   // An option's value: present, not empty (--out=) and not another option.
   const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
   const cli = new Command('datamodels')
@@ -121,6 +123,13 @@ function program({ onConvert, onBuild, onCheck, onInit, onAdd }) {
     .argument('[dir]', 'the node: node.yaml and models/', '.')
     .option('--value', 'a value type (a structure used inside attributes, like an address) instead of an entity type')
     .action(onAdd);
+  cli.command('release')
+    .description("keep the subject's current version online: snapshot its @context, vocabulary and schemas, so the next version leaves them in place")
+    .usage(USAGES.release.replace('usage: datamodels release ', ''))
+    .argument('<subject>', 'the subject, for example road')
+    .argument('[dir]', 'the node: node.yaml and models/', '.')
+    .option('--offline', 'do not compare the snapshot with the published files')
+    .action(onRelease);
   return cli;
 }
 
@@ -148,6 +157,7 @@ async function main(args) {
     onCheck: async (dir, options) => { code = await check(dir, options); },
     onInit: async (dir, options) => { code = await init(dir, options); },
     onAdd: async (target, dir, options) => { code = await add(target, dir, options); },
+    onRelease: async (subject, dir, options) => { code = await release(subject, dir, options); },
   });
   // datamodels --help lists the commands; datamodels help build is commander's.
   if (args.length === 1 && ['--help', '-h', 'help'].includes(args[0])) { cli.outputHelp(); return 0; }
@@ -230,6 +240,15 @@ async function add(target, dir, { value }) {
   for (const f of r.changed) console.error(`  changed ${f}`);
   if (r.released) console.error(`  note: v${r.released} of this subject was released, so its files cannot change; give the subject a new version (subject.yaml) before you build`);
   console.error(`${target}: ${r.typeIri}. Next: its attributes in schema.json (each with x-iri) and catalog.yaml, then datamodels check.`);
+  return 0;
+}
+
+async function release(subjectName, dir, { offline }) {
+  let r;
+  try { r = await releaseSubject(dir, subjectName, { offline }); } catch (e) { fail(e.message); }
+  for (const n of r.notes) console.error(`  note: ${n}`);
+  if (!r.written) console.error(`${r.subject} v${r.version}: already released (${r.dir}), unchanged`);
+  else console.error(`${r.subject} v${r.version}: released into ${r.dir}${r.online ? `, the same as the ${r.online} published file(s)` : ''}. Commit it; the next version leaves these files online.`);
   return 0;
 }
 
