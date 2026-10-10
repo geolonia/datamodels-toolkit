@@ -54,18 +54,32 @@ const FULL_IRI = /^(https?|urn):/;
  *
  * An import that cannot be read (or is not read: `offline`) leaves the
  * outcome open: what came before may be overridden, and any term may come
- * from it. Returns { defs, uncertain, open, notes }: the definitions, the
- * terms whose final mapping is unknown, whether an unread import may define
- * terms not seen, and what could not be read.
+ * from it. A term's IRI is fixed where it is defined, from the prefixes known
+ * there, as a processor creates term definitions; a prefix redefined later
+ * does not change it. Returns { iris, uncertain, open, notes }: each term's
+ * IRI (null when the context removes it), the terms whose final IRI is
+ * unknown, whether an unread import may define terms not seen, and what
+ * could not be read.
  */
 export async function resolveContext(context, getJson, { offline = false } = {}) {
-  const state = { defs: {}, uncertain: new Set(), open: false, notes: [] };
+  const state = { iris: new Map(), uncertain: new Set(), open: false, notes: [] };
   const docs = new Map();
   const walk = async (ctx, stack) => {
     for (const part of [ctx].flat()) {
-      if (part === null) { state.defs = {}; state.uncertain.clear(); state.open = false; continue; }
+      if (part === null) { state.iris.clear(); state.uncertain.clear(); state.open = false; continue; }
       if (typeof part === 'object') {
-        for (const [k, v] of Object.entries(part)) { state.defs[k] = v; state.uncertain.delete(k); }
+        // Expanded here, with this part's own prefixes and those defined so far.
+        const expanded = contextTerms(part, Object.fromEntries([...state.iris].filter(([, v]) => v)));
+        for (const [k, v] of Object.entries(part)) {
+          if (k.startsWith('@')) continue;
+          const removed = v === null || (typeof v === 'object' && v?.['@id'] === null);
+          state.iris.set(k, removed ? null : expanded.get(k) ?? null);
+          // Its prefix, when it comes from before this part, may be changed by an unread import.
+          const raw = typeof v === 'string' ? v : v?.['@id'];
+          const prefix = typeof raw === 'string' && raw.indexOf(':') > 0 && !raw.slice(raw.indexOf(':') + 1).startsWith('//') ? raw.slice(0, raw.indexOf(':')) : null;
+          const prefixOpen = prefix && !Object.hasOwn(part, prefix) && (state.uncertain.has(prefix) || (!state.iris.has(prefix) && state.open));
+          if (prefixOpen) state.uncertain.add(k); else state.uncertain.delete(k);
+        }
         continue;
       }
       if (typeof part !== 'string') continue;
@@ -80,7 +94,7 @@ export async function resolveContext(context, getJson, { offline = false } = {})
       }
       if (theirs === undefined) {
         // Anything before may be overridden, and any term may come from it.
-        for (const k of Object.keys(state.defs)) state.uncertain.add(k);
+        for (const k of state.iris.keys()) state.uncertain.add(k);
         state.open = true;
         continue;
       }
@@ -92,11 +106,7 @@ export async function resolveContext(context, getJson, { offline = false } = {})
 }
 
 /** The IRI a resolved context gives a term: { iri } (null when it removes the term), or undefined when it does not define it. */
-function lookup(defs, term) {
-  if (!Object.hasOwn(defs, term)) return undefined;
-  if (defs[term] === null || defs[term]?.['@id'] === null) return { iri: null };
-  return { iri: contextTerms(defs).get(term) ?? null };
-}
+const lookup = (iris, term) => (iris.has(term) ? { iri: iris.get(term) } : undefined);
 
 /**
  * Every type and attribute of a subject's models is a term of its @context and
@@ -108,18 +118,18 @@ function lookup(defs, term) {
 export function termProblems(subject, urls, resolved) {
   const problems = [];
   const notes = [];
-  const { defs, uncertain, open } = resolved;
+  const { iris, uncertain, open } = resolved;
   const core = contextTerms(CORE_CONTEXT);
   const ctx = `${subject.name}/context.jsonld`;
   const unsure = ', or a context it imports that could not be read may change that';
   const report = (term, text) => (uncertain.has(term) ? notes.push(`${text}${unsure}`) : problems.push(text));
   // The core terms keep their IRIs, whoever redefines them.
   for (const [term, iri] of core) {
-    const found = lookup(defs, term);
+    const found = lookup(iris, term);
     if (found && found.iri !== iri) report(term, `${ctx}: ${found.iri === null ? 'removes' : 'redefines'} the NGSI-LD core term ${term} (${iri})`);
   }
   const check = (where, name, what, expected) => {
-    const found = lookup(defs, name) ?? (core.has(name) ? { iri: core.get(name) } : undefined);
+    const found = lookup(iris, name) ?? (core.has(name) ? { iri: core.get(name) } : undefined);
     if (!found || found.iri === null) {
       if (open && !found) notes.push(`${where}: ${what} is not in the @context${unsure}`);
       else report(name, `${where}: ${what} is not in the @context`);
@@ -235,13 +245,13 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
           // Its terms, with those of the contexts it imports (datamodels.jp's common one, say).
           const their = await resolveContext(theirContext, getJson);
           if (their.notes.length) { notes.push(`${where}: not checked, ${their.notes.join('; ')}`); continue; }
-          const theirs = contextTerms(their.defs);
+          const theirs = their.iris;
           // This subject's terms as they end up, its own imports included. A term the term
           // check already reports (not a full IRI) or that an unread import may change is left out.
           const mine = resolvedBySubject.get(s.name);
           if (!mine) continue;
-          for (const [term, iri] of contextTerms(mine.defs)) {
-            if (!FULL_IRI.test(iri) || mine.uncertain.has(term)) continue;
+          for (const [term, iri] of mine.iris) {
+            if (!iri || !FULL_IRI.test(iri) || mine.uncertain.has(term)) continue;
             if (theirs.has(term) && theirs.get(term) !== iri) problems.push(`${where}: redefines ${term} (${theirs.get(term)} there, ${iri} here)`);
           }
         } catch (e) {
