@@ -63,7 +63,10 @@ test('add refuses a type that any part of the @context defines', async () => {
   assert.deepEqual(await readdir(join(dir, 'models', 'road')), ['context.jsonld', 'subject.yaml']);
 });
 
-test('add leaves nothing behind when it fails, so it can be run again', async () => {
+// The failure is forced with directory permissions, which root and Windows do not enforce.
+const noPermissions = process.platform === 'win32' ? 'Windows ignores the directory mode' : process.getuid?.() === 0 ? 'root ignores directory permissions' : false;
+
+test('add leaves nothing behind when it fails, so it can be run again', { skip: noPermissions }, async () => {
   const dir = await node();
   const file = join(dir, 'models', 'road', 'context.jsonld');
   const before = await readFile(file, 'utf8');
