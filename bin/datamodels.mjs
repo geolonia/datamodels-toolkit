@@ -228,7 +228,7 @@ async function init(dir, options) {
   if (answers.github) {
     const run = async (cmd, args, opts = {}) => (await promisify(execFile)(cmd, args, opts)).stdout;
     let steps;
-    try { steps = await publishToGitHub(dir, answers.github, { run }); } catch (e) { fail(`--github: ${e.stderr?.trim() || e.message}`); }
+    try { steps = await publishToGitHub(dir, answers.github, { run, files: [...added, ...appended] }); } catch (e) { fail(`--github: ${e.stderr?.trim() || e.message}`); }
     for (const s of steps) console.error(`  ${s}`);
   }
   console.error(`${dir}: a data model node. Next: add a model under models/${settings.subject}/, then datamodels check and datamodels build.`);
