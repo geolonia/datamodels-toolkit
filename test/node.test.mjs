@@ -91,6 +91,19 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   assert.match(model, /<h3 id="route">route<\/h3>/);
   assert.match(model, /<dt>Extends<\/dt><dd><a href="https:\/\/datamodels\.jp\/ns\/task\/Task">/);
   assert.match(model, /<title>RoadPatrol: data models by Example Inc\.<\/title>/);
+  // Only http(s) URLs from the sources become links.
+  const schemaFile = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  await writeFile(schemaFile, JSON.stringify({ ...JSON.parse(await readFile(schemaFile, 'utf8')), 'x-subclass-of': 'javascript:alert(1)' }));
+  await buildNode(dir);
+  assert.doesNotMatch(await read('models/road/RoadPatrol/index.html'), /javascript:/);
+});
+
+test('an eleventy.config.js where the command runs does not change the pages', async () => {
+  const dir = await node();
+  await writeFile(join(dir, 'eleventy.config.js'), "export default function () { throw new Error('the node\\'s own Eleventy configuration was loaded'); }\n");
+  const r = await run(process.execPath, [BIN, 'build'], { cwd: dir }).then((x) => ({ code: 0, ...x }), (e) => ({ code: e.code, stderr: e.stderr }));
+  assert.equal(r.code, 0, r.stderr);
+  assert.ok((await readFile(join(dir, '_site', 'ns', 'road.html'), 'utf8')).includes('id="RoadPatrol"'));
 });
 
 test('slash IRIs when node.yaml asks for them, with their redirects', async () => {

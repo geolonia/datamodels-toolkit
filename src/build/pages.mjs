@@ -8,6 +8,11 @@ import { join, relative } from 'node:path';
 import { attributesOf } from './urls.mjs';
 
 const TEMPLATES = join(import.meta.dirname, 'pages');
+// Our own (empty) configuration file: without it Eleventy loads eleventy.config.js from the current directory.
+const CONFIG = join(import.meta.dirname, 'eleventy.config.mjs');
+
+// A link only for an http(s) URL: these come from the sources and end up in href.
+const httpOnly = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u) ? u : null);
 
 /** A text in every language it has, in the node's order: [{ lang, text }]. */
 const texts = (o, languages) => languages.filter((l) => typeof o?.[l] === 'string' && o[l].trim()).map((lang) => ({ lang, text: o[lang] }));
@@ -46,7 +51,7 @@ export function pageData(subjects, { urls, node }) {
         titles: texts(model.catalog.title, languages), descriptions: texts(model.catalog.description, languages),
         schema: mu.schemaExact, schemaAlias: mu.schemaAlias, context: su.contextAlias,
         examples: Object.keys(model.examples).sort().map((f) => `${mu.examples}${f}`),
-        subClassOf: model.schema['x-subclass-of'] ?? null, aliasOf: model.schema['x-alias-of'] ?? null,
+        subClassOf: httpOnly(model.schema['x-subclass-of']), aliasOf: httpOnly(model.schema['x-alias-of']),
         extends: model.catalog.extends ?? [], attributes,
         subject: { name: subject.name, page: su.page },
       };
@@ -68,6 +73,7 @@ export async function writePages(subjects, { urls, node, out }) {
   const data = pageData(subjects, { urls, node });
   const eleventy = new Eleventy(TEMPLATES, out, {
     quietMode: true,
+    configPath: CONFIG,
     config(config) {
       config.setNunjucksEnvironmentOptions({ autoescape: true, throwOnUndefined: true });
       for (const [k, v] of Object.entries(data)) config.addGlobalData(k, v);
