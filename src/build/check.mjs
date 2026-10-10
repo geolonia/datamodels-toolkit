@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { buildNode } from './node.mjs';
-import { catalogUrls } from './urls.mjs';
+import { catalogUrls, attributesOf } from './urls.mjs';
 
 // A schema on another site that could not be read: noted and skipped, never a problem of this node.
 class Unavailable extends Error {}
@@ -72,8 +72,7 @@ export function termProblems(subject, urls, imported = {}) {
       if (!known.has(m.type)) missing(where, `the type ${m.type}`);
       else expandsTo(where, m.type, known.get(m.type), urls.modelUrls(subject, m).typeIri);
     }
-    for (const [name, prop] of Object.entries(m.schema.properties ?? {})) {
-      if (name === 'id' || name === 'type') continue;
+    for (const [name, prop] of attributesOf(m)) {
       if (!known.has(name)) missing(where, `the attribute ${name}`);
       else expandsTo(where, name, known.get(name), prop?.['x-iri']);
     }
