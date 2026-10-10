@@ -57,7 +57,15 @@ nodes:              # optional: nodes you know; a context may import theirs
   - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
 ```
 
-It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples and `llms.txt`. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`). The pages for people, and `datamodels check` for CI, come next ([#12](https://github.com/geolonia/datamodels-toolkit/issues/12)). The exit code is 1 when the node is invalid, 2 for a usage error.
+It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples, `llms.txt` and the pages. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`). `datamodels check` for CI comes next ([#12](https://github.com/geolonia/datamodels-toolkit/issues/12)).
+
+The pages are plain HTML in a monospace font, with no JavaScript, so they read well with `curl` too ([Eleventy](https://www.11ty.dev/) writes them):
+
+- `/`: the subjects and their models.
+- One page per subject. With hash IRIs it is the namespace document (`/ns/<subject>`, written as `ns/<subject>.html`), with an anchor for every type and attribute, so every IRI opens on it.
+- One page per model (`/models/<subject>/<Type>/`), with an anchor per attribute.
+
+Every page links to `catalog.json` (`<link rel="alternate" type="application/json">`). The exit code is 1 when the node is invalid, 2 for a usage error.
 
 ## Build library
 

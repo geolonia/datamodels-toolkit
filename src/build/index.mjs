@@ -8,3 +8,4 @@ export { attributeEntries, extensionEntry, catalogEntry, termRedirects } from '.
 export { publishCatalog } from './publish.mjs';
 export { llmsTxt } from './llms.mjs';
 export { readNode, buildNode } from './node.mjs';
+export { pageData, writePages } from './pages.mjs';

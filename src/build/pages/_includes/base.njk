@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="{{ site.lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{#- title and alternate come from computed front matter, marked safe there: escaped once, here. #}
+<title>{{ title }}</title>
+<link rel="alternate" type="application/json" href="{{ site.catalog }}">
+{%- if alternate %}
+<link rel="alternate" type="application/ld+json" href="{{ alternate }}">
+{%- endif %}
+<style>
+:root { color-scheme: light dark; }
+body { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height: 1.5; max-width: 88ch; margin: 2rem auto; padding: 0 1rem; }
+h1, h2, h3 { line-height: 1.25; }
+a { color: inherit; }
+:target { outline: 2px solid; outline-offset: 4px; }
+dt { font-weight: bold; }
+dd { margin: 0 0 0.5rem 2ch; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<header><a href="{{ site.home }}">Data models by {{ site.name }}</a></header>
+<main>
+{{ content | safe }}
+</main>
+<footer>
+<hr>
+<p>Published by <a href="{{ site.publisher.url }}">{% for n in site.publisher.names %}<span lang="{{ n.lang }}">{{ n.text }}</span>{% if not loop.last %} / {% endif %}{% endfor %}</a>.
+Machine-readable files: <a href="{{ site.catalog }}">catalog.json</a>, <a href="{{ site.llms }}">llms.txt</a>.
+Licence: <a href="{{ site.licenseUrl }}">{{ site.license }}</a>.</p>
+</footer>
+</body>
+</html>

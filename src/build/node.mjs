@@ -17,6 +17,7 @@ import { catalogUrls } from './urls.mjs';
 import { loadSubjects } from './load.mjs';
 import { publishCatalog } from './publish.mjs';
 import { llmsTxt } from './llms.mjs';
+import { writePages } from './pages.mjs';
 
 const httpUrl = (s) => { try { const u = new URL(s); return ['http:', 'https:'].includes(u.protocol) && !!u.hostname; } catch { return false; } };
 const texts = (o) => !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length > 0 && Object.values(o).every((v) => typeof v === 'string' && v.trim());
@@ -42,7 +43,7 @@ export async function readNode(dir) {
 
 /**
  * Build the node in `dir` into `out` (default `<dir>/_site`): the files of
- * publishCatalog() and llms.txt. Returns { node, catalog, exactPaths, redirects }.
+ * publishCatalog(), llms.txt and the pages. Returns { node, subjects, catalog, exactPaths, redirects, pages }.
  */
 export async function buildNode(dir, { out = join(dir, '_site'), now } = {}) {
   const node = await readNode(dir);
@@ -66,5 +67,6 @@ export async function buildNode(dir, { out = join(dir, '_site'), now } = {}) {
   const result = await publishCatalog(subjects, { urls, outDir: out, languages: node.languages, head, ...(now ? { now } : {}) });
   const name = node.publisher.name.en ?? node.languages.map((l) => node.publisher.name[l]).find(Boolean) ?? Object.values(node.publisher.name)[0];
   await writeFile(join(out, 'llms.txt'), llmsTxt(subjects, { urls, name: `Data models by ${name}`, languages: node.languages }));
-  return { node, subjects, ...result };
+  const pages = await writePages(subjects, { urls, node, out });
+  return { node, subjects, ...result, pages };
 }
