@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.2.0 release, and a README whose `npx` commands run v0.2.0.
+
 ## [0.2.0] - 2026-10-11
 
 The tools for keeping and growing a data model node: `release` keeps a published version online, `extend` starts a model from another node's model, and `check` compares every type and attribute with the `@context`.
