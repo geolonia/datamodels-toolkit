@@ -23,12 +23,9 @@ import { writePages } from './pages.mjs';
 const httpUrl = (s) => { if (typeof s !== 'string') return false; try { const u = new URL(s); return ['http:', 'https:'].includes(u.protocol) && !!u.hostname && !u.username && !u.password; } catch { return false; } };
 const texts = (o) => !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length > 0 && Object.values(o).every((v) => typeof v === 'string' && v.trim());
 
-/** The settings in `<dir>/node.yaml`, checked; every problem in one error. */
-export async function readNode(dir) {
-  const file = join(dir, 'node.yaml');
-  let node;
-  try { node = YAML.parse(await readFile(file, 'utf8')); } catch (e) { throw new Error(`${file}: ${e.code === 'ENOENT' ? 'not found (a node needs node.yaml)' : e.message}`); }
-  if (!node || typeof node !== 'object' || Array.isArray(node)) throw new Error(`${file}: must be a mapping of settings`);
+/** The problems of the settings of a node, as node.yaml holds them (also used by init before it writes). */
+export function settingsProblems(node) {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return ['must be a mapping of settings'];
   const problems = [];
   const { baseUrl, iris = 'hash', languages = ['en'], publisher, license, licenseUrl, nodes } = node;
   if (!httpUrl(baseUrl) || new URL(baseUrl).search || new URL(baseUrl).hash) problems.push('baseUrl must be an http(s) URL without credentials, query or fragment');
@@ -38,7 +35,18 @@ export async function readNode(dir) {
   if (typeof license !== 'string' || !license.trim()) problems.push('license is required (an SPDX identifier such as CC0-1.0)');
   if (licenseUrl !== undefined && !httpUrl(licenseUrl)) problems.push('licenseUrl must be an http(s) URL');
   if (nodes !== undefined && (!Array.isArray(nodes) || !nodes.every((n) => httpUrl(n?.url) && httpUrl(n?.index)))) problems.push('nodes must be a list of { url, index }, both http(s) URLs');
+  return problems;
+}
+
+/** The settings in `<dir>/node.yaml`, checked; every problem in one error. */
+export async function readNode(dir) {
+  const file = join(dir, 'node.yaml');
+  let node;
+  try { node = YAML.parse(await readFile(file, 'utf8')); } catch (e) { throw new Error(`${file}: ${e.code === 'ENOENT' ? 'not found (a node needs node.yaml)' : e.message}`); }
+  if (!node || typeof node !== 'object' || Array.isArray(node)) throw new Error(`${file}: must be a mapping of settings`);
+  const problems = settingsProblems(node);
   if (problems.length) throw new Error(`${file}:\n${problems.map((p) => `  ${p}`).join('\n')}`);
+  const { baseUrl, iris = 'hash', languages = ['en'], publisher, license, licenseUrl, nodes } = node;
   return { baseUrl: baseUrl.replace(/\/+$/, ''), iris, languages, publisher, license, ...(licenseUrl ? { licenseUrl } : {}), ...(nodes?.length ? { nodes } : {}) };
 }
 
