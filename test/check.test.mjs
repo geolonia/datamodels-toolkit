@@ -171,7 +171,7 @@ test('a term from a context imported by URL: checked online, noted offline or wh
   // Offline, or the import cannot be read: a term not found here is only noted.
   let o = await checkNode(dir, { offline: true });
   assert.deepEqual(o.problems, []);
-  assert.match(o.notes.join('\n'), /road\/RoadPatrol: the attribute route is not in the @context, or in a context it imports that could not be read/);
+  assert.match(o.notes.join('\n'), /road\/RoadPatrol: the attribute route is not in the @context, or a context it imports that could not be read may change that/);
   o = await checkNode(dir, { fetch: fakeFetch(datamodelsJp(), { fail: ['https://shared.example.org/'] }) });
   assert.deepEqual(o.problems, []);
   assert.match(o.notes.join('\n'), /road\/context\.jsonld: https:\/\/shared\.example\.org\/context\/common\/v1\.0\.0\.jsonld could not be read \(ENOTFOUND\)/);
@@ -193,6 +193,59 @@ test('the parts of an @context count in their order: a later import overrides an
   // null clears what came before it.
   await writeFile(ctx, JSON.stringify({ '@context': [{ route: 'https://other.example/route' }, null, own] }));
   assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
+});
+
+test('resolving the @context as JSON-LD does: repeats, resets, unread imports, core terms', async () => {
+  const dir = await node();
+  const shared = 'https://shared.example.org/context/common/v1.0.0.jsonld';
+  const reset = 'https://shared.example.org/context/reset/v1.0.0.jsonld';
+  await listNodes(dir, [{ url: 'https://shared.example.org/', index: 'https://shared.example.org/catalog.json' }]);
+  const served = { ...datamodelsJp(), [shared]: { '@context': { route: `${BASE}/ns/road#route` } }, [reset]: { '@context': [null, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol' }] } };
+  const ctx = join(dir, 'models', 'road', 'context.jsonld');
+  const write = (c) => writeFile(ctx, JSON.stringify({ '@context': c }));
+  const head = { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol' };
+  const online = async () => checkNode(dir, { fetch: fakeFetch(served) });
+  // The same import again, after an inline route: it applies again.
+  await write([shared, { ...head, route: 'https://other.example/route' }, shared]);
+  assert.deepEqual((await online()).problems, []);
+  // An imported context that starts with null clears what came before it, route included.
+  await write([{ ...head, route: 'road:route' }, reset]);
+  assert.deepEqual((await online()).problems, ['road/RoadPatrol: the attribute route is not in the @context']);
+  // An inline route that does not match, then an import that cannot be read: only noted, it may fix it.
+  await write([{ ...head, route: 'https://other.example/route' }, shared]);
+  let r = await checkNode(dir, { offline: true });
+  assert.deepEqual(r.problems, []);
+  assert.match(r.notes.join('\n'), /route is .* in the schema, but the @context expands it to https:\/\/other\.example\/route, or a context it imports that could not be read may change that/);
+  // The same mismatch after the import is certain.
+  await write([shared, { ...head, route: 'https://other.example/route' }]);
+  assert.deepEqual((await checkNode(dir, { offline: true })).problems, [`road/RoadPatrol: route is ${BASE}/ns/road#route in the schema, but the @context expands it to https://other.example/route`]);
+  // A core term redefined by an import, or removed with null.
+  served[shared] = { '@context': { route: `${BASE}/ns/road#route`, location: 'https://other.example/location' } };
+  await write([{ ...head }, shared]);
+  assert.deepEqual((await online()).problems, ['road/context.jsonld: redefines the NGSI-LD core term location (https://uri.etsi.org/ngsi-ld/location)']);
+  served[shared] = { '@context': { route: `${BASE}/ns/road#route` } };
+  const schemaFile = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const schema = JSON.parse(await readFile(schemaFile, 'utf8'));
+  schema.properties.location = { type: 'object', 'x-iri': 'https://uri.etsi.org/ngsi-ld/location' };
+  await writeFile(schemaFile, JSON.stringify(schema));
+  const yaml = join(dir, 'models', 'road', 'RoadPatrol', 'catalog.yaml');
+  await writeFile(yaml, (await readFile(yaml, 'utf8')).replace('  route: { en: The route }', '  route: { en: The route }\n  location: { en: Where }'));
+  await write([shared, { ...head, location: null }]);
+  assert.deepEqual((await online()).problems, ['road/context.jsonld: removes the NGSI-LD core term location (https://uri.etsi.org/ngsi-ld/location)', 'road/RoadPatrol: the attribute location is not in the @context']);
+  // A context that imports itself is refused.
+  served[shared] = { '@context': [shared] };
+  await write([shared, head]);
+  assert.match((await online()).problems.join('\n'), /imports itself/);
+});
+
+test('the extends check sees terms this subject imports from elsewhere', async () => {
+  const dir = await node();
+  const shared = 'https://shared.example.org/context/common/v1.0.0.jsonld';
+  await listNodes(dir, [{ url: 'https://shared.example.org/', index: 'https://shared.example.org/catalog.json' }]);
+  // The shared context redefines due, a term of the extended Task.
+  const served = { ...datamodelsJp(), [shared]: { '@context': { due: 'https://shared.example.org/ns/due' } } };
+  await writeFile(join(dir, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': [shared, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' }] }));
+  assert.deepEqual((await checkNode(dir, { fetch: fakeFetch(served) })).problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: redefines due (https://datamodels.jp/ns/task/due there, https://shared.example.org/ns/due here)`]);
 });
 
 test('imports of an imported context are followed: datamodels.jp subjects import its common context', async () => {
