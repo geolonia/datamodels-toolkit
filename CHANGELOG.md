@@ -9,6 +9,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 - `datamodels init` writes a workflow that pins the Action to the v0.1.0 release (its commit SHA, with the tag as a comment), instead of `main`. Dependabot can then propose newer releases.
 - The README that `datamodels init` writes runs the same release with `npx` (`#v0.1.0`), instead of the latest commit.
 
+### Fixed
+
+- `datamodels check` finds an entity type or attribute that is missing from the `@context`, or that the `@context` expands to another IRI than the schema's `x-iri`, and a redefined NGSI-LD core term (#26).
+
 ## [0.1.0] - 2026-10-10
 
 First release: the CSV converter moved from [geolonia/datamodels](https://github.com/geolonia/datamodels) ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)), and the tools to publish a data model node of the [web of data models](https://github.com/geolonia/datamodels/issues/200).

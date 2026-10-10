@@ -100,6 +100,7 @@ datamodels check --offline   # without the network
 The checks a node runs in CI before it publishes:
 
 - Every schema compiles, and every `examples/example.json` is valid against its schema.
+- Every entity type and attribute is a term of the subject's `@context` (or an NGSI-LD core term such as `location`), and expands to the IRI in the schema (`x-iri`). Otherwise JSON-LD drops the attribute, or gives it another meaning. A term from a context imported by URL is checked online; offline it is only noted.
 - Release snapshots in `models/<subject>/releases/vX.Y.Z/`, where the node keeps them, hold exactly what the sources produce.
 - An exact version (`v0.1.0`) that is already online is served unchanged. One that is not online yet is new.
 - A model does not redefine a term of a model it `extends`: the same name keeps the same IRI.
