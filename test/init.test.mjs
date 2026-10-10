@@ -31,7 +31,8 @@ test('init writes a node that passes check and builds', async () => {
   assert.match(subject, /title:\n {2}ja: road\n {2}en: road\n/);
   const workflow = await readFile(join(dir, '.github', 'workflows', 'publish.yml'), 'utf8');
   assert.match(workflow, /uses: actions\/checkout@[0-9a-f]{40} # v/);
-  assert.match(workflow, /uses: geolonia\/datamodels-toolkit@/);
+  // Pinned to a release: a commit SHA with the tag as a comment, as Dependabot expects.
+  assert.match(workflow, /uses: geolonia\/datamodels-toolkit@[0-9a-f]{40} # v\d+\.\d+\.\d+\n/);
   assert.match(workflow, /pages: write\n {6}id-token: write/);
 });
 
