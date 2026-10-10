@@ -24,7 +24,9 @@ const HELP = `${USAGE}
   --set attribute=value  a value the list does not carry, such as GSI's municipality code
   --normalized           NGSI-LD normalized form instead of key-values
   --out file.json        write to a file (default: standard output)
-  --site URL|dir         where to read the catalog (default ${SITE}), or a directory laid out like the site`;
+  --site URL|dir         where to read the catalog (default ${SITE}), or a directory laid out like the site
+
+More on each option, with examples: https://github.com/geolonia/datamodels-toolkit#readme`;
 // An error the command reports in one line and exits with. Nothing calls
 // process.exit(): it can cut off output still being written to a pipe.
 class Exit extends Error { constructor(code, message) { super(message); this.code = code; } }
