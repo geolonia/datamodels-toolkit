@@ -106,6 +106,16 @@ test('a node already listed is kept; its index is the default', async () => {
   assert.equal(JSON.parse(await read(dir, 'models/road/context.jsonld'))['@context'].filter((p) => p === CONTEXT).length, 1);
 });
 
+test('a node under a path (a GitHub Pages project site) is listed with that path, once', async () => {
+  const GH = 'https://owner.github.io/repo';
+  const served = Object.fromEntries(Object.entries(files).map(([url, body]) => [url.replace(DJ, GH), JSON.parse(JSON.stringify(body).replaceAll(DJ, GH))]));
+  const dir = await node();
+  await extendModel(dir, 'task/Task', 'road/RoadTask', { index: `${GH}/catalog.json`, fetch: fakeFetch(served) });
+  const r = await extendModel(dir, 'task/Task', 'road/OtherTask', { index: `${GH}/catalog.json`, subclass: true, fetch: fakeFetch(served) });
+  assert.deepEqual(YAML.parse(await read(dir, 'node.yaml')).nodes, [{ url: `${GH}/`, index: `${GH}/catalog.json` }]);
+  assert.deepEqual(r.changed, ['models/road/context.jsonld']);
+});
+
 test('what extend refuses, and nothing is written then', async () => {
   const dir = await node();
   const before = await read(dir, 'node.yaml');

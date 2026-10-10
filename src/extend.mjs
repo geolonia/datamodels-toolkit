@@ -59,7 +59,9 @@ export async function extendModel(dir, source, target, { index, subclass = false
   const theirs = await get(entry.schemaUrl);
 
   // This node imports the other node's @context, so it must list that node (node.yaml, nodes).
-  const nodeUrl = new URL('/', entry.contextUrl).href;
+  // The node's base URL is what comes before /context/: a node may live under a path (a GitHub Pages project site).
+  const cut = entry.contextUrl.lastIndexOf('/context/');
+  const nodeUrl = cut > 0 ? entry.contextUrl.slice(0, cut + 1) : new URL('/', entry.contextUrl).href;
   const listed = (node.nodes ?? []).some((n) => entry.contextUrl.startsWith(`${n.url.replace(/\/+$/, '')}/context/`));
   let nodeYaml;
   if (!listed) {
