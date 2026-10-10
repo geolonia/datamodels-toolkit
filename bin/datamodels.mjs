@@ -28,7 +28,8 @@ const fail = (msg) => { throw new Exit(1, msg); };
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
 function program(onConvert) {
-  const value = (name) => (v) => { if (v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
+  // An option's value: present, not empty (--out=) and not another option.
+  const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
   const cli = new Command('datamodels')
     .exitOverride()
     .configureOutput({ outputError: () => {} })

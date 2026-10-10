@@ -63,6 +63,8 @@ test('usage errors exit with 2 and name the problem', async () => {
     // An option's value that is another option, or no value at all.
     [['convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--out', '--normalized'], /^--out needs a value\nusage: /],
     [['convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--site'], /^--site needs a value\nusage: /],
+    [['convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--out='], /^--out needs a value\nusage: /],
+    [['convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--site='], /^--site needs a value\nusage: /],
   ]) {
     const r = await datamodels(...args);
     assert.equal(r.code, 2, args.join(' '));
