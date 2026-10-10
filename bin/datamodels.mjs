@@ -13,45 +13,78 @@
 // (encoding, repairs, invalid rows) goes to standard error; the exit code is 1
 // when a row is invalid or a file cannot be read, 2 for a usage error.
 import { readFile, writeFile } from 'node:fs/promises';
+import { Command, InvalidArgumentError } from 'commander';
 import { decodeCsv, parseCsv, convertRows, mappingProblems, mappedColumns, LINE } from '../src/convert.mjs';
 import { toNormalized } from '../src/ngsi.mjs';
 import { siteReader, loadTarget, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
 
 const USAGE = `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`;
-// --help adds one line per option, in the words of the README.
-const HELP = `${USAGE}
-
-  --set attribute=value  a value the list does not carry, such as GSI's municipality code
-  --normalized           NGSI-LD normalized form instead of key-values
-  --out file.json        write to a file (default: standard output)
-  --site URL|dir         where to read the catalog (default ${SITE}), or a directory laid out like the site
-
-More on each option, with examples: https://github.com/geolonia/datamodels-toolkit#readme`;
 // An error the command reports in one line and exits with. Nothing calls
 // process.exit(): it can cut off output still being written to a pipe.
 class Exit extends Error { constructor(code, message) { super(message); this.code = code; } }
 const usage = (msg) => { throw new Exit(2, `${msg}\n${USAGE}`); };
 const fail = (msg) => { throw new Exit(1, msg); };
 
-async function main(args) {
-  const command = args.shift();
-  if (command === '--help' || command === '-h' || command === 'help') { console.log(HELP); return 0; }
-  if (command !== 'convert') usage(command ? `unknown command ${command}` : 'missing command');
-  if (args.includes('--help') || args.includes('-h')) { console.log(HELP); return 0; }
+// The command line, with commander (#9). Its own messages are replaced by the
+// one-line errors above, so scripts see the same text and exit codes as before.
+function program(onConvert) {
+  // An option's value: present, not empty (--out=) and not another option.
+  const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
+  const cli = new Command('datamodels')
+    .exitOverride()
+    .configureOutput({ outputError: () => {} })
+    .configureHelp({ styleTitle: (title) => title.toLowerCase() });
+  cli.command('convert')
+    .description('turn a published list (CSV) into entities of a catalog model, validated against its JSON Schema')
+    .usage(USAGE.replace('usage: datamodels convert ', ''))
+    .argument('<subject/Type>', 'the model, as on its page, for example disaster/EvacuationSite')
+    .argument('<mapping>', "one of the model's mapping files")
+    .argument('<file.csv>', 'the list, UTF-8 or Shift_JIS')
+    // In the words of the README; the README has the details and examples.
+    .option('--set <attribute=value>', "a value the list does not carry, such as GSI's municipality code", (v, all = []) => [...all, value('--set')(v)])
+    .option('--normalized', 'NGSI-LD normalized form instead of key-values')
+    .option('--out <file.json>', 'write to a file (default: standard output)', value('--out'))
+    .option('--site <URL|dir>', 'where to read the catalog, or a directory laid out like the site', value('--site'), SITE)
+    .addHelpText('after', '\nMore on each option, with examples: https://github.com/geolonia/datamodels-toolkit#readme')
+    // exitOverride, the output and the help style are inherited from cli.
+    .action(onConvert);
+  return cli;
+}
 
-  // An option's operand: present and not another option.
-  const operand = (name, i) => { const v = args[i + 1]; if (v === undefined || v.startsWith('-')) usage(`${name} needs a value`); args.splice(i, 2); return v; };
-  const flag = (name) => { const i = args.indexOf(name); return i === -1 ? undefined : operand(name, i); };
-  const sets = []; for (let i = args.indexOf('--set'); i !== -1; i = args.indexOf('--set')) sets.push(operand('--set', i));
-  const out = flag('--out');
-  const site = flag('--site') ?? SITE;
-  const normalized = args.includes('--normalized') && args.splice(args.indexOf('--normalized'), 1);
-  const unknownOption = args.find((a) => a.startsWith('-'));
-  if (unknownOption) usage(`unknown option ${unknownOption}`);
-  const [target, mappingName, file, ...extra] = args;
+// commander's errors as this command's one-line errors (exit code 2).
+function usageError(e, cli) {
+  const convert = cli.commands.find((c) => c.name() === 'convert');
+  switch (e.code) {
+    case 'commander.unknownCommand': return usage(`unknown command ${/'([^']+)'/.exec(e.message)?.[1] ?? ''}`);
+    case 'commander.unknownOption': return usage(`unknown option ${/'([^']+)'/.exec(e.message)?.[1] ?? ''}`);
+    case 'commander.missingArgument': return usage('missing arguments');
+    case 'commander.excessArguments': return usage(`unexpected arguments: ${convert.args.slice(3).join(' ')}`);
+    case 'commander.optionMissingArgument': return usage(`${/'(--[a-z]+)/.exec(e.message)?.[1] ?? 'an option'} needs a value`);
+    // Our own message, after commander's "option '…' argument '…' is invalid.".
+    case 'commander.invalidArgument': return usage(e.message.split('is invalid. ').pop());
+    default: return usage(e.message.replace(/^error: /, ''));
+  }
+}
+
+async function main(args) {
+  let code = 0;
+  const cli = program(async (target, mappingName, file, options) => { code = await convert(target, mappingName, file, options); });
+  // One command so far: datamodels --help shows its help.
+  if (['--help', '-h', 'help'].includes(args[0])) { cli.commands.find((c) => c.name() === 'convert').outputHelp(); return 0; }
+  if (!args.length) usage('missing command');
+  try {
+    await cli.parseAsync(args, { from: 'user' });
+  } catch (e) {
+    if (e instanceof Exit) throw e;
+    if (e.code === 'commander.helpDisplayed' || e.code === 'commander.help') return 0;
+    if (typeof e.code === 'string' && e.code.startsWith('commander.')) usageError(e, cli);
+    throw e;
+  }
+  return code;
+}
+
+async function convert(target, mappingName, file, { set: sets = [], normalized, out, site }) {
   if (sets.some((kv) => kv.indexOf('=') < 1)) usage('--set needs attribute=value');
-  if (!target || !mappingName || !file) usage('missing arguments');
-  if (extra.length) usage(`unexpected arguments: ${extra.join(' ')}`);
 
   let loaded;
   try { loaded = await loadTarget(siteReader(site), target, mappingName); } catch (e) { fail(e.message); }
