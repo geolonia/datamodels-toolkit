@@ -6,3 +6,5 @@ export { buildVocabulary } from './vocab.mjs';
 export { listReleases, snapshotRelease, verifyRelease } from './releases.mjs';
 export { attributeEntries, extensionEntry, catalogEntry, termRedirects } from './entries.mjs';
 export { publishCatalog } from './publish.mjs';
+export { llmsTxt } from './llms.mjs';
+export { readNode, buildNode } from './node.mjs';

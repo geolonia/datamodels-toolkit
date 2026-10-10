@@ -9,10 +9,10 @@ import { attributesOf } from './urls.mjs';
  */
 export function attributeEntries(model, { urls, languages = ['ja', 'en'] }) {
   // A catalog value type, from the URL of the schema an attribute references:
-  // .../schema/<subject>/<Type>/vX.Y.Z.json is the type .../ns/<subject>/<Type>.
+  // .../schema/<subject>/<Type>/vX.Y.Z.json is the type IRI the catalog minted for <subject> and <Type>.
   const valueModel = (ref) => {
     const m = typeof ref === 'string' && ref.startsWith(`${urls.baseUrl}/schema/`) && /\/schema\/([^/]+)\/([^/]+)\/v[^/]+\.json$/.exec(ref);
-    return m ? `${urls.baseUrl}/ns/${m[1]}/${m[2]}` : undefined;
+    return m ? urls.term(m[1], m[2]) : undefined;
   };
   const required = new Set(model.schema.required ?? []);
   return attributesOf(model).map(([name, prop]) => {
@@ -88,6 +88,8 @@ export function catalogEntry(subject, model, { urls, languages = ['ja', 'en'], a
     ...(model.schema['x-alias-of'] ? { aliasOf: model.schema['x-alias-of'] } : {}),
     ...(model.schema['x-subclass-of'] ? { subClassOf: model.schema['x-subclass-of'] } : {}),
     ...(model.catalog.supersededBy ? { supersededBy: model.catalog.supersededBy } : {}),
+    // A node's model that builds on other nodes' models (docs/node.md): type IRI, version and index of each.
+    ...(model.catalog.extends?.length ? { extends: model.catalog.extends } : {}),
   };
 }
 
@@ -95,9 +97,10 @@ export function catalogEntry(subject, model, { urls, languages = ['ja', 'en'], a
  * The redirects that make the IRIs of a subject resolve to documentation, as
  * [from, to] paths: the namespace to the subject page, each type to its page,
  * each attribute minted in the namespace to its heading on a model page (the
- * first model that has it).
+ * first model that has it). None with hash IRIs: the namespace is the subject page itself.
  */
 export function termRedirects(subject, { urls }) {
+  if (urls.iris === 'hash') return [];
   const u = urls.subjectUrls(subject);
   const out = [[`/ns/${subject.name}/`, `/models/${subject.name}/`]];
   const done = new Set();

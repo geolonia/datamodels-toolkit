@@ -2,7 +2,7 @@
 
 Command-line tools for the [datamodels.jp](https://datamodels.jp) catalog.
 
-It starts with one command, `convert`, which turns a published list (CSV) into entities of a catalog model. More commands come only when someone needs them for a real task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
+`convert` turns a published list (CSV) into entities of a catalog model; `build` writes the files of a data model node, a site of your own in the [web of data models](https://github.com/geolonia/datamodels/issues/200). More commands come only when someone needs them for a real task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
 
 ## Install
 
@@ -36,6 +36,28 @@ It reads `catalog.json`, the model's schema and the mapping file from the site, 
 - Transforms: `text`, `code6`, `number`, `integer`, `numbers`, `flag`, `flags` (with `values`), `split`, `municipality`, `machiazaId`, `nationalShelterType` (`src/convert.mjs`).
 
 It detects UTF-8 and Shift_JIS. It repairs only what it can prove, such as a local government code that lost its leading zero or lacks its check digit (the check digit decides), and lists every repair on standard error. Invalid rows are left out and listed by line. The exit code is 1 when a row is invalid or a file cannot be read, and 2 for a usage error.
+
+## build
+
+```bash
+datamodels build             # the node in the current directory, into _site/
+datamodels build my-node --out public
+```
+
+A node is a folder with `node.yaml` and `models/`. `models/` is laid out as in [geolonia/datamodels](https://github.com/geolonia/datamodels/tree/main/models): one folder per subject with `subject.yaml` and `context.jsonld`, and one folder per model with `schema.json`, `catalog.yaml` and `examples/`. A node needs only one language and has no mapping files or ADOPTERS files ([what a node publishes](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
+
+```yaml
+# node.yaml
+baseUrl: https://models.example.org
+iris: hash          # /ns/<subject>#<Term>; slash needs w3id.org or a server that redirects
+languages: [en]
+publisher: { name: { en: Example Inc. }, url: https://example.org/ }
+license: CC0-1.0    # required; licenseUrl is optional
+nodes:              # optional: nodes you know; a context may import theirs
+  - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
+```
+
+It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples and `llms.txt`. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`). The pages for people, and `datamodels check` for CI, come next ([#12](https://github.com/geolonia/datamodels-toolkit/issues/12)). The exit code is 1 when the node is invalid, 2 for a usage error.
 
 ## Build library
 
