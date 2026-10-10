@@ -66,6 +66,54 @@ test('a node builds with hash IRIs, its publisher, licence and known nodes', asy
   assert.match(llms, /\[catalog\.json\]\(https:\/\/models\.example\.org\/catalog\.json\)/);
 });
 
+test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.json', async () => {
+  const dir = await node();
+  const desc = join(dir, 'models', 'road', 'subject.yaml');
+  await writeFile(desc, (await readFile(desc, 'utf8')).replace('Road maintenance.', '"Road <b>maintenance</b>."'));
+  const { pages, catalog } = await buildNode(dir);
+  assert.deepEqual(pages, ['index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
+  const read = (p) => readFile(join(dir, '_site', p), 'utf8');
+  for (const p of pages) {
+    const html = await read(p);
+    assert.match(html, /<link rel="alternate" type="application\/json" href="https:\/\/models\.example\.org\/catalog\.json">/, p);
+    assert.doesNotMatch(html, /<script/i, p);
+  }
+  // Every IRI the subject mints opens on the namespace document, ns/road.html, at its own anchor.
+  const subject = await read('ns/road.html');
+  const iris = [catalog.models[0].typeIri, ...catalog.models[0].attributes.map((a) => a.iri)];
+  for (const iri of iris) {
+    assert.ok(iri.startsWith(`${BASE}/ns/road#`), iri);
+    assert.ok(subject.includes(`id="${iri.split('#')[1]}"`), iri);
+  }
+  assert.match(subject, /<link rel="alternate" type="application\/ld\+json" href="https:\/\/models\.example\.org\/vocab\/road\/v0\.1\.0\.jsonld">/);
+  assert.match(subject, /Road &lt;b&gt;maintenance&lt;\/b&gt;\./, 'text is escaped');
+  const model = await read('models/road/RoadPatrol/index.html');
+  assert.match(model, /<h3 id="route">route<\/h3>/);
+  assert.match(model, /<dt>Extends<\/dt><dd><a href="https:\/\/datamodels\.jp\/ns\/task\/Task">/);
+  assert.match(model, /<title>RoadPatrol: data models by Example Inc\.<\/title>/);
+  // The anchor follows the IRI, not the attribute's name.
+  const sf = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const sj = JSON.parse(await readFile(sf, 'utf8'));
+  sj.properties.route['x-iri'] = `${BASE}/ns/road#lane`;
+  await writeFile(sf, JSON.stringify(sj));
+  await buildNode(dir);
+  const renamed = await read('ns/road.html');
+  assert.ok(renamed.includes('id="lane"') && !renamed.includes('id="route"'), 'the anchor of route is lane');
+  // Only http(s) URLs from the sources become links.
+  const schemaFile = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  await writeFile(schemaFile, JSON.stringify({ ...JSON.parse(await readFile(schemaFile, 'utf8')), 'x-subclass-of': 'javascript:alert(1)' }));
+  await buildNode(dir);
+  assert.doesNotMatch(await read('models/road/RoadPatrol/index.html'), /javascript:/);
+});
+
+test('an eleventy.config.js where the command runs does not change the pages', async () => {
+  const dir = await node();
+  await writeFile(join(dir, 'eleventy.config.js'), "export default function () { throw new Error('the node\\'s own Eleventy configuration was loaded'); }\n");
+  const r = await run(process.execPath, [BIN, 'build'], { cwd: dir }).then((x) => ({ code: 0, ...x }), (e) => ({ code: e.code, stderr: e.stderr }));
+  assert.equal(r.code, 0, r.stderr);
+  assert.ok((await readFile(join(dir, '_site', 'ns', 'road.html'), 'utf8')).includes('id="RoadPatrol"'));
+});
+
 test('slash IRIs when node.yaml asks for them, with their redirects', async () => {
   const dir = await node({ yaml: `${NODE_YAML}iris: slash\n`, context: { road: `${BASE}/ns/road/`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' } });
   const schema = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
@@ -73,6 +121,8 @@ test('slash IRIs when node.yaml asks for them, with their redirects', async () =
   const { catalog, redirects, subjects } = await buildNode(dir);
   assert.equal(catalog.models[0].typeIri, `${BASE}/ns/road/RoadPatrol`);
   assert.deepEqual(redirects.map(([from]) => from), ['/ns/road/', '/ns/road/RoadPatrol', '/ns/road/route']);
+  const { pages } = await buildNode(dir);
+  assert.ok(pages.includes('models/road/index.html'), 'the subject page is under /models/ with slash IRIs');
   assert.equal(buildVocabulary(subjects[0], { urls: catalogUrls(BASE), languages: ['en'] })['@graph'].length, 3);
 });
 

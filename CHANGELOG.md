@@ -7,7 +7,8 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 ### Added
 
 - `@geolonia/datamodels/build`: builds a catalog's machine-readable files from a models folder, the code of datamodels.jp with the base URL and the languages as options (#10). Its output for datamodels.jp's sources is byte for byte what the site serves.
-- `datamodels build`: writes the files a node of the web of data models publishes, from its `node.yaml` and `models/` folder: `catalog.json` with the publisher, licence and known nodes, the @contexts, JSON Schemas, vocabularies, examples and `llms.txt` (#12, first part; the pages and `datamodels check` follow).
+- `datamodels build`: writes the files a node of the web of data models publishes, from its `node.yaml` and `models/` folder: `catalog.json` with the publisher, licence and known nodes, the @contexts, JSON Schemas, vocabularies, examples and `llms.txt` (#12, first part; `datamodels check` follows).
+- The pages of a node, written with [Eleventy](https://www.11ty.dev/): plain HTML, monospace, no JavaScript; a page per subject with an anchor per term (the namespace document with hash IRIs) and a page per model with an anchor per attribute (#12).
 - Hash IRIs (`/ns/<subject>#<Term>`), the default for nodes; `extends` in a model's `catalog.yaml` goes into `catalog.json` (#12).
 - `datamodels --help` lists the commands; `datamodels <command> --help` explains each option (#6).
 

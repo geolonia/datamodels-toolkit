@@ -1,0 +1,35 @@
+---
+layout: base.njk
+pagination:
+  data: subjects
+  size: 1
+  alias: s
+permalink: "{{ s.file }}"
+eleventyComputed:
+  title: "{{ s.name | safe }}: data models by {{ site.name | safe }}"
+  alternate: "{{ s.vocab | safe }}"
+---
+{%- from "texts.njk" import texts %}
+<h1>{{ s.name }}</h1>
+{{ texts(s.titles) }}
+{{- texts(s.descriptions) }}
+<dl>
+<dt>Version</dt><dd>{{ s.version }}</dd>
+<dt>@context</dt><dd><a href="{{ s.contextAlias }}">{{ s.contextAlias }}</a> (exact version: <a href="{{ s.contextExact }}">{{ s.contextExact }}</a>)</dd>
+<dt>Vocabulary</dt><dd><a href="{{ s.vocab }}">{{ s.vocab }}</a></dd>
+<dt>Namespace</dt><dd>{{ s.namespace }}</dd>
+</dl>
+<h2>Models</h2>
+<ul>
+{%- for m in s.models %}
+<li><a href="{{ m.page }}">{{ m.type }}</a> ({{ m.kind }}, {{ m.status }}){% for t in m.titles %} <span lang="{{ t.lang }}">{{ t.text }}</span>{% endfor %}</li>
+{%- endfor %}
+</ul>
+<h2>Terms</h2>
+<p>Every type and attribute this subject defines, under its IRI.</p>
+<dl>
+{%- for t in s.terms %}
+<dt id="{{ t.anchor }}"><a href="{{ t.page }}">{{ t.name }}</a></dt>
+<dd>{% if t.kind == "type" %}Type{% else %}Attribute of {{ t.model }}{% endif %}. IRI: {{ t.iri }}{% for x in t.texts %}<br><span lang="{{ x.lang }}">{{ x.text }}</span>{% endfor %}</dd>
+{%- endfor %}
+</dl>

@@ -1,0 +1,18 @@
+---
+layout: base.njk
+permalink: index.html
+eleventyComputed:
+  title: "Data models by {{ site.name | safe }}"
+---
+{%- from "texts.njk" import texts %}
+<h1>Data models by {{ site.name }}</h1>
+<p>JSON Schemas, JSON-LD @contexts and RDFS vocabularies. Every model and its URLs are listed in <a href="{{ site.catalog }}">catalog.json</a>.</p>
+{%- for s in subjects %}
+<h2><a href="{{ s.page }}">{{ s.name }}</a> v{{ s.version }}</h2>
+{{ texts(s.titles) }}
+<ul>
+{%- for m in s.models %}
+<li><a href="{{ m.page }}">{{ m.type }}</a> ({{ m.status }}){% for t in m.titles %} <span lang="{{ t.lang }}">{{ t.text }}</span>{% endfor %}</li>
+{%- endfor %}
+</ul>
+{%- endfor %}

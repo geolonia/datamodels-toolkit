@@ -1,0 +1,4 @@
+{%- macro texts(list, tag = "p") -%}
+{%- for t in list %}<{{ tag }} lang="{{ t.lang }}">{{ t.text }}</{{ tag }}>
+{% endfor -%}
+{%- endmacro -%}
