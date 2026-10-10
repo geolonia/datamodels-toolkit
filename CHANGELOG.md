@@ -4,9 +4,11 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-11
+
 ### Changed
 
-- `datamodels init` writes a workflow pinned to the v0.2.0 release, and a README whose `npx` commands run v0.2.0.
+- `datamodels init` writes a workflow pinned to the v0.2.0 release of the Action (v0.2.0 wrote v0.1.0, which lacks the @context check), and a README whose `npx` commands run v0.2.0. The Action itself is the same as in v0.2.0.
 
 ## [0.2.0] - 2026-10-11
 
@@ -50,6 +52,7 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.2.0...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.2.1...main
+[0.2.1]: https://github.com/geolonia/datamodels-toolkit/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/geolonia/datamodels-toolkit/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/geolonia/datamodels-toolkit/releases/tag/v0.1.0
