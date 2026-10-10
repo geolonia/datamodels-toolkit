@@ -238,6 +238,23 @@ test('resolving the @context as JSON-LD does: repeats, resets, unread imports, c
   assert.match((await online()).problems.join('\n'), /imports itself/);
 });
 
+test('a term keeps the IRI it got where it was defined; a later prefix does not change it', async () => {
+  const dir = await node();
+  const shared = 'https://shared.example.org/context/common/v1.0.0.jsonld';
+  await listNodes(dir, [{ url: 'https://shared.example.org/', index: 'https://shared.example.org/catalog.json' }]);
+  const served = { ...datamodelsJp(), [shared]: { '@context': { r: `${BASE}/ns/road#`, route: 'r:route' } } };
+  const ctx = join(dir, 'models', 'road', 'context.jsonld');
+  const head = { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol' };
+  // route was defined in the import with r: as it was there; redefining r afterwards changes nothing.
+  await writeFile(ctx, JSON.stringify({ '@context': [shared, { ...head, r: 'https://other.example/' }] }));
+  assert.deepEqual((await checkNode(dir, { fetch: fakeFetch(served) })).problems, []);
+  // A term after an unread import, with a prefix from before it: that import may redefine the prefix, so only a note.
+  await writeFile(ctx, JSON.stringify({ '@context': [{ ...head, p: 'https://other.example/' }, shared, { route: 'p:route' }] }));
+  const r = await checkNode(dir, { offline: true });
+  assert.deepEqual(r.problems, []);
+  assert.match(r.notes.join('\n'), /route is .* in the schema, but the @context expands it to https:\/\/other\.example\/route, or a context it imports/);
+});
+
 test('the extends check sees terms this subject imports from elsewhere', async () => {
   const dir = await node();
   const shared = 'https://shared.example.org/context/common/v1.0.0.jsonld';
