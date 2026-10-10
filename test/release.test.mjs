@@ -80,10 +80,11 @@ test('online, the snapshot must be what was published', async () => {
   // Not published yet: released as it is.
   r = await releaseSubject(await node(), 'road', { fetch: fakeFetch({}) });
   assert.deepEqual([r.written, r.online], [true, 0]);
-  // A site that cannot be reached: noted, released.
-  r = await releaseSubject(await node(), 'road', { fetch: async () => { throw new TypeError('fetch failed', { cause: { code: 'ENOTFOUND' } }); } });
-  assert.equal(r.written, true);
-  assert.match(r.notes[0], /context\/road\/v0\.1\.0\.jsonld: not reachable \(ENOTFOUND\), not compared/);
+  // A site that cannot be reached, or answers with an error: nothing is released.
+  const down = await node();
+  await assert.rejects(releaseSubject(down, 'road', { fetch: async () => { throw new TypeError('fetch failed', { cause: { code: 'ENOTFOUND' } }); } }), /road v0\.1\.0: nothing released, the published files could not be compared:\n  .*context\/road\/v0\.1\.0\.jsonld: ENOTFOUND[\s\S]*--offline/);
+  await assert.rejects(releaseSubject(down, 'road', { fetch: async () => new Response('busy', { status: 503 }) }), /schema\/road\/RoadPatrol\/v0\.1\.0\.json: HTTP 503/);
+  assert.equal(await exists(join(down, 'models', 'road', 'releases')), false);
 });
 
 test('check notes a published version that is not released', async () => {

@@ -130,7 +130,7 @@ datamodels release road      # in the node's directory
 
 Keeps the current version of a subject online. A node's site holds the current version of each subject; when `subject.yaml` gets a new version, the files of the old one leave the site, although data may still point to them. `release` writes a snapshot of the current version's @context, vocabulary and schemas into `models/<subject>/releases/vX.Y.Z/`; `build` publishes every snapshot next to the current version.
 
-Run it once a version is published, before you change its sources, and commit the snapshot. Online, it first compares the snapshot with the published files and refuses when the sources changed since: then restore them (for example with git), release, and make the change with a new version. A snapshot that exists is kept; `build` stops when the sources of a released version change. `check` notes a published version that has no snapshot yet. `--offline` skips the comparison.
+Run it once a version is published, before you change its sources, and commit the snapshot. Online, it first compares the snapshot with the published files and refuses when the sources changed since, or when the site does not answer: then restore them (for example with git), release, and make the change with a new version. A snapshot that exists is kept; `build` stops when the sources of a released version change. `check` notes a published version that has no snapshot yet. `--offline` skips the comparison.
 
 ## GitHub Action
 
