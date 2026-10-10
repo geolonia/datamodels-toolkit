@@ -57,7 +57,7 @@ nodes:              # optional: nodes you know; a context may import theirs
   - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
 ```
 
-It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples, `llms.txt` and the pages. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`). `datamodels check` for CI comes next ([#12](https://github.com/geolonia/datamodels-toolkit/issues/12)).
+It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples, `llms.txt` and the pages. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`).
 
 The pages are plain HTML in a monospace font, with no JavaScript, so they read well with `curl` too ([Eleventy](https://www.11ty.dev/) writes them):
 
@@ -66,6 +66,22 @@ The pages are plain HTML in a monospace font, with no JavaScript, so they read w
 - One page per model (`/models/<subject>/<Type>/`), with an anchor per attribute.
 
 Every page links to `catalog.json` (`<link rel="alternate" type="application/json">`). The exit code is 1 when the node is invalid, 2 for a usage error.
+
+## check
+
+```bash
+datamodels check             # the node in the current directory
+datamodels check --offline   # without the network
+```
+
+The checks a node runs in CI before it publishes:
+
+- Every schema compiles, and every `examples/example.json` is valid against its schema.
+- Release snapshots in `models/<subject>/releases/vX.Y.Z/`, where the node keeps them, hold exactly what the sources produce.
+- An exact version (`v0.1.0`) that is already online is served unchanged. One that is not online yet is new.
+- A model does not redefine a term of a model it `extends`: the same name keeps the same IRI.
+
+The exit code is 1 on a problem. Another node that cannot be reached, or does not answer within 20 seconds, is only noted: a node that is down never fails someone else's check. `--offline` skips the published files, the extended models and schemas on other sites.
 
 ## Build library
 

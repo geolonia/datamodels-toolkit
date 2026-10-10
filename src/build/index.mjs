@@ -9,3 +9,4 @@ export { publishCatalog } from './publish.mjs';
 export { llmsTxt } from './llms.mjs';
 export { readNode, buildNode } from './node.mjs';
 export { pageData, writePages } from './pages.mjs';
+export { checkNode, contextTerms, contextDefs } from './check.mjs';
