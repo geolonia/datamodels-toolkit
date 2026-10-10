@@ -6,7 +6,7 @@ import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { checkNode, buildNode, loadSubjects, catalogUrls, snapshotRelease } from '../src/build/index.mjs';
+import { checkNode, buildNode, loadSubjects, catalogUrls, snapshotRelease, contextTerms } from '../src/build/index.mjs';
 
 const run = promisify(execFile);
 const BIN = join(import.meta.dirname, '..', 'bin', 'datamodels.mjs');
@@ -253,6 +253,13 @@ test('a term keeps the IRI it got where it was defined; a later prefix does not 
   const r = await checkNode(dir, { offline: true });
   assert.deepEqual(r.problems, []);
   assert.match(r.notes.join('\n'), /route is .* in the schema, but the @context expands it to https:\/\/other\.example\/route, or a context it imports/);
+});
+
+test('a prefix defined through another prefix is expanded in full', async () => {
+  const dir = await node();
+  await writeFile(join(dir, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': { base: `${BASE}/ns/`, road: 'base:road#', RoadPatrol: 'road:RoadPatrol', route: 'road:route' } }));
+  assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
+  assert.deepEqual([...contextTerms({ a: 'b:x/', b: 'a:y/', t: 'a:t' })].find(([k]) => k === 't'), ['t', 'a:y/x/t']);
 });
 
 test('the extends check sees terms this subject imports from elsewhere', async () => {
