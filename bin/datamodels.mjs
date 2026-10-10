@@ -18,6 +18,13 @@
 // build writes the files a node publishes (node.yaml and models/ in dir,
 // default the current directory) into --out (default dir/_site). The exit
 // code is 1 when the node is invalid, 2 for a usage error.
+//
+//   datamodels check [dir] [--offline]
+//
+// check runs the checks a node needs in CI: valid schemas and examples,
+// release snapshots, published versions unchanged online, no term of an
+// extended model redefined. Exit code 1 on a problem; unreachable nodes are
+// only noted.
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
@@ -25,12 +32,14 @@ import { decodeCsv, parseCsv, convertRows, mappingProblems, mappedColumns, LINE 
 import { toNormalized } from '../src/ngsi.mjs';
 import { siteReader, loadTarget, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
 import { buildNode } from '../src/build/node.mjs';
+import { checkNode } from '../src/build/check.mjs';
 
 const USAGES = {
   convert: `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`,
   build: `usage: datamodels build [dir] [--out dir]`,
+  check: `usage: datamodels check [dir] [--offline]`,
 };
-const USAGE = `${USAGES.convert}\n${USAGES.build}`;
+const USAGE = Object.values(USAGES).join('\n');
 // An error the command reports in one line and exits with. Nothing calls
 // process.exit(): it can cut off output still being written to a pipe.
 class Exit extends Error { constructor(code, message) { super(message); this.code = code; } }
@@ -39,7 +48,7 @@ const fail = (msg) => { throw new Exit(1, msg); };
 
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
-function program({ onConvert, onBuild }) {
+function program({ onConvert, onBuild, onCheck }) {
   // An option's value: present, not empty (--out=) and not another option.
   const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
   const cli = new Command('datamodels')
@@ -67,6 +76,12 @@ function program({ onConvert, onBuild }) {
     .argument('[dir]', 'the node: node.yaml and models/', '.')
     .option('--out <dir>', 'where to write the files (default: <dir>/_site)', value('--out'))
     .action(onBuild);
+  cli.command('check')
+    .description('check a data model node before it publishes: schemas, examples, published versions, extended terms')
+    .usage(USAGES.check.replace('usage: datamodels check ', ''))
+    .argument('[dir]', 'the node: node.yaml and models/', '.')
+    .option('--offline', 'skip what needs the network: published files, extended models, schemas on other sites')
+    .action(onCheck);
   return cli;
 }
 
@@ -91,6 +106,7 @@ async function main(args) {
   const cli = program({
     onConvert: async (target, mappingName, file, options) => { code = await convert(target, mappingName, file, options); },
     onBuild: async (dir, options) => { code = await build(dir, options); },
+    onCheck: async (dir, options) => { code = await check(dir, options); },
   });
   // datamodels --help lists the commands; datamodels help build is commander's.
   if (args.length === 1 && ['--help', '-h', 'help'].includes(args[0])) { cli.outputHelp(); return 0; }
@@ -156,6 +172,14 @@ async function build(dir, { out }) {
   try { r = await buildNode(dir, out ? { out } : {}); } catch (e) { fail(e.message); }
   console.error(`${dir}: ${r.subjects.length} subject(s), ${r.catalog.models.length} model(s), written to ${out ?? join(dir, '_site')}`);
   return 0;
+}
+
+async function check(dir, { offline }) {
+  const { problems, notes } = await checkNode(dir, { offline });
+  for (const n of notes) console.error(`  note: ${n}`);
+  for (const p of problems) console.error(p);
+  console.error(`${dir}: ${problems.length ? `${problems.length} problem(s)` : 'ok'}`);
+  return problems.length ? 1 : 0;
 }
 
 try { process.exitCode = await main(process.argv.slice(2)); } catch (e) {

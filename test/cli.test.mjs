@@ -44,7 +44,7 @@ test('--normalized writes NGSI-LD normalized entities with the alias context and
 test('--help lists the commands', async () => {
   const r = await datamodels('--help');
   assert.equal(r.code, 0);
-  for (const command of ['convert', 'build']) assert.match(r.stdout, new RegExp(`^ +${command} .*\\w`, 'm'), command);
+  for (const command of ['convert', 'build', 'check']) assert.match(r.stdout, new RegExp(`^ +${command} .*\\w`, 'm'), command);
 });
 
 test('build --help explains its option', async () => {
