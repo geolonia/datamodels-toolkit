@@ -6,7 +6,7 @@
 // returns the paths it needs for them.
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { listReleases } from './releases.mjs';
+import { listReleases, verifyRelease } from './releases.mjs';
 import { buildVocabulary } from './vocab.mjs';
 import { catalogEntry, termRedirects } from './entries.mjs';
 
@@ -40,6 +40,9 @@ export async function publishCatalog(subjects, { urls, outDir, languages = ['ja'
 
   for (const subject of subjects) {
     const u = urls.subjectUrls(subject);
+    // A version that has a snapshot was published: its exact files must not change.
+    const changed = await verifyRelease(subject, options);
+    if (changed.length) throw new Error(`${subject.name} v${subject.version} was published and its files would change; give the subject a new version:\n${changed.map((p) => `  ${p}`).join('\n')}`);
     // Every published version first, then the current one on top (identical
     // bytes when it has been snapshotted; an immutability check confirms).
     for (const release of await listReleases(subject, options)) {

@@ -46,15 +46,23 @@ export function attributeEntries(model, { urls, languages = ['ja', 'en'] }) {
   });
 }
 
-/** One known extension in catalog.json (models[].extensions), as its owner reported it. */
-export function extensionEntry(ext) {
+/**
+ * One known extension in catalog.json (models[].extensions), as its owner
+ * reported it, with its texts in the catalog's languages.
+ */
+export function extensionEntry(ext, { languages = ['ja', 'en'] } = {}) {
+  const texts = (o, what) => {
+    const out = Object.fromEntries(languages.filter((l) => typeof o?.[l] === 'string').map((l) => [l, o[l]]));
+    if (!Object.keys(out).length) throw new Error(`extension ${ext.name}: ${what} needs a ${languages.join(' or ')} text`);
+    return out;
+  };
   return {
     id: ext.name,
-    organization: { ja: ext.organization.ja, en: ext.organization.en },
+    organization: texts(ext.organization, 'organization'),
     ...(ext.url ? { url: ext.url } : {}),
     version: ext.version,
     ...(typeof ext.context === 'string' ? { contextUrl: ext.context } : { context: ext.context }),
-    terms: Object.entries(ext.terms).map(([name, t]) => ({ name, iri: t.iri, description: { ja: t.description.ja, en: t.description.en } })),
+    terms: Object.entries(ext.terms).map(([name, t]) => ({ name, iri: t.iri, description: texts(t?.description, `the description of ${name}`) })),
     ...(ext.data ? { dataUrl: ext.data } : {}),
     ...(ext.since !== undefined ? { since: String(ext.since) } : {}),
   };
@@ -75,7 +83,7 @@ export function catalogEntry(subject, model, { urls, languages = ['ja', 'en'], a
     ...(model.mappings?.length ? { mappings: model.mappings.map((m) => ({ url: `${mu.mapping}${m.name}.yaml`, standard: { ja: m.standard?.name?.ja ?? m.name, en: m.standard?.name?.en ?? m.name } })) } : {}),
     attributes: attributeEntries(model, { urls, languages }),
     // Attributes other organisations added under their own IRIs, as their owners reported them (not reviewed).
-    ...(model.extensions?.length ? { extensions: model.extensions.map(extensionEntry) } : {}),
+    ...(model.extensions?.length ? { extensions: model.extensions.map((ext) => extensionEntry(ext, { languages })) } : {}),
     ...(Object.keys(adapterUrls).length ? { adapters: adapterUrls } : {}),
     ...(model.schema['x-alias-of'] ? { aliasOf: model.schema['x-alias-of'] } : {}),
     ...(model.schema['x-subclass-of'] ? { subClassOf: model.schema['x-subclass-of'] } : {}),

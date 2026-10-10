@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import { catalogUrls, loadSubjects, publishCatalog, verifyRelease, buildVocabulary } from '../src/build/index.mjs';
+import { catalogUrls, loadSubjects, publishCatalog, verifyRelease, buildVocabulary, snapshotRelease, extensionEntry } from '../src/build/index.mjs';
 
 const FIXTURES = join(import.meta.dirname, 'fixtures', 'catalog');
 const SITE = 'https://datamodels.jp';
@@ -72,6 +72,20 @@ test('a node: its own base URL, English only, its licence and publisher in catal
   const vocab = JSON.parse(await readFile(join(outDir, 'vocab', 'road', 'v0.jsonld'), 'utf8'));
   assert.deepEqual(vocab, buildVocabulary(subjects[0], { urls, languages: ['en'] }));
   assert.deepEqual(vocab['@graph'][0].label, { en: 'Roads' });
+
+  // Once a version has a snapshot it was published: a change without a new version stops the build.
+  await snapshotRelease(subjects[0], { urls, languages: ['en'] });
+  const catalogYaml = join(models, 'road', 'RoadPatrol', 'catalog.yaml');
+  await writeFile(catalogYaml, (await readFile(catalogYaml, 'utf8')).replace('The route patrolled', 'The route'));
+  const changed = await loadSubjects(models, { urls, languages: ['en'], subjectFields: ['title', 'description'] });
+  await assert.rejects(publishCatalog(changed, { urls, outDir, languages: ['en'], head }), /road v0\.1\.0 was published and its files would change; give the subject a new version:\n {2}road v0\.1\.0 vocabulary: snapshot differs/);
+});
+
+test('an extension in catalog.json has its texts in the catalog\'s languages', () => {
+  const ext = { name: 'acme', organization: { ja: 'アクメ', en: 'Acme' }, version: '1.0.0', context: 'https://acme.example/context.jsonld', terms: { x: { iri: 'https://acme.example/x', description: { ja: 'エックス', en: 'X' } } } };
+  assert.deepEqual(extensionEntry(ext, { languages: ['en'] }).organization, { en: 'Acme' });
+  assert.deepEqual(extensionEntry(ext).terms[0].description, { ja: 'エックス', en: 'X' });
+  assert.throws(() => extensionEntry({ ...ext, terms: { x: { iri: 'https://acme.example/x' } } }), /extension acme: the description of x needs a ja or en text/);
 });
 
 test('a context may import only the catalog\'s own contexts, unless the node allows more', async () => {
