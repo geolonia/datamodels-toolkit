@@ -45,20 +45,24 @@ export function contextTerms(context, inherited = {}) {
 const FULL_IRI = /^(https?|urn):/;
 
 /**
- * The term definitions an @context brings in by URL, with the imports of
- * those contexts too (datamodels.jp's subject contexts import its common
- * one), in JSON-LD order: a later definition wins. Throws with the URL that
- * could not be read.
+ * The term definitions an @context ends up with, as a JSON-LD processor
+ * reads them: its parts in order, a context imported by URL with its own
+ * imports (datamodels.jp's subject contexts import its common one), a later
+ * definition over an earlier one, and null clearing what came before. Throws
+ * with the URL that could not be read.
  */
-export async function importedDefs(context, getJson, seen = new Set()) {
+export async function resolvedDefs(context, getJson, seen = new Set()) {
   let defs = {};
-  for (const url of [context].flat().filter((p) => typeof p === 'string')) {
-    if (seen.has(url)) continue;
-    seen.add(url);
-    let theirs;
-    try { theirs = (await getJson(url))?.['@context']; } catch (e) { throw new Error(`${url} could not be read (${e.cause?.code ?? e.message})`); }
-    if (theirs == null) throw new Error(`${url} has no @context`);
-    defs = { ...defs, ...(await importedDefs(theirs, getJson, seen)), ...contextDefs(theirs) };
+  for (const part of [context].flat()) {
+    if (part === null) defs = {};
+    else if (typeof part === 'string') {
+      if (seen.has(part)) continue;
+      seen.add(part);
+      let theirs;
+      try { theirs = (await getJson(part))?.['@context']; } catch (e) { throw new Error(`${part} could not be read (${e.cause?.code ?? e.message})`); }
+      if (theirs === undefined) throw new Error(`${part} has no @context`);
+      defs = { ...defs, ...(await resolvedDefs(theirs, getJson, seen)) };
+    } else if (typeof part === 'object') defs = { ...defs, ...part };
   }
   return defs;
 }
@@ -66,23 +70,26 @@ export async function importedDefs(context, getJson, seen = new Set()) {
 /**
  * Every type and attribute of a subject's models is a term of its @context and
  * expands to the model's IRI for it: otherwise JSON-LD drops the attribute, or
- * gives it another meaning than the schema and the pages say. `imported`: the
- * term definitions of the contexts it imports by URL, or null when they could
- * not be read (then a term that is not found is only noted). Returns { problems, notes }.
+ * gives it another meaning than the schema and the pages say. `resolved`: the
+ * definitions of the whole @context (resolvedDefs), or null when a context it
+ * imports could not be read: then only its inline parts are known, and a term
+ * that is not found there is only noted. Returns { problems, notes }.
  */
-export function termProblems(subject, urls, imported = {}) {
+export function termProblems(subject, urls, resolved = null) {
   const problems = [];
   const notes = [];
   const context = subject.context['@context'];
+  const complete = resolved !== null;
+  const defs = resolved ?? [context].flat().reduce((d, p) => (p === null ? {} : p && typeof p === 'object' ? { ...d, ...p } : d), {});
   const core = contextTerms(CORE_CONTEXT);
-  const own = contextTerms(context, imported ?? {});
-  const known = new Map([...core, ...(imported ? contextTerms(imported) : []), ...own]);
+  const terms = contextTerms(defs);
+  const known = new Map([...core, ...terms]);
   const ctx = `${subject.name}/context.jsonld`;
-  for (const [term, iri] of own) if (core.has(term) && core.get(term) !== iri) problems.push(`${ctx}: redefines the NGSI-LD core term ${term} (${core.get(term)})`);
+  for (const term of Object.keys(contextDefs(context))) if (core.has(term) && terms.has(term) && terms.get(term) !== core.get(term)) problems.push(`${ctx}: redefines the NGSI-LD core term ${term} (${core.get(term)})`);
   // A term found nowhere: a problem, unless it may be in an imported context that could not be read.
-  const missing = (where, what) => (imported ? problems : notes).push(`${where}: ${what} is not in the @context${imported ? '' : ', or in a context it imports that could not be read'}`);
+  const missing = (where, what) => (complete ? problems : notes).push(`${where}: ${what} is not in the @context${complete ? '' : ', or in a context it imports that could not be read'}`);
   const expandsTo = (where, name, iri, expected) => {
-    if (!FULL_IRI.test(iri)) (imported ? problems : notes).push(`${where}: the @context maps ${name} to ${iri}, which is not a full IRI (is its prefix defined?)`);
+    if (!FULL_IRI.test(iri)) (complete ? problems : notes).push(`${where}: the @context maps ${name} to ${iri}, which is not a full IRI (is its prefix defined?)`);
     else if (iri !== expected) problems.push(`${where}: ${name} is ${expected ?? '(no x-iri)'} in the schema, but the @context expands it to ${iri}`);
   };
   for (const m of subject.models) {
@@ -143,12 +150,11 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
     // Types and attributes against the @context; contexts it imports by URL are read online only.
     for (const s of subjects) {
       const imports = [s.context['@context']].flat().filter((p) => typeof p === 'string');
-      let imported = {};
-      if (imports.length && offline) imported = null;
-      else if (imports.length) {
-        try { imported = await importedDefs(s.context['@context'], getJson); } catch (e) { notes.push(`${s.name}/context.jsonld: ${e.message}`); imported = null; }
+      let resolved = null;
+      if (!imports.length || !offline) {
+        try { resolved = await resolvedDefs(s.context['@context'], getJson); } catch (e) { notes.push(`${s.name}/context.jsonld: ${e.message}`); }
       }
-      const found = termProblems(s, urls, imported);
+      const found = termProblems(s, urls, resolved);
       problems.push(...found.problems);
       notes.push(...found.notes);
     }
@@ -197,7 +203,7 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
           if (theirContext == null) { problems.push(`${where}: ${contextUrl} has no @context`); continue; }
           if (typeof theirContext !== 'object') { notes.push(`${where}: not checked, the @context of ${contextUrl} only imports another one`); continue; }
           // Its terms, with those of the contexts it imports (datamodels.jp's common one, say).
-          const all = { ...(await importedDefs(theirContext, getJson)), ...contextDefs(theirContext) };
+          const all = await resolvedDefs(theirContext, getJson);
           const theirs = contextTerms(all);
           // Prefixes of the extended context may be used here without being defined again.
           const ours = contextTerms(s.context['@context'], all);
