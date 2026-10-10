@@ -1,0 +1,1 @@
+{ "@context": { "road": "https://models.example.org/ns/road#", "RoadPatrol": "road:RoadPatrol", "route": "road:route" } }

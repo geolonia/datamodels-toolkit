@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/RoadPatrol/v0.1.0.json",
+  "type": "object",
+  "required": ["id", "type"],
+  "properties": {
+    "id": { "type": "string" },
+    "type": { "const": "RoadPatrol" },
+    "route": { "type": "string", "x-iri": "https://models.example.org/ns/road#route" }
+  }
+}

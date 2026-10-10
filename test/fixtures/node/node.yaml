@@ -1,0 +1,5 @@
+# A small node for the tests and for the Action's own CI (action.yml).
+baseUrl: https://models.example.org
+languages: [en]
+publisher: { name: { en: Example }, url: https://example.org/ }
+license: CC0-1.0
