@@ -52,12 +52,13 @@ export function strict(s, path) {
   const notes = [];
   const text = s.description;
   const branches = s.oneOf ?? s.anyOf;
-  // anyOf of formats only (a date or a date-time): one branch per format.
-  if (branches && s.type && branches.every((b) => b && Object.keys(b).length === 1 && b.format)) {
-    return { anyOf: branches.map((b) => strict({ type: s.type, format: b.format }, path)), ...describe(text, notes) };
-  }
+  if (branches && s.oneOf && s.anyOf) throw new NotStrict(`${path}: oneOf and anyOf together have no strict form`);
   if (branches) {
-    const merged = branches.map((b, i) => strict({ ...(s.type && !b.type ? { type: s.type } : {}), ...b }, `${path}[${i}]`));
+    // The keywords next to anyOf/oneOf apply to every branch (JSON Schema reads them together), so
+    // each branch gets them, the branch's own keywords winning: a date or a date-time with the same
+    // type, or a pattern and bounds that hold whichever branch is taken.
+    const { anyOf, oneOf, description, ...siblings } = s;
+    const merged = branches.map((b, i) => strict({ ...siblings, ...b }, `${path}[${i}]`));
     return { anyOf: merged, ...describe(text, notes) };
   }
   if (s.const !== undefined) return { type: typeOfValues([s.const]), enum: [s.const], ...describe(text, notes) };

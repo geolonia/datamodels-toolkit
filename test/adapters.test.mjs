@@ -14,7 +14,7 @@ import { ADAPTERS, localRefs, readRefs } from '../src/adapters/index.mjs';
 import { columnsOf, shortTitle, snake } from '../src/adapters/model.mjs';
 import { fieldsOf, tableSchemaOf, xsdPattern } from '../src/adapters/table-schema/index.mjs';
 import { csvHeader } from '../src/adapters/csv/index.mjs';
-import { structuredOutputOf, unionCount, NotStrict } from '../src/adapters/ai/index.mjs';
+import { structuredOutputOf, unionCount, NotStrict, strict } from '../src/adapters/ai/index.mjs';
 import { createTable, ident, literal } from '../src/adapters/postgis/index.mjs';
 import { exportModel } from '../src/export.mjs';
 
@@ -401,4 +401,15 @@ test('PostGIS: two attributes with the same column name give no table, not a bro
   const ctx = { urls: catalogUrls('https://example.org'), languages: ['en'], refs: {} };
   assert.throws(() => createTable({ name: 's', version: '1.0.0' }, thing, ctx), (e) => e instanceof NoTable && /foo_bar would hold both/.test(e.message));
   assert.equal(postgis.urlFor({ name: 's', version: '1.0.0' }, thing, ctx), null);
+});
+
+test('AI: the keywords next to anyOf hold in every branch', () => {
+  const s = strict({ type: 'string', pattern: '^[0-9]+$', anyOf: [{ format: 'date' }, { maxLength: 4 }] }, 'x');
+  assert.equal(s.anyOf.length, 2);
+  for (const b of s.anyOf) { assert.equal(b.type, 'string'); assert.equal(b.pattern, '^[0-9]+$'); }
+  assert.equal(s.anyOf[0].format, 'date');
+  assert.match(s.anyOf[1].description, /at most 4 characters/);
+  const n = strict({ type: 'number', minimum: 0, anyOf: [{ maximum: 10 }, { const: 100 }] }, 'n');
+  assert.match(n.anyOf[0].description, /minimum 0; maximum 10/);
+  assert.throws(() => strict({ anyOf: [{ type: 'string' }], oneOf: [{ type: 'number' }] }, 'y'), NotStrict);
 });
