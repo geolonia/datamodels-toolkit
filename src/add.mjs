@@ -1,8 +1,8 @@
 // datamodels add (#13): a new model in a subject of a node, as a skeleton that
-// builds and passes check right away: schema.json, catalog.yaml and an example,
-// and the type in the subject's @context. The short form of geolonia/datamodels'
-// scripts/new-model.mjs, in the node's languages and without the files only
-// the shared catalog needs (notes, ADOPTERS).
+// builds and passes check right away: schema.json, catalog.yaml, an example,
+// an empty notes.yaml, and the type in the subject's @context. The short form
+// of geolonia/datamodels' scripts/new-model.mjs, in the node's languages and
+// without the file only the shared catalog needs (ADOPTERS).
 import { mkdir, mkdtemp, readFile, writeFile, stat, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
