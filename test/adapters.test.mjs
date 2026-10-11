@@ -242,6 +242,8 @@ test('PostGIS: the SQL of every fixture model loads, and the checks reject a wro
     assert.equal(ok.status, 0, ok.stderr);
     const wrong = psql(`SET search_path TO ${schema}, public; INSERT INTO evacuation_site (id, name, local_government_code, external_site_id, hazard_types) VALUES ('urn:ngsi-ld:EvacuationSite:2', 'x', '131016', '2', ARRAY['meteor']);`);
     assert.match(wrong.stderr, /violates check constraint "evacuation_site_hazard_types_check"/);
+    const twice = psql(`SET search_path TO ${schema}, public; INSERT INTO evacuation_site (id, name, local_government_code, external_site_id, hazard_types) VALUES ('urn:ngsi-ld:EvacuationSite:3', 'x', '131016', '3', ARRAY['flood', 'flood']);`);
+    assert.match(twice.stderr, /violates check constraint "evacuation_site_hazard_types_check/);
     const lookahead = psql(`SET search_path TO ${schema}, public; INSERT INTO task (id, name, progress, estimated_duration) VALUES ('urn:ngsi-ld:Task:1', 'x', 'completed', 'P');`);
     assert.match(lookahead.stderr, /violates check constraint "task_estimated_duration_check"/);
   } finally {
@@ -306,4 +308,12 @@ test('a $ref outside the schema/ of a known node is never fetched', async () => 
   assert.deepEqual(Object.keys(r.refs), [good]);
   assert.equal(r.problems.length, bad.length);
   assert.ok(r.problems.every((x) => / is not read: only the schemas of the nodes in node\.yaml are \(https:\/\/datamodels\.jp\/schema\/\)$/.test(x)));
+});
+
+test('PostGIS: a list without duplicates is checked by a function the file creates first', async () => {
+  const { UNIQUE_ITEMS } = await import('../src/adapters/postgis/index.mjs');
+  const sql = file(evacuationSite, 'postgis');
+  assert.ok(sql.indexOf(`CREATE OR REPLACE FUNCTION ${UNIQUE_ITEMS}(anyarray)`) < sql.indexOf('CREATE TABLE'));
+  assert.match(sql, new RegExp(`CHECK \\(${UNIQUE_ITEMS}\\(hazard_types\\)\\)`));
+  assert.doesNotMatch(createTable(task, model('Milestone'), context), /FUNCTION/, 'only when a list needs it');
 });

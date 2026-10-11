@@ -3,7 +3,8 @@
 //   - names in snake_case (hazardTypes → hazard_types); id is the primary key;
 //   - NOT NULL for required attributes; CHECK for allowed values, patterns,
 //     limits and "at least one of" rules;
-//   - lists as arrays (text[], ...), with a check of their values;
+//   - lists as arrays (text[], ...), with a check of their values and, for
+//     uniqueItems, of duplicates (a function the file creates, UNIQUE_ITEMS);
 //   - location as geometry(<type>, 4326) with a GiST index;
 //   - a value type made of plain fields (an address) as one column per field,
 //     <attribute>_<field>, the same split as the table-schema adapter's columns,
@@ -55,6 +56,11 @@ function comment(languages, texts, iris) {
   return literal(lines.join('\n'));
 }
 
+// A list without duplicates (uniqueItems). A CHECK cannot hold a subquery, so it calls this function,
+// which the file creates first (CREATE OR REPLACE: the files of several models can run one after another).
+export const UNIQUE_ITEMS = 'datamodels_unique_items';
+const uniqueItemsFunction = `CREATE OR REPLACE FUNCTION ${UNIQUE_ITEMS}(anyarray) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT count(*) = count(DISTINCT x) FROM unnest($1) AS x $$;`;
+
 /** The table's name: the type in snake_case (EvacuationSite → evacuation_site). */
 export const tableName = (model) => snake(model.type);
 
@@ -69,6 +75,7 @@ export function createTable(subject, model, context) {
   const indexes = [];
   // The columns of each attribute, for the "at least one of" checks.
   const columnsOfAttribute = {};
+  let needsUnique = false;
   const add = (name, type, { notNull = false, primaryKey = false, texts = {}, iris = [] } = {}) => {
     const col = ident(name);
     columns.push(`  ${col} ${type}${primaryKey ? ' PRIMARY KEY' : notNull ? ' NOT NULL' : ''}`);
@@ -101,6 +108,7 @@ export function createTable(subject, model, context) {
       const values = c.item.enum ?? (c.item.const !== undefined ? [c.item.const] : null);
       if (values) checks.push(`${col} <@ ARRAY[${values.map(literal).join(', ')}]::${sqlType(c.item)}[]`);
       if (c.minItems) checks.push(`cardinality(${col}) >= ${c.minItems}`);
+      if (c.uniqueItems) { checks.push(`${UNIQUE_ITEMS}(${col})`); needsUnique = true; }
       // No empty values in a list: NGSI-LD has no null inside a value.
       checks.push(`array_position(${col}, NULL) IS NULL`);
       columnsOfAttribute[c.name] = [col];
@@ -124,6 +132,7 @@ export function createTable(subject, model, context) {
   const tableTexts = joinTexts(languages, model.catalog?.title, model.catalog?.description, inEach(languages, (t, l) => sentences(l, rules.atLeastOne.map((g) => t.atLeastOne(g)))));
   return [
     ...header,
+    ...(needsUnique ? [uniqueItemsFunction] : []),
     `CREATE TABLE ${table} (`,
     [...columns, ...checks.map((c) => `  CHECK (${c})`)].join(',\n'),
     ');',
