@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.2 release of the Action, and a README whose `npx` commands run v0.3.2.
+
 ## [0.3.2] - 2026-10-11
 
 Addresses that moved still lead somewhere: a 404 page in the node's style, pages for renamed models and anchors for former terms; `check` notes example files it does not read.

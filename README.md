@@ -9,7 +9,7 @@ Command-line tools for the [datamodels.jp](https://datamodels.jp) catalog.
 Node.js 24 or later. Until the package is on npm, run a release from GitHub:
 
 ```bash
-npx github:geolonia/datamodels-toolkit#v0.3.1 convert <subject>/<Type> <mapping> <file.csv>
+npx github:geolonia/datamodels-toolkit#v0.3.2 convert <subject>/<Type> <mapping> <file.csv>
 ```
 
 ## convert
@@ -180,7 +180,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: geolonia/datamodels-toolkit@d43f1a9289f986ecb1eebe94e00b18d5efaadabe # v0.3.1
+      - uses: geolonia/datamodels-toolkit@2b9bbea93e6f32191e8b75feb899a350ead57ce0 # v0.3.2
         with:
           deploy: 'false'
 
@@ -202,7 +202,7 @@ jobs:
         with:
           persist-credentials: false
       - id: node
-        uses: geolonia/datamodels-toolkit@d43f1a9289f986ecb1eebe94e00b18d5efaadabe # v0.3.1
+        uses: geolonia/datamodels-toolkit@2b9bbea93e6f32191e8b75feb899a350ead57ce0 # v0.3.2
 ```
 
 In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). A node upgrades by changing the pinned version; Dependabot can propose it. `datamodels init` writes this workflow.
