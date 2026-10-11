@@ -4,6 +4,11 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Added
+
+- `datamodels build` writes `_headers` and, with slash IRIs, `_redirects` into the site: the content types (`application/ld+json`, `application/schema+json`, `text/csv`, `application/sql`, ...), CORS and IRI redirects that Cloudflare Pages, Cloudflare Workers static assets and Netlify read. GitHub Pages ignores both (#51).
+- The Action has a `site` output, the folder with the built files, so a workflow can publish the node on another host with `deploy: 'false'`. The README shows how for Cloudflare Pages and Netlify, and what any other host must do (#51).
+
 ### Changed
 
 - `datamodels init` writes a workflow pinned to the v0.3.5 release of the Action, and a README whose `npx` commands run v0.3.5.

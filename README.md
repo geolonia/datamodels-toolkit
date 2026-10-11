@@ -226,6 +226,8 @@ The pages are plain HTML in a monospace font, with no JavaScript, so they read w
 - `/adapters/`: what each adapter writes and its file for every model. A model page has a Download line with its files and a link to its row there, without naming a product.
 - `404.html`: what GitHub Pages and most static hosts show for an address with no page (for example the page of a model that a new version renamed). One page at the root, in the node's first language with the other languages' texts, linking to the index, `catalog.json` and every model.
 
+It also writes `_headers` and, with slash IRIs, `_redirects`: the content types, CORS and IRI redirects for hosts other than GitHub Pages ([Other hosts](#other-hosts)).
+
 One set of pages per language of the node: the first language at the base URL (where the IRIs open), each other one under `/<lang>/` (for example `/en/`), with a link to switch in the header. Each page shows the node's texts in its language, falling back to the first language that has one; the fixed texts are in Japanese and English (English for other languages). When English is not the first language, `catalog.json` lists the English pages as `pageUrlEn`, as datamodels.jp does. The pages follow the device's light or dark setting.
 
 Every page links to `catalog.json` (`<link rel="alternate" type="application/json">`) and carries a description, Open Graph tags for link previews, and `<meta name="generator">`. Every page but `404.html` also carries a canonical URL and its other languages (`hreflang`); `404.html` answers at any address, so it has neither and asks not to be indexed. The footer names the toolkit and links to the guide for publishing your own models. The exit code is 1 when the node is invalid, 2 for a usage error.
@@ -324,7 +326,61 @@ jobs:
         uses: geolonia/datamodels-toolkit@fe0b17d9a13d2e7df59d9bc0950f9e6c94abe95e # v0.3.5
 ```
 
-In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). A node upgrades by changing the pinned version; Dependabot can propose it. `datamodels init` writes this workflow.
+In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). Outputs: `page_url`, and `site`, the folder with the built files, for a step that publishes them elsewhere ([Other hosts](#other-hosts); new after v0.3.5). A node upgrades by changing the pinned version; Dependabot can propose it. `datamodels init` writes this workflow.
+
+## Other hosts
+
+`build` writes plain files, so the node can go on any static host. The host must do what GitHub Pages does by itself:
+
+- send each file with its content type: `application/ld+json` for `.jsonld` (contexts, vocabularies, examples), `application/schema+json` for the schemas, `application/json` for `catalog.json` and the other `.json` files, `text/csv`, `application/sql` and `application/yaml` for the adapters' and mapping files;
+- send `Access-Control-Allow-Origin: *`, so browsers and JSON-LD processors on other sites can read the contexts and schemas;
+- answer an address with no page with `404.html`, status 404;
+- with slash IRIs, redirect each IRI to its page.
+
+`build` writes these rules into the site as `_headers` and `_redirects` (only with slash IRIs). Cloudflare Pages, Cloudflare Workers static assets and Netlify read both files from the folder they publish, and serve `404.html` by themselves (Workers with `"not_found_handling": "404-page"`). GitHub Pages ignores both files. On another host, such as a web server or object storage behind a CDN, set the same rules in its configuration; the two files list them. `npx wrangler pages dev _site` serves the folder locally as Cloudflare would.
+
+In the workflow, the Action only builds (`deploy: 'false'`), and the next step publishes its `site` output. The repository needs a secret with a token for the host; the workflow passes nothing else secret.
+
+### Cloudflare Pages
+
+Once: create the project (`npx wrangler pages project create my-models --production-branch main`), add an API token with the permission Cloudflare Pages: Edit as the repository secret `CLOUDFLARE_API_TOKEN`, and your account ID as the repository variable `CLOUDFLARE_ACCOUNT_ID`. Your own domain goes under Custom domains in the project. The publish job:
+
+```yaml
+  publish:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: node
+        uses: geolonia/datamodels-toolkit@fe0b17d9a13d2e7df59d9bc0950f9e6c94abe95e # v0.3.5
+        with:
+          deploy: 'false'
+      - uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy ${{ steps.node.outputs.site }} --project-name=my-models --branch=main
+```
+
+### Netlify
+
+Once: create the site in Netlify, add a personal access token as the repository secret `NETLIFY_AUTH_TOKEN`, and the site's ID (Site configuration → Site details) as the repository variable `NETLIFY_SITE_ID`. The publish job is the one above, with this step instead of `wrangler-action`:
+
+```yaml
+      - name: Deploy to Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
+          SITE: ${{ steps.node.outputs.site }}
+        run: npx --yes netlify-cli@27.10.2 deploy --dir "$SITE" --site "$NETLIFY_SITE_ID" --prod --no-build
+```
 
 ## Build library
 

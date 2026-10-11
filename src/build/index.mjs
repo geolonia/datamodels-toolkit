@@ -8,5 +8,6 @@ export { attributeEntries, extensionEntry, catalogEntry, termRedirects } from '.
 export { publishCatalog } from './publish.mjs';
 export { llmsTxt } from './llms.mjs';
 export { readNode, loadNode, buildNode, nodeAdapters } from './node.mjs';
+export { headersFile, redirectsFile } from './hosts.mjs';
 export { pageData, writePages } from './pages.mjs';
 export { checkNode, contextTerms, contextDefs } from './check.mjs';

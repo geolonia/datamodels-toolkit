@@ -26,14 +26,19 @@ jobs:
           persist-credentials: false
 
       - name: Check and build the fixture node
+        id: node
         uses: ./
         with:
           directory: test/fixtures/node
           deploy: 'false'
           offline: 'true'
 
-      - name: The site is there
+      - name: The site is there, also in the site output
+        env:
+          SITE: ${{ steps.node.outputs.site }}
         run: |
-          test -f "$RUNNER_TEMP/datamodels-site/catalog.json"
-          test -f "$RUNNER_TEMP/datamodels-site/ns/road.html"
-          test -f "$RUNNER_TEMP/datamodels-site/models/road/RoadPatrol/index.html"
+          test "$SITE" = "$RUNNER_TEMP/datamodels-site"
+          test -f "$SITE/catalog.json"
+          test -f "$SITE/ns/road.html"
+          test -f "$SITE/models/road/RoadPatrol/index.html"
+          grep -qx '  Content-Type: application/ld+json; charset=utf-8' "$SITE/_headers"

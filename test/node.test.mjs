@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -68,6 +68,7 @@ test('a node builds with hash IRIs, its publisher, licence and known nodes', asy
   assert.deepEqual(entry.extends, [{ typeIri: 'https://datamodels.jp/ns/task/Task', version: '1.0.0', index: 'https://datamodels.jp/catalog.json' }]);
   // Hash IRIs need no redirects: the namespace document is the subject's page.
   assert.deepEqual(redirects, []);
+  await assert.rejects(access(join(out, '_redirects')), { code: 'ENOENT' }, 'no _redirects with hash IRIs');
   assert.deepEqual(exactPaths.sort(), ['/context/road/v0.1.0.jsonld', '/schema/road/RoadPatrol/v0.1.0.json', '/vocab/road/v0.1.0.jsonld']);
 
   const vocab = JSON.parse(await readFile(join(out, 'vocab', 'road', 'v0.jsonld'), 'utf8'));
@@ -215,6 +216,9 @@ test('slash IRIs when node.yaml asks for them, with their redirects', async () =
   const { catalog, redirects, subjects } = await buildNode(dir);
   assert.equal(catalog.models[0].typeIri, `${BASE}/ns/road/RoadPatrol`);
   assert.deepEqual(redirects.map(([from]) => from), ['/ns/road/', '/ns/road/RoadPatrol', '/ns/road/route']);
+  // For hosts that redirect (Cloudflare, Netlify): the same list, 302 so a node can still move its pages.
+  const rules = (await readFile(join(dir, '_site', '_redirects'), 'utf8')).split('\n').filter((l) => l && !l.startsWith('#'));
+  assert.deepEqual(rules, ['/ns/road/ /models/road/ 302', '/ns/road/RoadPatrol /models/road/RoadPatrol/ 302', '/ns/road/route /models/road/RoadPatrol/#route 302']);
   const { pages } = await buildNode(dir);
   assert.ok(pages.includes('models/road/index.html'), 'the subject page is under /models/ with slash IRIs');
   assert.equal(buildVocabulary(subjects[0], { urls: catalogUrls(BASE), languages: ['en'] })['@graph'].length, 3);
@@ -289,4 +293,48 @@ test('a language without a known territory gets no Open Graph locale', async () 
   const en = await readFile(join(dir, '_site', 'index.html'), 'utf8');
   assert.match(en, /<meta property="og:locale" content="en_US">/);
   assert.doesNotMatch(en, /og:locale:alternate/);
+});
+
+test('_headers: CORS for every file and the content type of each kind of file the node publishes', async () => {
+  const dir = await node();
+  const { catalog } = await buildNode(dir);
+  const out = join(dir, '_site');
+  const text = await readFile(join(out, '_headers'), 'utf8');
+  // Rules as Cloudflare and Netlify read them: a path at the start of a line, its headers indented below.
+  const rules = new Map();
+  let current;
+  for (const line of text.split('\n')) {
+    if (!line.trim() || line.startsWith('#')) continue;
+    if (!line.startsWith(' ')) { assert.ok(!rules.has(line), `one rule per path: ${line}`); current = line; rules.set(current, []); continue; }
+    assert.ok(current, `a header before any path: ${line}`);
+    rules.get(current).push(line.trim());
+  }
+  assert.deepEqual(rules.get('/*'), ['Access-Control-Allow-Origin: *', 'X-Content-Type-Options: nosniff']);
+  // Patterns both hosts read the same way: a * only at the end, :name for one folder.
+  for (const p of rules.keys()) assert.match(p, /^(\/([\w.-]+|:\w+))*(\/\*)?$/, p);
+  // The content type of a file: the one rule whose pattern matches it (* matches the rest, / included).
+  const matches = (pattern, file) => new RegExp(`^${pattern.replace(/[.]/g, '\\.').replace(/:\w+/g, '[^/]+').replace(/\*$/, '.*')}$`).test(file);
+  const typeOf = (file) => {
+    const found = [...rules].filter(([p, headers]) => matches(p, file) && headers.some((h) => h.startsWith('Content-Type:')));
+    assert.ok(found.length <= 1, `one content type for ${file}: ${found.map(([p]) => p)}`);
+    return found[0]?.[1].find((h) => h.startsWith('Content-Type:')).slice('Content-Type: '.length);
+  };
+  const [entry] = catalog.models;
+  const path = (url) => url.slice(BASE.length);
+  assert.equal(typeOf('/catalog.json'), 'application/json; charset=utf-8');
+  assert.equal(typeOf('/llms.txt'), 'text/plain; charset=utf-8');
+  assert.equal(typeOf(path(entry.contextUrl)), 'application/ld+json; charset=utf-8');
+  assert.equal(typeOf('/context/road/v0.1.0.jsonld'), 'application/ld+json; charset=utf-8');
+  assert.equal(typeOf('/vocab/road/v0.1.0.jsonld'), 'application/ld+json; charset=utf-8');
+  assert.equal(typeOf(path(entry.schemaUrl)), 'application/schema+json; charset=utf-8');
+  assert.equal(typeOf('/examples/road/RoadPatrol/example.json'), 'application/json; charset=utf-8');
+  assert.equal(typeOf('/examples/road/RoadPatrol/example-normalized.jsonld'), 'application/ld+json; charset=utf-8');
+  assert.equal(typeOf('/mapping/road/RoadPatrol/some-standard.yaml'), 'application/yaml; charset=utf-8');
+  assert.equal(typeOf('/examples/road/RoadPatrol/other.json'), undefined, 'a placeholder is one folder, the file name is exact');
+  const adapterTypes = { csv: 'text/csv', 'table-schema': 'application/json', ai: 'application/json', postgis: 'application/sql' };
+  assert.deepEqual(Object.keys(entry.adapters).sort(), Object.keys(adapterTypes).sort());
+  for (const [name, url] of Object.entries(entry.adapters)) assert.equal(typeOf(path(url)), `${adapterTypes[name]}; charset=utf-8`, name);
+  // Pages keep the host's own type (text/html).
+  assert.equal(typeOf('/models/road/RoadPatrol/'), undefined);
+  assert.equal(typeOf('/ns/road'), undefined);
 });

@@ -3,8 +3,10 @@
 # so a node upgrades by changing the version it pins.
 #
 # The calling job needs `pages: write` and `id-token: write` to deploy, and the
-# `github-pages` environment; see the README for the whole workflow. Inputs
-# reach the shell only through environment variables, never inside a command.
+# `github-pages` environment; see the README for the whole workflow. With
+# `deploy: 'false'` it only checks and builds, and a later step can publish the
+# folder in the `site` output elsewhere (#51). Inputs reach the shell only
+# through environment variables, never inside a command.
 name: Data model node
 description: Check and build a data model node (node.yaml and models/) and deploy it to GitHub Pages.
 author: Geolonia
@@ -17,13 +19,16 @@ inputs:
     description: The node, the folder with node.yaml and models/.
     default: '.'
   deploy:
-    description: Deploy to GitHub Pages ('true') or only check and build ('false', for pull requests).
+    description: Deploy to GitHub Pages ('true') or only check and build ('false', for pull requests or another host).
     default: 'true'
   offline:
     description: Check without the network ('true'), skipping published files and extended models.
     default: 'false'
 
 outputs:
+  site:
+    description: The folder with the built site, for a later step that publishes it on another host.
+    value: ${{ steps.build.outputs.site }}
   page_url:
     description: The URL of the deployed site.
     value: ${{ steps.deploy.outputs.page_url }}
@@ -53,11 +58,14 @@ runs:
         node "$TOOLKIT/bin/datamodels.mjs" "${args[@]}"
 
     - name: Build
+      id: build
       shell: bash
       env:
         TOOLKIT: ${{ github.action_path }}
         NODE_DIR: ${{ inputs.directory }}
-      run: node "$TOOLKIT/bin/datamodels.mjs" build "$NODE_DIR" --out "$RUNNER_TEMP/datamodels-site"
+      run: |
+        node "$TOOLKIT/bin/datamodels.mjs" build "$NODE_DIR" --out "$RUNNER_TEMP/datamodels-site"
+        echo "site=$RUNNER_TEMP/datamodels-site" >> "$GITHUB_OUTPUT"
 
     - name: Upload the site
       if: inputs.deploy == 'true'

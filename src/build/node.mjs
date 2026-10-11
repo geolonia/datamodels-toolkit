@@ -18,6 +18,7 @@ import { loadSubjects } from './load.mjs';
 import { publishCatalog } from './publish.mjs';
 import { llmsTxt } from './llms.mjs';
 import { writePages } from './pages.mjs';
+import { headersFile, redirectsFile } from './hosts.mjs';
 import { ADAPTERS, readRefs, localRefs, refsRead, schemaPrefixes } from '../adapters/index.mjs';
 
 // Every URL here is published: one with a user name or password in it would publish them too.
@@ -98,7 +99,8 @@ export async function nodeAdapters(subjects, { urls, languages, fetch, timeout, 
 /**
  * Build the node in `dir` into `out` (default `<dir>/_site`): the files of
  * publishCatalog() with the files of the toolkit's adapters, llms.txt and the
- * pages (unless `pages: false`). `fetch` and `timeout` read the schemas of
+ * pages (unless `pages: false`), and `_headers` and `_redirects` for hosts
+ * other than GitHub Pages (hosts.mjs). `fetch` and `timeout` read the schemas of
  * other nodes that models refer to (tests pass a stand-in); `offline` reads
  * none, and those models get no adapter files. Returns
  * { node, subjects, catalog, exactPaths, redirects, pages, notes }.
@@ -112,5 +114,8 @@ export async function buildNode(dir, { out = join(dir, '_site'), now, pages: wit
   const name = node.publisher.name.en ?? node.languages.map((l) => node.publisher.name[l]).find(Boolean) ?? Object.values(node.publisher.name)[0];
   await writeFile(join(out, 'llms.txt'), llmsTxt(subjects, { urls, name: `Data models by ${name}`, languages: node.languages }));
   const pages = withPages ? await writePages(subjects, { urls, node, out, adapters }) : [];
+  await writeFile(join(out, '_headers'), headersFile());
+  const redirectRules = redirectsFile(result.redirects);
+  if (redirectRules) await writeFile(join(out, '_redirects'), redirectRules);
   return { node, subjects, ...result, pages, notes };
 }
