@@ -7,6 +7,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 ### Added
 
 - `build` writes `404.html`, the page that GitHub Pages and most static hosts show for a missing address: in the node's style, in its languages, with links to the index, `catalog.json` and every model. It is not indexed and has no canonical URL.
+- `check` notes a file in a model's `examples/` other than `example.json` and `example-normalized.jsonld`: it is not read, published or validated.
 
 ### Changed
 

@@ -68,16 +68,20 @@ export async function loadSubjects(modelsDir, { urls, languages = ['ja', 'en'], 
         const fileKeys = data && typeof data === 'object' && !Array.isArray(data) ? Object.keys(data) : [];
         extensions.push({ ...data, name: f.replace(/\.yaml$/, ''), fileKeys });
       }
+      // A model has one example, in key-values and optionally normalized; other files in examples/ are not read (check notes them).
+      const EXAMPLES = ['example.json', 'example-normalized.jsonld'];
       const examples = {};
-      for (const f of ['example.json', 'example-normalized.jsonld']) {
+      for (const f of EXAMPLES) {
         const p = join(mdir, 'examples', f);
         if (await exists(p)) examples[f] = await readJson(p);
       }
+      const mdirExamples = join(mdir, 'examples');
+      const unreadExamples = (await isDir(mdirExamples)) ? (await readdir(mdirExamples)).filter((f) => !EXAMPLES.includes(f) && !f.startsWith('.')).sort() : [];
       // kind: 'entity' (an NGSI-LD entity type) or 'value' (a reusable value
       // structure such as an address, referenced from entity schemas).
       const kind = schema['x-kind'] ?? 'entity';
       if (!['entity', 'value'].includes(kind)) throw new Error(`${name}/${type}/schema.json: x-kind must be entity or value`);
-      models.push({ type, kind, dir: mdir, schema, catalog, notes, adopters, examples, mappings, extensions });
+      models.push({ type, kind, dir: mdir, schema, catalog, notes, adopters, examples, unreadExamples, mappings, extensions });
     }
     subjects.push({ name, dir, ...meta, context, imports, inlineTerms, models });
   }

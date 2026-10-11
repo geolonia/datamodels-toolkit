@@ -70,6 +70,16 @@ test('an invalid example or schema is a problem', async () => {
   assert.match(r.problems[0], /^road\/RoadPatrol\/schema\.json: .*type/);
 });
 
+test('a file in examples/ other than the example is noted, not read', async () => {
+  const dir = await node();
+  const m = join(dir, 'models', 'road', 'RoadPatrol');
+  await writeFile(join(m, 'examples', 'night-patrol.json'), JSON.stringify({ id: 'urn:ngsi-ld:RoadPatrol:2', type: 'RoadPatrol', route: 7 }));
+  await writeFile(join(m, 'examples', '.DS_Store'), '');
+  const r = await checkNode(dir, { offline: true });
+  assert.deepEqual(r.problems, [], 'it is not validated, so its wrong route is no problem');
+  assert.deepEqual(r.notes.filter((n) => n.includes('examples/')), ['road/RoadPatrol/examples/night-patrol.json: not read; a model has one example, example.json (and example-normalized.jsonld)']);
+});
+
 test('a release snapshot that differs from the sources is a problem', async () => {
   const dir = await node();
   const urls = catalogUrls(BASE, { iris: 'hash' });
