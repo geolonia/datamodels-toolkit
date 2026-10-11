@@ -42,4 +42,5 @@ const ja = {
 const TEXTS = { en, ja };
 
 /** The fixed texts for `lang`, English where it has none of its own. */
-export const pageTexts = (lang) => ({ ...en, ...(TEXTS[lang] ?? {}), label: TEXTS[lang]?.label ?? lang, locale: TEXTS[lang]?.locale ?? lang });
+// Open Graph locales need a territory (ja_JP); a language without one known here gets none.
+export const pageTexts = (lang) => ({ ...en, ...(TEXTS[lang] ?? {}), label: TEXTS[lang]?.label ?? lang, locale: TEXTS[lang]?.locale ?? null });
