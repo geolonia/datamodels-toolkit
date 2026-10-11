@@ -13,7 +13,7 @@ const en = {
   stage: 'Stage', kind: 'Kind', typeIri: 'Type IRI', subclassOf: 'Subclass of', aliasOf: 'Another name for',
   standards: 'Standards referenced', mapping: 'mapping', notes: 'Notes',
   extendsLabel: 'Extends', index: 'index', example: 'Example', attributes: 'Attributes', required: 'required', any: 'any', noAttributes: 'None.',
-  publishedBy: 'Published by ', machineReadable: 'Machine-readable files: ', licence: 'Licence: ',
+  publishedBy: 'Published by ',
   madeWith: 'Made with ', ownBefore: 'Publish your own data models: ', guide: 'the guide', guideUrl: 'https://datamodels.jp/en/guide/own-site',
   // Every version listed, not a range: a model can leave and come back.
   formerModel: (type, subject, versions) => `${type} was a model of ${subject} in ${versions.length > 1 ? `versions ${versions.slice(0, -1).join(', ')} and ${versions.at(-1)}` : `version ${versions[0]}`}. The current version no longer has it; its files stay online.`,
@@ -38,7 +38,7 @@ const ja = {
   stage: '段階', kind: '種類', typeIri: '型の IRI', subclassOf: '親クラス', aliasOf: '別名の元',
   standards: '参照している標準', mapping: '対応表', notes: '注記',
   extendsLabel: '拡張元', index: '索引', example: '例', attributes: '属性', required: '必須', any: '任意', noAttributes: 'ありません。',
-  publishedBy: '公開：', machineReadable: '機械が読むファイル：', licence: 'ライセンス：',
+  publishedBy: '公開：',
   madeWith: '作成：', ownBefore: '自分のデータモデルを公開するには：', guide: 'ガイド', guideUrl: 'https://datamodels.jp/guide/own-site',
   formerModel: (type, subject, versions) => `${type} は、${subject} のバージョン ${versions.join('、')} のモデルでした。現在の版にはありません。ファイルは公開したままです。`,
   renamedBefore: '同じ型は、現在 ', renamedAfter: ' という名前です。', currentModels: 'このサブジェクトの現在のモデル：',

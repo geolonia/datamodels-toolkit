@@ -109,6 +109,8 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   assert.match(subject, /for example https:\/\/models\.example\.org\/ns\/road#RoadPatrol\./);
   assert.doesNotMatch(subject, /IRI: https/, 'no full IRI repeated per term');
   assert.match(subject, /Road &lt;b&gt;maintenance&lt;\/b&gt;\./, 'text is escaped');
+  // The footer's first line is one short line: publisher, licence, the machine-readable files.
+  assert.match(subject, /<p>Published by <a href="https:\/\/example\.org\/">Example Inc\.<\/a> · <a href="https:\/\/spdx\.org\/licenses\/CC0-1\.0\.html">CC0-1\.0<\/a> · <a href="https:\/\/models\.example\.org\/catalog\.json">catalog\.json<\/a> · <a href="https:\/\/models\.example\.org\/llms\.txt">llms\.txt<\/a><\/p>/);
   const model = await read('models/road/RoadPatrol/index.html');
   assert.match(model, /<h3 id="route">route<\/h3>/);
   assert.match(model, /<dt>Extends<\/dt><dd><a href="https:\/\/datamodels\.jp\/ns\/task\/Task">/);
@@ -150,6 +152,7 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   const missing = await read('404.html');
   assert.match(missing, /<html lang="ja">/);
   assert.match(missing, /<h1 lang="ja">ページが見つかりません<\/h1>/);
+  assert.match(missing, /<p>公開：<a href="https:\/\/example\.org\/">例社<\/a> · <a href="https:\/\/spdx\.org\/licenses\/CC0-1\.0\.html">CC0-1\.0<\/a> · /);
   assert.match(missing, /<p lang="ja">このアドレスにページはありません。/);
   assert.match(missing, /<p lang="en">There is no page at this address\./);
   assert.match(missing, /<meta name="robots" content="noindex">/);
