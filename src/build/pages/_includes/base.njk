@@ -7,7 +7,12 @@
 {#- title and alternate come from computed front matter, marked safe there: escaped once, here. #}
 <title>{{ title }}</title>
 <meta name="description" content="{{ description }}">
+{#- The 404 page answers at any address: no canonical URL, no language versions, not indexed. #}
+{%- if page.fileSlug == "404" %}
+<meta name="robots" content="noindex">
+{%- else %}
 <link rel="canonical" href="{{ site.home }}{{ path }}">
+{%- endif %}
 <link rel="alternate" type="application/json" href="{{ site.catalog }}">
 {%- if alternate %}
 <link rel="alternate" type="application/ld+json" href="{{ alternate }}">
@@ -15,17 +20,21 @@
 {%- if schema %}
 <link rel="alternate" type="application/schema+json" href="{{ schema }}">
 {%- endif %}
+{%- if page.fileSlug != "404" %}
 {%- for l in site.langs %}
 <link rel="alternate" hreflang="{{ l.lang }}" href="{{ l.prefix }}{{ path }}">
 {%- endfor %}
 {%- if site.langs.length %}
 <link rel="alternate" hreflang="x-default" href="{{ site.first }}{{ path }}">
 {%- endif %}
+{%- endif %}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{{ site.title }}">
 <meta property="og:title" content="{{ title }}">
 <meta property="og:description" content="{{ description }}">
+{%- if page.fileSlug != "404" %}
 <meta property="og:url" content="{{ site.home }}{{ path }}">
+{%- endif %}
 {%- if site.locale %}
 <meta property="og:locale" content="{{ site.locale }}">
 {%- for l in site.langs %}{% if l.lang != site.lang and l.locale %}

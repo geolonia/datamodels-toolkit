@@ -104,6 +104,7 @@ The pages are plain HTML in a monospace font, with no JavaScript, so they read w
 - `/`: the subjects and their models.
 - One page per subject. With hash IRIs it is the namespace document (`/ns/<subject>`, written as `ns/<subject>.html`), with an anchor for every type and attribute, so every IRI opens on it.
 - One page per model (`/models/<subject>/<Type>/`), with an anchor per attribute, the standards it maps (`mapping/*.yaml`, with links to the tables) and its notes (`notes.yaml`: the sources, the decisions and their reasons), so readers can judge how well-founded it is.
+- `404.html`: what GitHub Pages and most static hosts show for an address with no page (for example the page of a model that a new version renamed). One page at the root, in the node's first language with the other languages' texts, linking to the index, `catalog.json` and every model.
 
 One set of pages per language of the node: the first language at the base URL (where the IRIs open), each other one under `/<lang>/` (for example `/en/`), with a link to switch in the header. Each page shows the node's texts in its language, falling back to the first language that has one; the fixed texts are in Japanese and English (English for other languages). When English is not the first language, `catalog.json` lists the English pages as `pageUrlEn`, as datamodels.jp does. The pages follow the device's light or dark setting.
 

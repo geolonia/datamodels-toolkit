@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Added
+
+- `build` writes `404.html`, the page that GitHub Pages and most static hosts show for a missing address: in the node's style, in its languages, with links to the index, `catalog.json` and every model. It is not indexed and has no canonical URL.
+
 ### Changed
 
 - `datamodels init` writes a workflow pinned to the v0.3.1 release of the Action, and a README whose `npx` commands run v0.3.1.
