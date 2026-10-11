@@ -19,8 +19,16 @@ const RESERVED = new Set(`all analyse analyze and any array as asc asymmetric au
 
 /** An identifier, quoted when it is a reserved word or not plain lower case. */
 export const ident = (name) => (/^[a-z_][a-z0-9_]*$/.test(name) && !RESERVED.has(name) ? name : `"${name.replace(/"/g, '""')}"`);
-/** A string literal: single quotes doubled (standard_conforming_strings is on by default, so backslashes stay). */
-export const literal = (v) => (typeof v === 'number' || typeof v === 'boolean' ? String(v) : `'${String(v).replace(/'/g, "''")}'`);
+/**
+ * A string literal that means the same whatever standard_conforming_strings is: single quotes
+ * doubled, and a text with a backslash (a pattern such as \\d) as an E'' literal with the
+ * backslashes doubled, since a plain literal reads backslashes as escapes when that setting is off.
+ */
+export const literal = (v) => {
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  const s = String(v).replace(/'/g, "''");
+  return s.includes('\\') ? `E'${s.replace(/\\/g, '\\\\')}'` : `'${s}'`;
+};
 
 // A date, or a date-time as JSON Schema's format takes it (RFC 3339): with seconds and Z or an offset.
 export const DATE_OR_DATE_TIME = '^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$';

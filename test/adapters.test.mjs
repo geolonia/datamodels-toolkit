@@ -15,7 +15,7 @@ import { columnsOf, shortTitle, snake } from '../src/adapters/model.mjs';
 import { fieldsOf, tableSchemaOf, xsdPattern } from '../src/adapters/table-schema/index.mjs';
 import { csvHeader } from '../src/adapters/csv/index.mjs';
 import { structuredOutputOf, unionCount, NotStrict } from '../src/adapters/ai/index.mjs';
-import { createTable, ident } from '../src/adapters/postgis/index.mjs';
+import { createTable, ident, literal } from '../src/adapters/postgis/index.mjs';
 import { exportModel } from '../src/export.mjs';
 
 const run = promisify(execFile);
@@ -162,14 +162,14 @@ test('PostGIS: a table with constraints, a GiST index and comments', () => {
   assert.match(sql, /^ {2}location geometry\(Geometry, 4326\),$/m);
   assert.match(sql, /^ {2}keywords text\[\],$/m);
   assert.match(sql, /CHECK \(project_status IN \('active', 'closed', 'archived'\)\)/);
-  assert.match(sql, /CHECK \("end" ~ '\^\\d\{4\}/);
+  assert.match(sql, /CHECK \("end" ~ E'\^\\\\d\{4\}/);
   assert.match(sql, /^CREATE INDEX project_location_idx ON project USING gist \(location\);$/m);
   assert.match(sql, /^COMMENT ON COLUMN project\.name IS '名称・件名\nName or subject\n<https:\/\/uri\.etsi\.org\/ngsi-ld\/name>';$/m);
   assert.match(sql, /^COMMENT ON TABLE project IS '.*\n[\s\S]*<https:\/\/datamodels\.jp\/ns\/task\/Project>';$/m);
   const site = file(evacuationSite, 'postgis');
   assert.match(site, /^ {2}location geometry\(Point, 4326\),$/m);
   assert.match(site, /^ {2}address_postal_code text,$/m);
-  assert.match(site, /CHECK \(address_postal_code ~ '\^\\d\{3\}-\?\\d\{4\}\$'\)/);
+  assert.match(site, /CHECK \(address_postal_code ~ E'\^\\\\d\{3\}-\?\\\\d\{4\}\$'\)/);
   assert.match(site, /CHECK \(hazard_types <@ ARRAY\['flood', /);
   assert.match(site, /CHECK \(cardinality\(hazard_types\) >= 1\)/);
   assert.match(site, /CHECK \(external_site_id IS NOT NULL OR national_shelter_id IS NOT NULL\)/);
@@ -368,4 +368,12 @@ test('PostGIS: schema values cannot add SQL of their own', () => {
   assert.match(lines[0], /^-- Thing: https:\/\/example\.org\/ns#Thing DROP TABLE important;$/);
   const outsideLiterals = sql.replace(/'(?:[^']|'')*'/g, "''");
   assert.ok(!/^DROP TABLE/m.test(outsideLiterals), outsideLiterals);
+});
+
+test('PostGIS: a string literal means the same whatever standard_conforming_strings is', () => {
+  assert.equal(literal('flood'), "'flood'");
+  assert.equal(literal("it's"), "'it''s'");
+  assert.equal(literal('^\\d{3}$'), "E'^\\\\d{3}$'");
+  // A backslash before a quote cannot end the literal early, with the setting on or off.
+  assert.equal(literal("\\' OR 1=1 --"), "E'\\\\'' OR 1=1 --'");
 });
