@@ -9,6 +9,7 @@
 // published files never change, and model pages stay product-neutral (they
 // link the node's /adapters/ page).
 import { refsOf } from './model.mjs';
+import { publicFetch } from './net.mjs';
 import csv from './csv/index.mjs';
 import tableSchema from './table-schema/index.mjs';
 import ai from './ai/index.mjs';
@@ -36,16 +37,23 @@ export function publicUrl(url) {
 
 const REDIRECTS = 5;
 
-/** A reader of JSON URLs that reads each once; it follows a redirect only to a publicUrl(). */
+/**
+ * A reader of JSON URLs that reads each once. The first URL and every redirect
+ * must be a publicUrl(); with the global fetch (the default everywhere), it
+ * reads through publicFetch, which also refuses a host that resolves to a
+ * private address. Tests pass a fetch of their own.
+ */
 export const getter = (fetchUrl, timeout) => {
+  const read = !fetchUrl || fetchUrl === globalThis.fetch ? publicFetch : fetchUrl;
   const cache = new Map();
   return (url) => {
     if (!cache.has(url)) {
       cache.set(url, (async () => {
         let res;
-        let at = url;
+        let at = normalUrl(url);
+        if (!publicUrl(at)) throw new Error(`${url} is not read: only https on a public host name`);
         for (let hop = 0; ; hop++) {
-          try { res = await fetchUrl(at, { signal: AbortSignal.timeout(timeout), redirect: 'manual' }); } catch (e) { throw new Error(`${url} could not be read (${e.cause?.code ?? e.message})`); }
+          try { res = await read(at, { signal: AbortSignal.timeout(timeout), redirect: 'manual' }); } catch (e) { throw new Error(`${url} could not be read (${e.cause?.code ?? e.message})`); }
           const location = res.status >= 300 && res.status < 400 ? res.headers?.get?.('location') : null;
           if (!location) break;
           const next = normalUrl(new URL(location, at).href);

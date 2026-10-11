@@ -377,3 +377,19 @@ test('PostGIS: a string literal means the same whatever standard_conforming_stri
   // A backslash before a quote cannot end the literal early, with the setting on or off.
   assert.equal(literal("\\' OR 1=1 --"), "E'\\\\'' OR 1=1 --'");
 });
+
+test('the adapters connect only to public addresses, also for the first URL', async () => {
+  const { isPublicAddress, publicFetch } = await import('../src/adapters/net.mjs');
+  const { getter } = await import('../src/adapters/index.mjs');
+  for (const ok of ['8.8.8.8', '104.21.1.1', '2606:4700::1']) assert.ok(isPublicAddress(ok), ok);
+  for (const bad of ['127.0.0.1', '10.0.0.5', '172.16.0.1', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1', '::1', '::', 'fd00::1', 'fe80::1', '::ffff:127.0.0.1', '::ffff:10.0.0.1', 'not-an-ip']) assert.ok(!isPublicAddress(bad), bad);
+  await assert.rejects(publicFetch('https://127.0.0.1/x'), /127\.0\.0\.1 is not a public address/);
+  await assert.rejects(publicFetch('https://[::1]/x'), /::1 is not a public address/);
+  await assert.rejects(publicFetch('http://example.org/x'), /only https is read/);
+  // The first URL is checked before any request, not only the redirects.
+  const read = [];
+  const stub = async (url) => { read.push(url); return { ok: true, status: 200, json: async () => ({}) }; };
+  await assert.rejects(getter(stub, 1000)('http://169.254.169.254/schema/x.json'), /only https on a public host name/);
+  await assert.rejects(getter(stub, 1000)('https://10.0.0.1/schema/x.json'), /only https on a public host name/);
+  assert.deepEqual(read, []);
+});
