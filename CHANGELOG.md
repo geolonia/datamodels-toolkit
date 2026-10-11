@@ -17,6 +17,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 - `datamodels convert` reports an id that more than one row gets, and an id value in exponent form such as `1.31E+11`, as problems of those rows: they are left out and the exit code is 1 (#56).
 - `datamodels init` writes a workflow pinned to the v0.3.4 release of the Action, and a README whose `npx` commands run v0.3.4.
+- The skill links the list of data model sites at its new address on datamodels.jp (`/en/guide/sites`).
 
 ## [0.3.4] - 2026-10-11
 
