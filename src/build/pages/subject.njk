@@ -28,13 +28,15 @@ eleventyComputed:
 <li><a href="{{ m.page }}">{{ m.type }}</a>{{ t.open }}{{ m.kind }}{{ t.comma }}{{ m.status }}{{ t.close }}{% for x in m.titles %} <span lang="{{ x.lang }}">{{ x.text }}</span>{% endfor %}</li>
 {%- endfor %}
 </ul>
+{%- if s.termGroups.length %}
 <h2>{{ t.terms }}</h2>
 <p>{{ t.termsIntro }}{{ s.termExample }}{{ t.period }}</p>
+{%- endif %}
 {%- for g in s.termGroups %}
 <h3><a href="{{ g.page }}">{{ g.model }}</a></h3>
 <table>
 {%- for x in g.terms %}
-<tr id="{{ x.anchor }}"><td><a href="{{ x.page }}">{{ x.name }}</a>{% if x.type %}{{ t.open }}{{ t.type }}{{ t.close }}{% endif %}</td><td>{% for y in x.texts %}<span lang="{{ y.lang }}">{{ y.text }}</span>{% endfor %}</td></tr>
+<tr id="{{ x.anchor }}"><th scope="row"><a href="{{ x.page }}">{{ x.name }}</a>{% if x.type %}{{ t.open }}{{ t.type }}{{ t.close }}{% endif %}</th><td>{% for y in x.texts %}<span lang="{{ y.lang }}">{{ y.text }}</span>{% endfor %}</td></tr>
 {%- endfor %}
 </table>
 {%- endfor %}

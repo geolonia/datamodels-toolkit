@@ -89,7 +89,8 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   assert.doesNotMatch(subject, /hreflang|<nav>/, 'one language: no links to other languages');
   // Compact: grouped by model, one table row per term, the IRI rule stated once.
   assert.match(subject, /<h3><a href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/">RoadPatrol<\/a><\/h3>\n<table>/);
-  assert.match(subject, /<tr id="route"><td><a href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/#route">route<\/a><\/td>/);
+  assert.match(subject, /<tr id="route"><th scope="row"><a href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/#route">route<\/a><\/th>/);
+  assert.match(subject, /<tr id="RoadPatrol"><th scope="row">.*?<\/th><td><span lang="en">One patrol run\.<\/span><\/td><\/tr>/, 'a type row shows the description');
   assert.match(subject, /for example https:\/\/models\.example\.org\/ns\/road#RoadPatrol\./);
   assert.doesNotMatch(subject, /IRI: https/, 'no full IRI repeated per term');
   assert.match(subject, /Road &lt;b&gt;maintenance&lt;\/b&gt;\./, 'text is escaped');
@@ -105,6 +106,12 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   await buildNode(dir);
   const renamed = await read('ns/road.html');
   assert.ok(renamed.includes('id="lane"') && !renamed.includes('id="route"'), 'the anchor of route is lane');
+  // An alias mints no terms: no Terms section and no empty example.
+  await writeFile(sf, JSON.stringify({ ...sj, 'x-alias-of': 'https://datamodels.jp/ns/task/Task', properties: Object.fromEntries(Object.entries(sj.properties).map(([k, v]) => [k, v['x-iri'] ? { ...v, 'x-iri': `https://datamodels.jp/ns/task#${k}` } : v])) }));
+  await buildNode(dir);
+  const aliasOnly = await read('ns/road.html');
+  assert.doesNotMatch(aliasOnly, /<h2>Terms<\/h2>|for example \./);
+  await writeFile(sf, JSON.stringify(sj));
   // Only http(s) URLs from the sources become links.
   const schemaFile = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
   await writeFile(schemaFile, JSON.stringify({ ...JSON.parse(await readFile(schemaFile, 'utf8')), 'x-subclass-of': 'javascript:alert(1)' }));

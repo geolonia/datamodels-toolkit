@@ -68,7 +68,7 @@ export function pageData(subjects, { urls, node, lang = node.languages[0] }) {
     const subjectModels = subject.models.map((model) => {
       const mu = urls.modelUrls(subject, model);
       const terms = [];
-      if (!model.schema['x-alias-of']) terms.push({ name: model.type, anchor: anchor(mu.typeIri, model.type), type: true, iri: mu.typeIri, page: at(mu.page), texts: texts(model.catalog.title) });
+      if (!model.schema['x-alias-of']) terms.push({ name: model.type, anchor: anchor(mu.typeIri, model.type), type: true, iri: mu.typeIri, page: at(mu.page), texts: texts(model.catalog.description).length ? texts(model.catalog.description) : texts(model.catalog.title) });
       const required = new Set(model.schema.required ?? []);
       const attributes = attributesOf(model).map(([name, prop]) => {
         const iri = prop['x-iri'] ?? '';
