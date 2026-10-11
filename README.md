@@ -2,7 +2,7 @@
 
 Command-line tools for the [datamodels.jp](https://datamodels.jp) catalog.
 
-`convert` turns a published list (CSV) into entities of a catalog model; `export` writes files made from a model for tools that do not read NGSI-LD (a spreadsheet, an AI model, PostgreSQL); `build` writes the files of a data model node, a site of your own in the [web of data models](https://github.com/geolonia/datamodels/issues/200). More commands come only when someone needs them for a real task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
+`convert` turns a published list (CSV) into entities of a catalog model, also a list of your own with a mapping you write with `mapping`; `export` writes files made from a model for tools that do not read NGSI-LD (a spreadsheet, an AI model, PostgreSQL); `build` writes the files of a data model node, a site of your own in the [web of data models](https://github.com/geolonia/datamodels/issues/200). More commands come only when someone needs them for a real task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
 
 ## Install
 
@@ -17,25 +17,98 @@ npx github:geolonia/datamodels-toolkit#v0.3.4 convert <subject>/<Type> <mapping>
 ```bash
 datamodels convert disaster/EvacuationSite jichitai-opendata-site 092011_evacuation_space.csv --out sites.json
 datamodels convert disaster/EvacuationSite gsi-emergency-site 13101_2.csv --set localGovernmentCode=13101
+datamodels convert disaster/EvacuationSite ./my-list.yaml my-list.csv --check     # a mapping of your own, first rows only
+datamodels convert disaster/EvacuationSite csv-template sites.csv                 # the columns of the CSV template
 ```
 
 This turns, for example, a municipality's 指定緊急避難場所一覧 (自治体標準オープンデータセット 03) or GSI's data into EvacuationSite entities. Each entity is validated against the model's JSON Schema.
 
 - `<subject>/<Type>`: the model, as on its page (`/models/disaster/EvacuationSite/`).
-- `<mapping>`: one of the model's mapping files. The model page lists them under "Mapping files (YAML)", and `catalog.json` lists them as `mappingUrls`.
+- `<mapping>`: one of the model's mapping files. The model page lists them under "Mapping files (YAML)", and `catalog.json` lists them as `mappingUrls`. It can also be a mapping file of your own: a path, or a name that ends in `.yaml` or `.yml` ([your own list](#your-own-list)). `csv-template` converts a CSV whose header is the model's [CSV template](#the-csv-template).
 - `--set attribute=value`: a value the list does not carry, such as GSI's municipality code, which is only in the file name.
 - `--normalized`: NGSI-LD normalized form instead of key-values, with the subject's `@context` alias and the NGSI-LD core context.
 - `--out file.json`: write to a file (default: standard output).
+- `--check`: convert only the first rows, write nothing, and report what to fix ([below](#--check)).
+- `--rows N`: how many rows `--check` converts (default 20).
 - `--site URL|dir`: where to read the catalog (default `https://datamodels.jp`). A directory laid out like the site also works, for example the `dist/` that `npm run build` makes in [geolonia/datamodels](https://github.com/geolonia/datamodels), to try a mapping before it is published.
 
 It reads `catalog.json`, the model's schema and the mapping file from the site, and any mapping that one names with `via` (such as `common/JapaneseAddress/jichitai-opendata-address` for the address columns). The conversion rules in a mapping file:
 
 - A field with `column` (one column or a list), an optional `transform`, a constant `value`, or `via` is converted.
-- The `convert.id` template names the entities.
+- The `convert.id` template names the entities: `{attribute}` is that attribute's value in the row (`{address.localGovernmentCode}` for a field of a value). A template that is only one value, such as `"{id}"`, takes the value as it is; inside a longer id a value is URL-encoded. A field `id` with a `column` gives the entity id as it is, when there is no template.
 - Fields with only `to` are documentation.
-- Transforms: `text`, `code6`, `number`, `integer`, `numbers`, `flag`, `flags` (with `values`), `split`, `municipality`, `machiazaId`, `nationalShelterType` (`src/convert.mjs`).
+- A field name with a dot fills a field of a value: `address.postalCode: { column: 郵便番号 }` (only in mapping files of your own; the catalog's mapping files use `via`).
 
-It detects UTF-8 and Shift_JIS. It repairs only what it can prove, such as a local government code that lost its leading zero or lacks its check digit (the check digit decides), and lists every repair on standard error. Invalid rows are left out and listed by line. The exit code is 1 when a row is invalid or a file cannot be read, and 2 for a usage error.
+| `transform` | Columns | What it makes |
+|---|---|---|
+| (none) or `text` | 1 | the text as it is; empty is no value |
+| `code6` | 1 | a 6-digit local government code; repairs a lost leading zero or a missing check digit when the check digit proves it |
+| `number`, `integer` | 1 | a number; `integer` also takes `1,200` and `1200人` |
+| `numbers` | 2 or more | a list of numbers |
+| `flag` | 1 | `1` is true, `0` or empty is false |
+| `boolean` | 1 | `true`/`false` (also `TRUE`, `True`, `1`, `0`); empty is no value |
+| `flags` | `values` | a list of the values whose column holds `1`: `values: { 洪水: flood, 地震: earthquake }` |
+| `split` | 1 | a list, split at `;` or `；` |
+| `geometry` | 1 to 3 | two columns, longitude and latitude, make a GeoJSON Point; one column holds a GeoJSON geometry; with three, the third is the GeoJSON for rows without longitude and latitude |
+| `json` | 1 | the JSON in the column |
+| `municipality` | 1 | a municipality name; a value that goes on (`宇都宮市中央本町1-29`) is left out and reported |
+| `machiazaId` | 1 | the 7-digit town id of the Address Base Registry, without its hyphen |
+| `nationalShelterType` | 1 | `general` or `welfare`, from the type code in a 全国共通避難所・避難場所 ID |
+
+It detects UTF-8 and Shift_JIS. It repairs only what it can prove, such as a local government code that lost its leading zero or lacks its check digit (the check digit decides), and lists every repair on standard error. Invalid rows are left out and listed by line. An id that more than one row gets, and an id value in exponent form such as `1.31E+11` (a spreadsheet rounded the number and its digits are lost), make those rows invalid. The exit code is 1 when a row is invalid or a file cannot be read, and 2 for a usage error.
+
+### Your own list
+
+A list that follows no standard in the catalog needs a mapping file of your own: which column fills which attribute. `datamodels mapping` writes a first one, and `--check` tells you what is still wrong:
+
+```bash
+datamodels mapping disaster/EvacuationSite my-list.csv --out my-list.yaml     # 1. a first mapping
+#                                                                               2. fill in the TODOs
+datamodels convert disaster/EvacuationSite my-list.yaml my-list.csv --check    # 3. check the first rows; fix, repeat
+datamodels convert disaster/EvacuationSite my-list.yaml my-list.csv --out entities.json
+```
+
+A mapping file of your own has the same rules as the catalog's (above), and `standard` is not needed. In `via` it may name a catalog mapping (`common/JapaneseAddress/jichitai-opendata-address`) or another file of your own, relative to its own folder (`address.yaml`; a via that ends in `.yaml` or `.yml` is a file). `convert` refuses a file of your own that still has a `# TODO:` comment or names an attribute the model does not have. An AI agent can do step 2 with you: [the agent skill](#agent-skill) has the steps and the rules.
+
+### --check
+
+`--check` converts the first rows (`--rows`, default 20) and writes nothing. On standard error it reports:
+
+- the problems of the mapping: TODOs left, attributes the model does not have;
+- the columns the mapping reads that the file does not have;
+- the required attributes that no row gets;
+- each invalid row, with its first three schema errors, duplicate ids and ids in exponent form;
+- the repairs, as `convert` lists them.
+
+The last line is a summary, such as `18 of 20 rows valid`. The exit code is 0 when every checked row is valid and the mapping has no problem, else 1.
+
+### The CSV template
+
+A CSV made from the model's CSV template (`datamodels export <subject>/<Type> --to csv`) converts without a mapping file:
+
+```bash
+datamodels convert disaster/EvacuationSite csv-template sites.csv
+```
+
+Each column fills the attribute of the same name: `id` is the entity id as it is, `address.postalCode` a field of the address, `longitude` and `latitude` a Point (or the GeoJSON in `location` for another shape), a list is split at `;`, a boolean is `true` or `false`, and a JSON column is read as JSON. Columns you leave out of the file stay empty.
+
+## mapping
+
+```bash
+datamodels mapping disaster/EvacuationSite my-list.csv --out my-list.yaml
+```
+
+Writes a first mapping file for a CSV and a catalog model, for you or an AI agent to finish. It reads the CSV (UTF-8 or Shift_JIS; the header, and the first rows to tell true/false columns from 1/0 ones) and the model and its mapping files from the catalog (`--site`, as for `convert`). No value of the list goes into the mapping. `--out` writes a new file and never overwrites one; without it, the mapping goes to standard output.
+
+- One row per attribute, and per field of a value (`address.postalCode`) and for the location, as the CSV template splits them. Required attributes come first.
+- A column fills a row when its name is the attribute's, also written otherwise (`postal_code`, `Postal Code`), or the attribute's Japanese or English name in the catalog, or a column the catalog's mapping files of the model read for it (with their transform). Longitude and latitude columns (`lng`, `経度`, …) become the location. A column that only shares part of the Japanese name is marked as a guess; two columns that fit equally well are left to you, listed as candidates.
+- A row without a column says `# TODO: which column?`. Write the column, or delete the row when the list has nothing for it.
+- `transform` follows the attribute's type: `integer`, `number`, `flag` for a boolean (`boolean` when the column holds true and false), `split` for a list, `geometry` for the location, `code6` for a local government code.
+- `convert.id` comes from a catalog mapping of the model when the columns it needs are there; otherwise it is a TODO.
+- The CSV columns that no row reads are listed at the end, as a comment.
+- When the header has nearly all the columns of one of the catalog's mapping files, it says so: that mapping may convert the list as it is.
+
+Every part of the file has a comment of one line, in Japanese when the header is Japanese.
 
 ## init
 
@@ -90,7 +163,7 @@ Writes the files of one or more adapters for one entity model into `--out` (defa
 
 | `--to` | File | What it is |
 |---|---|---|
-| `csv` | `<Type>.csv` | The header row of a CSV file: one column per attribute. Fill in one row per entity in a spreadsheet. |
+| `csv` | `<Type>.csv` | The header row of a CSV file: one column per attribute. Fill in one row per entity in a spreadsheet, then `datamodels convert <subject>/<Type> csv-template <file.csv>` makes the entities. |
 | `table-schema` | `<Type>.tableschema.json` | A [Frictionless Table Schema](https://datapackage.org/standard/table-schema/) (v2) for those columns, so a CSV file can be checked with `frictionless validate` or another Table Schema tool: types, required columns, allowed values, patterns, limits. |
 | `ai` | `<Type>.ai.json` | A strict JSON Schema for the structured output of a large language model, to extract entities from text: `{ name, description, strict, schema }`, the `json_schema` of OpenAI's Structured Outputs, and `schema` is the `input_schema` of a Claude tool. |
 | `postgis` | `<Type>.sql` | `CREATE TABLE` for PostgreSQL with PostGIS: one row per entity, constraints for the model's rules, the location as a geometry with a GiST index, and the descriptions and IRIs in `COMMENT ON`. |
@@ -257,7 +330,7 @@ await publishCatalog(subjects, { urls, outDir: 'dist', languages: ['en'], head: 
 
 ## Agent skill
 
-`skills/datamodels/SKILL.md` gives an AI agent the catalog's modelling rules and this toolkit's workflow (find before you define, alias or subclass, `bump` before changing a published model, and more). It points the agent to https://datamodels.jp/llms.txt for the models themselves. For Claude Code, copy the folder into your project's `.claude/skills/` (or `~/.claude/skills/` for every project):
+`skills/datamodels/SKILL.md` gives an AI agent the catalog's modelling rules and this toolkit's workflow (find before you define, alias or subclass, `bump` before changing a published model, and more), and the steps to convert a list of your own with `mapping` and `convert --check`. It points the agent to https://datamodels.jp/llms.txt for the models themselves. For Claude Code, copy the folder into your project's `.claude/skills/` (or `~/.claude/skills/` for every project):
 
 ```bash
 mkdir -p .claude/skills && cp -R path/to/datamodels-toolkit/skills/datamodels .claude/skills/

@@ -1,0 +1,44 @@
+# Correspondence between DesignatedShelter and the Cabinet Office's EEI
+# (災害対応基本共有情報) version 1.1, item 21 避難所等: 避難所 (平時整備).
+standard:
+  name:
+    ja: 災害対応基本共有情報（EEI）第1.1版（内閣府（防災担当）、2025年6月）「21 避難所等：避難所」の平時整備の属性
+    en: "Essential Elements of Information (EEI, 災害対応基本共有情報) version 1.1 (Cabinet Office, June 2025), item 21 避難所等: 避難所 (shelters), the attributes kept in normal times (平時整備)"
+  url: https://www.bousai.go.jp/kaigirep/kentokai/dataplatform/pdf/jitsumu/r7/dai2kai/siryo1.pdf
+  license:
+    ja: "内閣府ホームページ利用規約による公共データ利用規約（第1.0版）（PDL1.0、CC BY 4.0 と互換）"
+    en: "Public Data License (Version 1.0) (PDL1.0) under the Cabinet Office website terms of use (内閣府ホームページ利用規約), compatible with CC BY 4.0"
+  note:
+    ja: "EEI の説明と「基本」「特定」の区分は EvacuationSite の対応表を参照。避難所の属性は、平時に整備するもの（このモデル）と災害時に取得するもの（EvacuationShelter）に分かれる。基本共有データ属性はすべて本モデルにある。特定データ属性のうち、施設の設備と構造（耐震状態、非常用電源、給水設備、トイレなど 40 項目ほど）、標高、施設電話番号、支援想定地域、想定避難者数（通常時・最大時）、施設種別、管理担当連絡先、管理主体、指定福祉避難所との重複、公示日、算定基準、施設面積は本モデルに無い。"
+    en: "For what EEI is and its 基本 (basic) and 特定 (specific) classes, see the EvacuationSite table. EEI splits a shelter's attributes into those kept in normal times (this model) and those collected during a disaster (EvacuationShelter). Every basic attribute has a field here. Specific attributes with no field: the facility's equipment and structure (about 40: seismic status, emergency power, water supply, toilets and more), 標高, 施設電話番号, 支援想定地域, 想定避難者数 (normal and maximum), 施設種別, 管理担当連絡先, 管理主体, 指定福祉避難所との重複, 公示日, 算定基準 and 施設面積."
+fields:
+  nationalShelterId: { to: 全国共通避難所・避難場所ID（基本） }
+  localGovernmentCode: { to: 地方公共団体コード（基本） }
+  name: { to: 施設名（基本） }
+  nameKana: { to: 施設名（かな）（基本） }
+  address:
+    to: 所在地（住所）（基本）
+    note:
+      ja: 都道府県名と市区町村名（どちらも基本）は JapaneseAddress の addressRegion と addressLocality
+      en: 都道府県名 and 市区町村名 (both basic) are the addressRegion and addressLocality of the JapaneseAddress
+  location:
+    to: 緯度、経度（基本）
+    note:
+      ja: "[経度, 緯度] の点"
+      en: "a point [longitude, latitude]"
+  shelterType:
+    to: 避難所タイプ（基本）
+    note:
+      ja: 一般避難所 → general、福祉避難所 → welfare
+      en: "一般避難所 → general, 福祉避難所 → welfare"
+  maxCapacity: { to: 想定収容人数（基本） }
+  alsoEmergencyEvacuationSite: { to: 指定緊急避難場所との重複（特定） }
+  targetEvacuees: { to: 受入対象者（福祉避難所）（特定） }
+  site:
+    to: null
+    note:
+      ja: 重複する指定緊急避難場所への参照。EEI は重複の有無だけを持つ
+      en: the link to the site at the same place; EEI records only whether there is one
+  externalShelterId: { to: null }
+  designationNotes: { to: null }
+  description: { to: null }

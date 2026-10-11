@@ -1,6 +1,6 @@
 ---
 name: datamodels
-description: Model NGSI-LD / JSON-LD data with the datamodels.jp catalog and publish your own data models with datamodels-toolkit. Use when choosing or designing a data model (entity types, attributes, @context, IRIs), when reusing or extending a datamodels.jp model, or when starting, changing, releasing or upgrading a data model node (node.yaml, models/<subject>/, datamodels init/add/extend/check/build/bump/upgrade).
+description: Model NGSI-LD / JSON-LD data with the datamodels.jp catalog and publish your own data models with datamodels-toolkit. Use when choosing or designing a data model (entity types, attributes, @context, IRIs), when reusing or extending a datamodels.jp model, when converting a CSV list into entities of a model (datamodels mapping, datamodels convert), or when starting, changing, releasing or upgrading a data model node (node.yaml, models/<subject>/, datamodels init/add/extend/check/build/bump/upgrade).
 ---
 
 # Data models with datamodels.jp and datamodels-toolkit
@@ -25,6 +25,26 @@ datamodels.jp is a catalog of data models that work in Japan: JSON Schemas, JSON
 - Group models by subject (topic), never by customer, region or project.
 - Record the sources, the upstream types you considered and why, and what you left out in the model's `notes.yaml`. Map fields to an external standard in `mapping/<name>.yaml`.
 - Examples: `examples/example.json` (key-values form), valid against the schema; ids `urn:ngsi-ld:<Type>:<local id>`; Japanese times with `+09:00`. The catalog also requires `examples/example-normalized.jsonld` for every entity model (not for value types); on a node it is optional. Other files in `examples/` are not read (`check` notes them).
+
+## Convert your data
+
+A CSV list becomes entities of a datamodels.jp model with `datamodels convert`. Run it with `npx github:geolonia/datamodels-toolkit#<version>` (Node.js 24 or later).
+
+1. **A standard list:** if the model page (or `mappingUrls` in catalog.json) has a mapping for the list's standard, use it: `datamodels convert <subject>/<Type> <mapping> <file.csv> --check`.
+2. **The CSV template:** a CSV made from `datamodels export <subject>/<Type> --to csv` converts with `csv-template` as the mapping.
+3. **Any other list:** make a mapping and finish it in a loop:
+   1. `datamodels mapping <subject>/<Type> <file.csv> --out <name>.yaml` writes a first mapping: one row per attribute, the column that fits it, or `# TODO: which column?`.
+   2. Read the CSV header and the first rows, then fill in each TODO: the column (`column: 列名`), and a `transform` when the text needs one (see the README's table). Delete a row when the list has nothing for it. Check the rows marked as a guess against the sample values. Fill in the `convert.id` template with the attributes that tell the rows apart.
+   3. `datamodels convert <subject>/<Type> <name>.yaml <file.csv> --check` converts the first rows and reports what is wrong. Fix the mapping (or tell the user what is wrong in the list) and run it again until the last line says every row is valid and the exit code is 0.
+   4. `datamodels convert <subject>/<Type> <name>.yaml <file.csv> --out entities.json`. Report the invalid rows and the repairs it lists.
+
+Rules:
+
+- **Never invent values.** A value comes from a column of the list, or from `value:` only when the user confirms it is true for every row (such as `addressCountry: JP` for a list of Japanese addresses). Do not fill an attribute from your own knowledge, and do not change the data to make a row valid.
+- **Leave unmatched columns out.** A column that fits no attribute stays in the comment at the end of the mapping; do not force it into the nearest attribute.
+- **Ask the user about ambiguous columns:** two columns that could fill the same attribute, a column whose meaning is unclear from its name and sample values, a code whose system you do not know, and which attributes make the id unique. Do not guess.
+- Duplicate ids and ids like `1.31E+11` (a spreadsheet rounded them) are problems of the list: tell the user; do not work around them with another id without asking.
+- Keep the mapping file: it is the record of how the list was converted, and it converts the next version of the list.
 
 ## A node with datamodels-toolkit
 

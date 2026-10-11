@@ -10,7 +10,7 @@ import { ADAPTERS, getter, textsOfEntry, readRefs, localRefs, schemaPrefixes, no
 const DEFAULT_INDEX = 'https://datamodels.jp/catalog.json';
 
 /** A model of another node, from its catalog.json, shaped as loadSubjects() shapes one. */
-async function remoteModel(target, from, get) {
+export async function remoteModel(target, from, get) {
   const catalog = await get(from);
   if (!Array.isArray(catalog?.models)) throw new Error(`${from}: no models (is it a catalog.json?)`);
   const entry = /^https?:\/\//.test(target) ? catalog.models.find((m) => m.typeIri === target) : catalog.models.find((m) => `${m.subject}/${m.type}` === target);

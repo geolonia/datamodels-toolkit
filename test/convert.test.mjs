@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { decodeCsv, parseCsv, code6, convertRows, mappingProblems, mappedColumns, LINE } from '../src/convert.mjs';
+import { decodeCsv, parseCsv, code6, convertRows, mappingProblems, mappedColumns, unknownFields, exponentForm, TRANSFORMS, LINE } from '../src/convert.mjs';
 import { siteReader, loadTarget } from '../src/catalog.mjs';
 
 const reader = siteReader(join(import.meta.dirname, 'fixtures', 'site'));
@@ -178,7 +178,7 @@ test('a column the file does not have gives no value, not false; the columns rea
 test('an unknown transform or a missing via mapping is found before any row is read', () => {
   const map = { fields: { a: { to: 'a', column: 'a', transform: 'upper' }, b: { to: 'b', via: 'x/X/y' } } };
   assert.deepEqual(mappingProblems(map, {}), [
-    'a: unknown transform "upper" (known: text, code6, number, integer, numbers, flag, flags, split, municipality, machiazaId, nationalShelterType)',
+    `a: unknown transform "upper" (known: ${TRANSFORMS.join(', ')})`,
     'b: no mapping x/X/y',
   ]);
   const inner = { fields: { c: { to: 'c', column: 'c', transform: 'lower' } } };
@@ -191,4 +191,83 @@ test('an explicit empty record in a one-column file is listed, like ",," in a wi
   assert.deepEqual(rows.map((r) => r.only), ['value']);
   assert.deepEqual(rows.skipped, [2, 5], 'the quoted empty records, also the last one without a line break; not the blank line');
   assert.deepEqual(parseCsv('only\nvalue\n\n').skipped, [], 'blank lines stay ignored');
+});
+
+test('the same id on several rows is a problem of each of them (#56)', () => {
+  const map = { convert: { id: 'urn:ngsi-ld:T:{n}' }, fields: { n: { column: 'n' } } };
+  const rows = parseCsv('n\na\nb\na\na\n');
+  const [first, other, second, third] = convertRows(rows, map, { type: 'T' });
+  assert.deepEqual(other.problems, []);
+  assert.deepEqual(first.problems, ['id: urn:ngsi-ld:T:a is not unique (also line 4, line 5)']);
+  assert.deepEqual(second.problems, ['id: urn:ngsi-ld:T:a is not unique (also line 2, line 5)']);
+  assert.equal(third.problems.length, 1);
+  assert.match(convertRows([{ n: 'x' }, { n: 'x' }], map, { type: 'T' })[0].problems[0], /also row 2/, 'rows without a line are counted');
+});
+
+test('an id value in exponent form is lost digits, not an id (#56)', () => {
+  assert.ok(exponentForm('1.31E+11') && exponentForm('1E+12') && exponentForm('-2.5e-3'));
+  assert.ok(!exponentForm('131000000000') && !exponentForm('E1310100002201') && !exponentForm('1.5'));
+  const map = { convert: { id: 'urn:ngsi-ld:T:{n}' }, fields: { n: { column: 'ID' } } };
+  const [r] = convertRows([{ ID: '1.31E+11' }], map, { type: 'T' });
+  assert.equal(r.entity.id, undefined);
+  assert.deepEqual(r.problems, ['id: n is 1.31E+11, a number in exponent form: a spreadsheet rounded it and its digits are lost']);
+  // An integer transform would turn it into 131000000000: the column as written is what counts.
+  const [int] = convertRows([{ ID: '1.31E+11' }], { ...map, fields: { n: { column: 'ID', transform: 'integer' } } }, { type: 'T' });
+  assert.match(int.problems.join(), /n is 1\.31E\+11/);
+  // Chuo City's AED list writes every id as 1.31E+11: each row is reported, and none gets an id.
+  const all = convertRows(parseCsv('ID\n1.31E+11\n1.31E+11\n'), map, { type: 'T' });
+  assert.ok(all.every((x) => x.entity.id === undefined && x.problems.length === 1));
+  const [direct] = convertRows([{ id: '1.3E+12' }], { fields: { id: { column: 'id' } } }, { type: 'T' });
+  assert.match(direct.problems.join(), /1\.3E\+12 is a number in exponent form/);
+});
+
+test('a field with a dot fills a field of a value; a field id is the entity id as it is', () => {
+  const map = { fields: { id: { column: 'id' }, 'address.postalCode': { column: 'zip' }, 'address.addressRegion': { column: 'pref' }, name: { column: 'name' } } };
+  const [r] = convertRows([{ id: 'urn:ngsi-ld:T:1', zip: '100-0001', pref: '東京都', name: 'x' }], map, { type: 'T' });
+  assert.deepEqual(r.problems, []);
+  assert.deepEqual(r.entity, { id: 'urn:ngsi-ld:T:1', type: 'T', address: { postalCode: '100-0001', addressRegion: '東京都' }, name: 'x' });
+  const [empty] = convertRows([{ id: 'urn:ngsi-ld:T:2', zip: '', pref: '', name: 'y' }], map, { type: 'T' });
+  assert.equal(empty.entity.address, undefined, 'no value, no object');
+  const both = { fields: { id: { column: 'id' }, address: { value: { addressCountry: 'JP' } }, 'address.postalCode': { column: 'zip' } } };
+  const [one, two] = convertRows([{ id: 'urn:ngsi-ld:T:1', zip: '100-0001' }, { id: 'urn:ngsi-ld:T:2', zip: '' }], both, { type: 'T' });
+  assert.deepEqual(one.entity.address, { addressCountry: 'JP', postalCode: '100-0001' });
+  assert.deepEqual(two.entity.address, { addressCountry: 'JP' }, 'the value of the mapping is not changed by a row');
+  const [clash] = convertRows([{ a: '1', b: '2' }], { fields: { id: { column: 'a' }, addr: { column: 'a' }, 'addr.x': { column: 'b' } } }, { type: 'T' });
+  assert.match(clash.problems.join(), /addr\.x: addr already has a value of its own/);
+  // A template that is only one value takes it as it is; inside a longer id it is encoded.
+  const whole = { convert: { id: '{u}' }, fields: { u: { column: 'u' } } };
+  assert.equal(convertRows([{ u: 'urn:ngsi-ld:T:a b' }], whole, { type: 'T' })[0].entity.id, 'urn:ngsi-ld:T:a b');
+  const part = { convert: { id: 'urn:ngsi-ld:T:{address.postalCode}' }, fields: { 'address.postalCode': { column: 'zip' } } };
+  assert.equal(convertRows([{ zip: '100 0001' }], part, { type: 'T' })[0].entity.id, 'urn:ngsi-ld:T:100%200001');
+});
+
+test('boolean, geometry and json transforms', () => {
+  const map = { convert: { id: 'urn:ngsi-ld:T:{n}' }, fields: { n: { column: 'n' }, b: { column: 'b', transform: 'boolean' }, p: { column: ['lon', 'lat'], transform: 'geometry' }, g: { column: ['lon', 'lat', 'geo'], transform: 'geometry' }, j: { column: 'j', transform: 'json' } } };
+  const poly = '{"type":"Polygon","coordinates":[[[139,35],[139.1,35],[139.1,35.1],[139,35]]]}';
+  const [a, b, c] = convertRows([
+    { n: 'a', b: 'TRUE', lon: '139.7', lat: '35.6', geo: '', j: '{"k":[1,2]}' },
+    { n: 'b', b: '', lon: '', lat: '', geo: poly, j: '' },
+    { n: 'c', b: 'yes', lon: '139.7', lat: '', geo: '{"type":"Point"}', j: '{' },
+  ], map, { type: 'T' });
+  assert.deepEqual(a.problems, []);
+  assert.deepEqual([a.entity.b, a.entity.p, a.entity.g, a.entity.j], [true, { type: 'Point', coordinates: [139.7, 35.6] }, { type: 'Point', coordinates: [139.7, 35.6] }, { k: [1, 2] }]);
+  assert.deepEqual(b.problems, []);
+  assert.deepEqual([b.entity.b, b.entity.p, b.entity.g.type, b.entity.j], [undefined, undefined, 'Polygon', undefined]);
+  assert.deepEqual(c.problems, ['b: b: yes is not true or false', 'p: lon, lat: 139.7, (empty) is not a longitude and a latitude', 'g: lon, lat: 139.7, (empty) is not a longitude and a latitude', 'j: j: not JSON']);
+  const one = { convert: { id: 'urn:ngsi-ld:T:{n}' }, fields: { n: { column: 'n' }, g: { column: 'geo', transform: 'geometry' } } };
+  assert.deepEqual(convertRows([{ n: 'x', geo: '{"type":"Point"}' }], one, { type: 'T' })[0].problems, ['g: geo: not a GeoJSON geometry']);
+});
+
+test('the structure of a mapping of your own is checked before any row is read', () => {
+  assert.deepEqual(mappingProblems({ convert: { id: 'urn:ngsi-ld:T:1' }, fields: { a: { column: 'a' } } }), ['convert.id must be a template such as "urn:ngsi-ld:Type:{attribute}"']);
+  assert.match(mappingProblems({ fields: ['a'] }).join(), /fields must map each attribute to a rule/);
+  assert.deepEqual(mappingProblems({ fields: { a: 'a', b: { column: 3 }, c: { column: ['x'], transform: 'geometry' }, d: { column: ['x', 'y', 'z', 'w'], transform: 'geometry' }, e: { transform: 'flags' }, f: null, g: {} } }), [
+    'a: a rule must be a mapping, such as { column: 名称 }',
+    'b: column must be a column name or a list of them',
+    'd: transform geometry reads 1 to 3 columns, got 4',
+    'e: transform flags needs values, as column: value',
+  ]);
+  assert.deepEqual(unknownFields({ fields: { name: {}, nmae: {}, 'address.postalCode': {}, 'adress.x': {}, id: {}, type: {} } }, { title: 'T', properties: { id: {}, type: {}, name: {}, address: {} } }), [
+    'nmae: not an attribute of T', 'adress.x: not an attribute of T', 'type: not an attribute of T',
+  ]);
 });

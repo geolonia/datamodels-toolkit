@@ -4,8 +4,18 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Added
+
+- `datamodels convert` takes a mapping file of your own: a path, or a name that ends in `.yaml` or `.yml`, as the mapping. Its `via` may name a catalog mapping or another file of your own, relative to its folder. A field name with a dot (`address.postalCode`) fills a field of a value. convert refuses a file of your own that still has a `# TODO:` comment or names an attribute the model does not have.
+- `datamodels mapping <subject>/<Type> <file.csv> [--out file.yaml]`: a first mapping file for a list of your own, for you or an AI agent to finish. One row per attribute and field (as the CSV template splits them) with the column that fits it, a transform for its type, or a TODO; required attributes first; the `convert.id` template of a catalog mapping when its columns are there; the columns no row reads; a one-line comment on each part, in Japanese for a Japanese header. It also says when the header has nearly all the columns of a catalog mapping.
+- `datamodels convert --check [--rows N]`: converts the first rows (default 20), writes nothing, and reports the problems of the mapping, the columns the file lacks, the required attributes no row gets and the invalid rows with their first schema errors; the last line is a summary such as `18 of 20 rows valid`. Exit code 0 when every checked row is valid.
+- `datamodels convert <subject>/<Type> csv-template <file.csv>`: a CSV made from the model's CSV template converts without a mapping file.
+- Transforms `boolean` (true or false), `geometry` (longitude and latitude into a Point, or a GeoJSON column) and `json`. A field `id` gives the entity id as it is; a `convert.id` template that is only one value is not URL-encoded.
+- The agent skill has a "Convert your data" section: the steps with `mapping` and `--check`, and the rules (never invent values, leave unmatched columns out, ask about ambiguous columns).
+
 ### Changed
 
+- `datamodels convert` reports an id that more than one row gets, and an id value in exponent form such as `1.31E+11`, as problems of those rows: they are left out and the exit code is 1 (#56).
 - `datamodels init` writes a workflow pinned to the v0.3.4 release of the Action, and a README whose `npx` commands run v0.3.4.
 
 ## [0.3.4] - 2026-10-11

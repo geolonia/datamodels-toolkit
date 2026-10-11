@@ -101,7 +101,13 @@ export function code6(v) {
   return { problem: `${s}: not a local government code` };
 }
 
-export const TRANSFORMS = ['text', 'code6', 'number', 'integer', 'numbers', 'flag', 'flags', 'split', 'municipality', 'machiazaId', 'nationalShelterType'];
+export const TRANSFORMS = ['text', 'code6', 'number', 'integer', 'numbers', 'flag', 'flags', 'boolean', 'split', 'geometry', 'json', 'municipality', 'machiazaId', 'nationalShelterType'];
+
+// How many columns a transform reads, when that is fixed: [fewest, most].
+const COLUMNS = { numbers: [2, Infinity], geometry: [1, 3] };
+
+/** A number a spreadsheet wrote in exponent form (1.31E+11): its digits are lost, so it cannot be an id. */
+export const exponentForm = (v) => /^[+-]?\d+(\.\d+)?[eE][+-]?\d+$/.test(String(v ?? '').trim());
 
 // Every mapping a conversion uses: the mapping itself and those it reaches through via.
 function reachable(mapping, mappings) {
@@ -124,14 +130,36 @@ function reachable(mapping, mappings) {
  */
 export function mappingProblems(mapping, mappings = {}) {
   const out = [];
+  const id = mapping?.convert?.id;
+  if (id !== undefined && (typeof id !== 'string' || !/\{[\w.]+\}/.test(id))) out.push('convert.id must be a template such as "urn:ngsi-ld:Type:{attribute}"');
   for (const [name, map] of reachable(mapping, mappings)) {
-    for (const [field, rule] of Object.entries(map.fields ?? {})) {
+    if (map?.fields !== undefined && (!map.fields || typeof map.fields !== 'object' || Array.isArray(map.fields))) { out.push(`${name ? `${name}: ` : ''}fields must map each attribute to a rule, such as name: { column: 名称 }`); continue; }
+    for (const [field, rule] of Object.entries(map?.fields ?? {})) {
       const where = name ? `${name}: ${field}` : field;
-      if (rule?.transform !== undefined && !TRANSFORMS.includes(rule.transform)) out.push(`${where}: unknown transform "${rule.transform}" (known: ${TRANSFORMS.join(', ')})`);
-      if (rule?.via && !mappings[rule.via]) out.push(`${where}: no mapping ${rule.via}`);
+      // An empty row (name: or name: {}) converts nothing, like a row with only to.
+      if (rule === null) continue;
+      if (typeof rule !== 'object' || Array.isArray(rule)) { out.push(`${where}: a rule must be a mapping, such as { column: 名称 }`); continue; }
+      const cols = rule.column === undefined ? [] : [].concat(rule.column);
+      if (rule.column !== undefined && (!cols.length || cols.some((c) => typeof c !== 'string' || !c.trim()))) out.push(`${where}: column must be a column name or a list of them`);
+      if (rule.transform !== undefined && !TRANSFORMS.includes(rule.transform)) out.push(`${where}: unknown transform "${rule.transform}" (known: ${TRANSFORMS.join(', ')})`);
+      const [min, max] = COLUMNS[rule.transform] ?? [];
+      if (min && rule.column !== undefined && (cols.length < min || cols.length > max)) out.push(`${where}: transform ${rule.transform} reads ${max === Infinity ? `at least ${min}` : `${min} to ${max}`} columns, got ${cols.length}`);
+      if (rule.transform === 'flags' && (!rule.values || typeof rule.values !== 'object' || Array.isArray(rule.values))) out.push(`${where}: transform flags needs values, as column: value`);
+      if (rule.via && !mappings[rule.via]) out.push(`${where}: no mapping ${rule.via}`);
     }
   }
   return out;
+}
+
+/**
+ * Field names of a mapping that are not attributes of the model: a typo would
+ * otherwise be dropped by the schema without saying which row of the mapping
+ * caused it. `address.postalCode` names a field of the address; its own fields
+ * are checked by the schema. `id` is the entity id itself.
+ */
+export function unknownFields(mapping, schema) {
+  const props = schema?.properties ?? {};
+  return Object.keys(mapping?.fields ?? {}).filter((f) => f === 'type' || f === '@context' || !Object.hasOwn(props, f.split('.')[0])).map((f) => `${f}: not an attribute of ${schema?.title ?? 'the model'}`);
 }
 
 /** The columns a conversion reads, through via too: `column` names and the columns of `flags` values. */
@@ -145,6 +173,8 @@ export function mappedColumns(mapping, mappings = {}) {
   }
   return [...cols];
 }
+
+const parseJson = (text) => { try { return JSON.parse(text); } catch { return undefined; } };
 
 // One attribute from one row. Returns { value } (undefined means leave it out), and optionally fix or problem.
 function apply(rule, row, set) {
@@ -172,6 +202,27 @@ function apply(rule, row, set) {
       const vs = Object.entries(rule.values ?? {}).filter(([c]) => row[c] === '1').map(([, v]) => v);
       return { value: vs.length ? vs : undefined };
     }
+    // true or false as a spreadsheet or Table Schema writes them; empty is no value (flag reads empty as false).
+    case 'boolean': {
+      if (!one) return { value: undefined };
+      if (['true', 'True', 'TRUE', '1'].includes(one)) return { value: true };
+      if (['false', 'False', 'FALSE', '0'].includes(one)) return { value: false };
+      return { problem: `${cols[0]}: ${one} is not true or false` };
+    }
+    // Two columns, longitude and latitude, make a Point; one column holds a GeoJSON geometry; with three,
+    // the third is the GeoJSON for rows without longitude and latitude (the CSV template's columns).
+    case 'geometry': {
+      const [lon = '', lat = '', geo = ''] = cols.length === 1 ? ['', '', one] : raw;
+      if (lon || lat) {
+        const xy = [Number(lon), Number(lat)];
+        if (!lon || !lat || !xy.every(Number.isFinite)) return { problem: `${cols.slice(0, 2).join(', ')}: ${lon || '(empty)'}, ${lat || '(empty)'} is not a longitude and a latitude` };
+        return { value: { type: 'Point', coordinates: xy } };
+      }
+      if (!geo) return { value: undefined };
+      const g = parseJson(geo);
+      return g && typeof g === 'object' && typeof g.type === 'string' && (Array.isArray(g.coordinates) || Array.isArray(g.geometries)) ? { value: g } : { problem: `${cols.at(-1)}: not a GeoJSON geometry` };
+    }
+    case 'json': { if (!one) return { value: undefined }; const v = parseJson(one); return v === undefined ? { problem: `${cols[0]}: not JSON` } : { value: v }; }
     case 'split': { const vs = one.split(/[;；]/).map((x) => x.trim()).filter(Boolean); return { value: vs.length ? vs : undefined }; }
     // A municipality name ends in 市, 区, 町 or 村; a value that goes on (宇都宮市中央本町1-29) is the rest of the address.
     case 'municipality': return !one ? { value: undefined } : /[市区町村]$/.test(one) ? { value: one } : { value: undefined, fix: { repair: `left out ${cols[0]}: not a municipality name`, detail: one } };
@@ -184,11 +235,34 @@ function apply(rule, row, set) {
   }
 }
 
+// A field name with a dot (address.postalCode) is a field of a value: the values are nested.
+function nest(flat, problems) {
+  const out = {};
+  for (const [key, value] of Object.entries(flat)) {
+    const path = key.split('.');
+    let at = out;
+    for (const p of path.slice(0, -1)) {
+      at[p] ??= {};
+      if (typeof at[p] !== 'object' || Array.isArray(at[p])) { problems.push(`${key}: ${p} already has a value of its own`); at = null; break; }
+      // A copy: the object may be a value: of the mapping, the same for every row.
+      at[p] = { ...at[p] };
+      at = at[p];
+    }
+    if (at) at[path.at(-1)] = value;
+  }
+  return out;
+}
+
+const valueAt = (obj, path) => path.split('.').reduce((v, k) => (v && typeof v === 'object' ? v[k] : undefined), obj);
+
 /**
  * Entities from rows. `mapping` is the model's mapping file with `column`
  * rules; `mappings` resolves `via` names (subject/Type/mapping) to other
  * mapping files; `set` fills attributes the list does not carry (GSI's
  * municipality code from the file name) and goes through the same transform.
+ * A field `id` gives the entity id as it is; otherwise the convert.id
+ * template makes it. Ids in exponent form (1.31E+11) and ids that more than
+ * one row gets are problems of those rows.
  * Returns one { entity, fixes, problems } per row; a fix is { field, repair, detail }.
  */
 export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {}) {
@@ -217,18 +291,43 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
       if (r.fix) fixes.push({ field, ...r.fix });
       if (r.value !== undefined) out[field] = r.value;
     }
-    return out;
+    return nest(out, problems);
   };
-  return rows.map((row) => {
+  // The columns a top-level field reads, to see the value as the list wrote it.
+  const rawOf = (row, k) => [].concat(mapping.fields?.[k]?.column ?? []).map((c) => row[c]);
+  const results = rows.map((row) => {
     const fixes = [], problems = [];
-    const attrs = build(mapping, row, fixes, problems, true);
+    const { id: own, ...attrs } = build(mapping, row, fixes, problems, true);
+    const all = { id: own, ...attrs };
     const tpl = mapping.convert?.id;
     let id;
+    const rounded = (k) => [valueAt(all, k), ...rawOf(row, k)].find(exponentForm);
     if (tpl) {
-      const missing = [];
-      id = tpl.replace(/\{(\w+)\}/g, (_, k) => { if (attrs[k] === undefined) missing.push(k); return encodeURIComponent(String(attrs[k] ?? '')); });
-      if (missing.length) { problems.push(`id: no ${missing.join(', ')} for ${tpl}`); id = undefined; }
+      const missing = [], lost = [];
+      // A template that is only one value takes it as it is (a whole id); inside a longer id a value is encoded.
+      const whole = /^\{[\w.]+\}$/.test(tpl);
+      id = tpl.replace(/\{([\w.]+)\}/g, (_, k) => {
+        const v = valueAt(all, k);
+        if (v === undefined) missing.push(k);
+        if (rounded(k) !== undefined) lost.push(`${k} is ${rounded(k)}`);
+        return whole ? String(v ?? '') : encodeURIComponent(String(v ?? ''));
+      });
+      if (missing.length) problems.push(`id: no ${missing.join(', ')} for ${tpl}`);
+      if (lost.length) problems.push(`id: ${lost.join(', ')}, a number in exponent form: a spreadsheet rounded it and its digits are lost`);
+      if (missing.length || lost.length) id = undefined;
+    } else if (own !== undefined) {
+      if (rounded('id') !== undefined) problems.push(`id: ${rounded('id')} is a number in exponent form: a spreadsheet rounded it and its digits are lost`);
+      else id = String(own);
     } else problems.push('the mapping has no convert.id template');
     return { entity: { ...(id ? { id } : {}), type, ...attrs }, fixes, problems };
   });
+  // The same id on several rows: a broker would keep only one of them, so every one of those rows is a problem.
+  const where = (i) => (rows[i][LINE] ? `line ${rows[i][LINE]}` : `row ${i + 1}`);
+  const byId = new Map();
+  results.forEach((r, i) => { if (r.entity.id) byId.set(r.entity.id, [...(byId.get(r.entity.id) ?? []), i]); });
+  for (const [id, at] of byId) {
+    if (at.length < 2) continue;
+    for (const i of at) results[i].problems.push(`id: ${id} is not unique (also ${at.filter((j) => j !== i).slice(0, 5).map(where).join(', ')}${at.length > 6 ? `, and ${at.length - 6} more` : ''})`);
+  }
+  return results;
 }

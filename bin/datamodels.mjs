@@ -13,6 +13,20 @@
 // (encoding, repairs, invalid rows) goes to standard error; the exit code is 1
 // when a row is invalid or a file cannot be read, 2 for a usage error.
 //
+//   datamodels convert disaster/EvacuationSite ./my-list.yaml my-list.csv --check
+//   datamodels convert disaster/EvacuationSite csv-template sites.csv
+//
+// The mapping may also be a file of your own (a path, or a name ending in
+// .yaml), or csv-template for a CSV with the columns of the model's CSV
+// template. --check converts the first rows (--rows, default 20), writes
+// nothing and reports what to fix; the exit code is 0 when every checked row
+// is valid.
+//
+//   datamodels mapping disaster/EvacuationSite my-list.csv --out my-list.yaml
+//
+// mapping writes a first mapping file for a CSV: a row per attribute, with
+// the column that fits it or a TODO, for a person or an AI agent to finish.
+//
 //   datamodels build [dir] [--out dir]
 //
 // build writes the files a node publishes (node.yaml and models/ in dir,
@@ -48,9 +62,10 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
-import { decodeCsv, parseCsv, convertRows, mappingProblems, mappedColumns, LINE } from '../src/convert.mjs';
+import { decodeCsv, parseCsv, convertRows, mappingProblems, mappedColumns, unknownFields, LINE } from '../src/convert.mjs';
 import { toNormalized } from '../src/ngsi.mjs';
-import { siteReader, loadTarget, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
+import { siteReader, loadTarget, isMappingFile, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
+import { TEMPLATE, siteModel, templateMapping, catalogMappings, startMapping } from '../src/mapping.mjs';
 import { buildNode, readNode } from '../src/build/node.mjs';
 import { checkNode } from '../src/build/check.mjs';
 import { execFile } from 'node:child_process';
@@ -63,9 +78,11 @@ import { extendModel, extendableModels } from '../src/extend.mjs';
 import { exportModel, writeExport } from '../src/export.mjs';
 import { ADAPTERS } from '../src/adapters/index.mjs';
 import { unionCount } from '../src/adapters/ai/index.mjs';
+import { crossRules } from '../src/adapters/model.mjs';
 
 const USAGES = {
-  convert: `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`,
+  convert: `usage: datamodels convert <subject>/<Type> <mapping|file.yaml|${TEMPLATE}> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--check [--rows N]] [--site URL|dir]`,
+  mapping: `usage: datamodels mapping <subject>/<Type> <file.csv> [--out file.yaml] [--site URL|dir]`,
   build: `usage: datamodels build [dir] [--out dir]`,
   check: `usage: datamodels check [dir] [--offline]`,
   add: `usage: datamodels add <subject>/<Type> [dir] [--value]`,
@@ -85,9 +102,10 @@ const fail = (msg) => { throw new Exit(1, msg); };
 
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
-function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease, onExtend, onBump, onUpgrade, onExport }) {
+function program({ onConvert, onMapping, onBuild, onCheck, onInit, onAdd, onRelease, onExtend, onBump, onUpgrade, onExport }) {
   // An option's value: present, not empty (--out=) and not another option.
   const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
+  const count = (name) => (v) => { if (!/^[1-9]\d*$/.test(v)) throw new InvalidArgumentError(`${name} needs a whole number above 0`); return Number(v); };
   const cli = new Command('datamodels')
     .exitOverride()
     .configureOutput({ outputError: () => {} })
@@ -97,16 +115,26 @@ function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease, onExte
     .description('turn a published list (CSV) into entities of a catalog model, validated against its JSON Schema')
     .usage(USAGES.convert.replace('usage: datamodels convert ', ''))
     .argument('<subject/Type>', 'the model, as on its page, for example disaster/EvacuationSite')
-    .argument('<mapping>', "one of the model's mapping files")
+    .argument('<mapping>', `one of the model's mapping files, a mapping file of your own (./my-list.yaml), or ${TEMPLATE} for the columns of the model's CSV template`)
     .argument('<file.csv>', 'the list, UTF-8 or Shift_JIS')
     // In the words of the README; the README has the details and examples.
     .option('--set <attribute=value>', "a value the list does not carry, such as GSI's municipality code", (v, all = []) => [...all, value('--set')(v)])
     .option('--normalized', 'NGSI-LD normalized form instead of key-values')
     .option('--out <file.json>', 'write to a file (default: standard output)', value('--out'))
+    .option('--check', 'convert only the first rows, write nothing, and report what to fix in the mapping or the list')
+    .option('--rows <N>', 'how many rows --check converts (default 20)', count('--rows'))
     .option('--site <URL|dir>', 'where to read the catalog, or a directory laid out like the site', value('--site'), SITE)
     .addHelpText('after', '\nMore on each option, with examples: https://github.com/geolonia/datamodels-toolkit#readme')
     // exitOverride, the output and the help style are inherited from cli.
     .action(onConvert);
+  cli.command('mapping')
+    .description('write a first mapping file for your own list (CSV) and a catalog model: a row per attribute with the column that fits it, or a TODO')
+    .usage(USAGES.mapping.replace('usage: datamodels mapping ', ''))
+    .argument('<subject/Type>', 'the model, as on its page, for example disaster/EvacuationSite')
+    .argument('<file.csv>', 'the list, UTF-8 or Shift_JIS')
+    .option('--out <file.yaml>', 'write to a new file (default: standard output); an existing file is never overwritten', value('--out'))
+    .option('--site <URL|dir>', 'where to read the catalog, or a directory laid out like the site', value('--site'), SITE)
+    .action(onMapping);
   cli.command('build')
     .description("write the files a data model node publishes: catalog.json, @contexts, JSON Schemas, vocabularies, examples, llms.txt, the pages and the adapters' files")
     .usage(USAGES.build.replace('usage: datamodels build ', ''))
@@ -202,6 +230,7 @@ async function main(args) {
   let code = 0;
   const cli = program({
     onConvert: async (target, mappingName, file, options) => { code = await convert(target, mappingName, file, options); },
+    onMapping: async (target, file, options) => { code = await mapping(target, file, options); },
     onBuild: async (dir, options) => { code = await build(dir, options); },
     onCheck: async (dir, options) => { code = await check(dir, options); },
     onInit: async (dir, options) => { code = await init(dir, options); },
@@ -226,49 +255,102 @@ async function main(args) {
   return code;
 }
 
-async function convert(target, mappingName, file, { set: sets = [], normalized, out, site }) {
+async function convert(target, mappingName, file, { set: sets = [], normalized, out, site, check, rows: limit }) {
   if (sets.some((kv) => kv.indexOf('=') < 1)) usage('--set needs attribute=value', USAGES.convert);
+  if (limit !== undefined && !check) usage('--rows is for --check', USAGES.convert);
+  if (check && (out || normalized)) usage(`--check writes nothing; leave out ${out ? '--out' : '--normalized'}`, USAGES.convert);
 
+  const reader = siteReader(site);
   let loaded;
-  try { loaded = await loadTarget(siteReader(site), target, mappingName); } catch (e) { fail(e.message); }
-  const { entry, schema, mapping, mappings, validate, errorsText } = loaded;
+  try {
+    // The CSV template's rules come from the model's columns, the same as export writes them.
+    const template = mappingName === TEMPLATE ? templateMapping((await siteModel(reader, target)).columns) : undefined;
+    loaded = await loadTarget(reader, target, mappingName, { mapping: template });
+  } catch (e) { fail(e.message); }
+  const { entry, schema, mapping, mappings, validate, errorsText, todos } = loaded;
   // Rules this converter cannot apply stop the run before any row is read.
   const ruleProblems = mappingProblems(mapping, mappings);
   if (ruleProblems.length) fail(`${target} ${mappingName}: the mapping cannot be applied:\n${ruleProblems.map((p) => `  ${p}`).join('\n')}`);
+  // A file of your own may name an attribute the model does not have, or still have a TODO
+  // that datamodels mapping wrote: convert refuses it, --check reports it with the rows.
+  const ownProblems = [
+    ...(isMappingFile(mappingName) ? unknownFields(mapping, schema) : []),
+    ...todos.map((t) => `${t.file} line ${t.line}: a TODO is left: ${t.text.length > 100 ? `${t.text.slice(0, 99)}…` : t.text}`),
+  ];
+  if (ownProblems.length && !check) fail(`${target} ${mappingName}: the mapping is not finished:\n${ownProblems.map((p) => `  ${p}`).join('\n')}\n(datamodels convert ... --check shows what the rows need)`);
   const set = Object.fromEntries(sets.map((kv) => { const i = kv.indexOf('='); return [kv.slice(0, i), kv.slice(i + 1)]; }));
   // A name the mapping converts nothing into would be ignored without a word.
   const settable = Object.keys(mapping.fields ?? {}).filter((k) => mapping.fields[k]?.via === undefined && mapping.fields[k]?.value === undefined && mapping.fields[k]?.transform !== 'flags');
   const unknown = Object.keys(set).filter((k) => !settable.includes(k));
   if (unknown.length) usage(`--set ${unknown.join(', ')}: not a field that ${mappingName} fills (${settable.join(', ')})`, USAGES.convert);
 
-  let text, encoding, rows;
-  try { ({ text, encoding } = decodeCsv(await readFile(file))); rows = parseCsv(text); } catch (e) { fail(`${file}: ${e.message}`); }
+  let text, encoding, all;
+  try { ({ text, encoding } = decodeCsv(await readFile(file))); all = parseCsv(text); } catch (e) { fail(`${file}: ${e.message}`); }
+  const rows = check ? all.slice(0, limit ?? 20) : all;
   const results = convertRows(rows, mapping, { type: entry.type, mappings, set });
 
   const invalid = [];
   const invalidIndex = new Set();
   const repairs = new Map();
+  // --check shows the first schema errors of a row, convert all of them.
+  const schemaErrors = (errors) => (check && errors.length > 3 ? `${errorsText(errors.slice(0, 3))} (and ${errors.length - 3} more)` : errorsText(errors));
   for (const [i, r] of results.entries()) {
     for (const f of r.fixes) { const k = `${f.field}: ${f.repair}`; const e = repairs.get(k) ?? { n: 0, example: f.detail }; e.n++; repairs.set(k, e); }
-    if (r.problems.length || !validate(r.entity)) { invalidIndex.add(i); invalid.push({ line: rows[i][LINE], problems: [...r.problems, ...(r.problems.length ? [] : [errorsText(validate.errors)])] }); }
+    if (r.problems.length || !validate(r.entity)) { invalidIndex.add(i); invalid.push({ line: rows[i][LINE], problems: [...r.problems, ...(r.problems.length ? [] : [schemaErrors(validate.errors)])] }); }
   }
-  const context = [entry.contextAliasUrl, CORE_CONTEXT_URL];
-  const entities = results.filter((_, i) => !invalidIndex.has(i)).map((r) => (normalized ? toNormalized(r.entity, schema, context) : r.entity));
-  const json = `${JSON.stringify(entities, null, 2)}\n`;
-  if (out) {
-    try { await writeFile(out, json); } catch (e) { fail(`${out}: ${e.code ?? e.message}`); }
-  } else process.stdout.write(json);
-
-  console.error(`${file}: ${encoding}, ${rows.length} row(s), ${entities.length} valid ${entry.type}, ${invalid.length} invalid`);
+  const entities = results.filter((_, i) => !invalidIndex.has(i)).map((r) => r.entity);
+  if (!check) {
+    const context = [entry.contextAliasUrl, CORE_CONTEXT_URL];
+    const json = `${JSON.stringify(normalized ? entities.map((e) => toNormalized(e, schema, context)) : entities, null, 2)}\n`;
+    if (out) {
+      try { await writeFile(out, json); } catch (e) { fail(`${out}: ${e.code ?? e.message}`); }
+    } else process.stdout.write(json);
+    console.error(`${file}: ${encoding}, ${rows.length} row(s), ${entities.length} valid ${entry.type}, ${invalid.length} invalid`);
+  } else console.error(`${file}: ${encoding}, checked ${rows.length} of ${all.length} row(s) with ${mappingName}`);
+  for (const p of ownProblems) console.error(`  mapping: ${p}`);
   // Columns the mapping reads that the file does not have: their attributes stay empty, unless --set fills them.
   const filled = new Set(Object.keys(set).flatMap((k) => [].concat(mapping.fields[k]?.column ?? [])));
-  const absent = mappedColumns(mapping, mappings).filter((c) => !rows.columns.includes(c) && !filled.has(c));
+  const absent = mappedColumns(mapping, mappings).filter((c) => !all.columns.includes(c) && !filled.has(c));
   if (absent.length) console.error(`  not in the file, so left empty: ${absent.join(', ')}`);
-  if (rows.skipped.length) console.error(`  skipped ${rows.skipped.length} record(s) with only empty fields: line ${rows.skipped.slice(0, 10).join(', ')}${rows.skipped.length > 10 ? ', …' : ''}`);
+  // In a file of your own, such a column is most often a typo: --check counts it as a problem.
+  const own = isMappingFile(mappingName);
+  // Required attributes that no row gets: a column is missing from the mapping, not a fault of one row.
+  const required = (schema.required ?? []).filter((k) => k !== 'id' && k !== 'type');
+  const groups = crossRules(schema).atLeastOne;
+  const none = (k) => results.every((r) => r.entity[k] === undefined);
+  const missing = [...required.filter(none), ...groups.filter((g) => g.every(none)).map((g) => `one of ${g.join(', ')}`)];
+  if (check && rows.length && missing.length) console.error(`  required, but no row gets a value: ${missing.join('; ')}`);
+  if (all.skipped.length) console.error(`  skipped ${all.skipped.length} record(s) with only empty fields: line ${all.skipped.slice(0, 10).join(', ')}${all.skipped.length > 10 ? ', …' : ''}`);
   for (const [k, e] of repairs) console.error(`  repaired ${e.n}×: ${k} (e.g. ${e.example})`);
   for (const x of invalid.slice(0, 20)) console.error(`  line ${x.line}: ${x.problems.join('; ')}`);
   if (invalid.length > 20) console.error(`  … ${invalid.length - 20} more`);
-  return invalid.length ? 1 : 0;
+  if (!check) return invalid.length ? 1 : 0;
+  // The summary is the last line, so a script or an agent can read it alone.
+  const problems = ownProblems.length + (rows.length && missing.length ? 1 : 0) + (own && absent.length ? 1 : 0);
+  console.error(rows.length ? `${entities.length} of ${rows.length} rows valid${problems ? `; ${problems} problem(s) in the mapping` : ''}` : 'no rows to check');
+  return rows.length && !invalid.length && !problems ? 0 : 1;
+}
+
+async function mapping(target, file, { out, site }) {
+  const reader = siteReader(site);
+  let model, catalog;
+  try { model = await siteModel(reader, target); catalog = await catalogMappings(reader, model.entry); } catch (e) { fail(e.message); }
+  // The commands in the file name the model as convert takes it, also when it was given by its type IRI.
+  target = `${model.entry.subject}/${model.entry.type}`;
+  let encoding, rows;
+  try { let text; ({ text, encoding } = decodeCsv(await readFile(file))); rows = parseCsv(text); } catch (e) { fail(`${file}: ${e.message}`); }
+  const r = startMapping({ target, ...model, header: rows.columns, rows, catalog: catalog.mappings, csv: file, out });
+  if (out) {
+    // A mapping someone has filled in is work: never write over it.
+    try { await writeFile(out, r.text, { flag: 'wx' }); } catch (e) { fail(e.code === 'EEXIST' ? `${out}: the file exists, not overwritten (choose another name, or delete it first)` : `${out}: ${e.code ?? e.message}`); }
+  } else process.stdout.write(r.text);
+  for (const n of catalog.notes) console.error(`  note: ${n}`);
+  const [hint] = r.hints;
+  if (hint) console.error(`  note: the header has ${hint.n} of the ${hint.all} columns of the catalog's mapping ${hint.name}; if the list follows that standard, try: datamodels convert ${target} ${hint.name} ${file} --check`);
+  console.error(`  ${r.chosen.size} of ${r.targets.length} attributes and fields have a column; ${r.todos.length + (r.idTodo ? 1 : 0)} TODO(s)`);
+  if (r.unused.length) console.error(`  columns no row reads: ${r.unused.join(', ')}`);
+  console.error(`${file}: ${encoding}, ${rows.columns.length} column(s)${out ? `, mapping written to ${out}` : ''}. Next: fill in the TODOs, then datamodels convert ${target} ${out ?? '<mapping.yaml>'} ${file} --check`);
+  return 0;
 }
 
 async function build(dir, { out }) {

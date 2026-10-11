@@ -1,0 +1,55 @@
+# Correspondence between EvacuationSite and the Cabinet Office's EEI
+# (災害対応基本共有情報) version 1.1, item 21 避難所等: 避難場所.
+standard:
+  name:
+    ja: 災害対応基本共有情報（EEI）第1.1版（内閣府（防災担当）、2025年6月）「21 避難所等：避難場所」
+    en: "Essential Elements of Information (EEI, 災害対応基本共有情報) version 1.1 (Cabinet Office, June 2025), item 21 避難所等: 避難場所 (evacuation sites)"
+  url: https://www.bousai.go.jp/kaigirep/kentokai/dataplatform/pdf/jitsumu/r7/dai2kai/siryo1.pdf
+  license:
+    ja: "内閣府ホームページ利用規約による公共データ利用規約（第1.0版）（PDL1.0、CC BY 4.0 と互換）"
+    en: "Public Data License (Version 1.0) (PDL1.0) under the Cabinet Office website terms of use (内閣府ホームページ利用規約), compatible with CC BY 4.0"
+  note:
+    ja: "EEI は新総合防災情報システム（SOBO-WEB）で国・自治体・指定公共機関が共有する災害情報の一覧。情報項目ごとにデータ属性の名前と、基本共有データ属性（連携時に必須、空欄可）か特定データ属性（連携を推奨）かの区分を定める。型、コード表、機械可読な定義は無い。以下の「基本」「特定」はこの区分。EEI の属性のうち本モデルに項目が無いもの：公示日（指定）、公示日（取消）、算定基準、駐車場の有無（台数）、車中泊の可否、最終更新日（いずれも特定。最終更新日は NGSI-LD の modifiedAt で表せる）。"
+    en: "EEI lists the disaster information that national and local governments and designated public institutions share through the Cabinet Office's disaster information system (新総合防災情報システム, SOBO-WEB). For each information item it names the data attributes and marks each as 基本共有データ属性 (basic: required when exchanging, may be empty) or 特定データ属性 (specific: recommended). It defines no data types, code lists or machine-readable schema. 基本 and 特定 below are these classes. EEI attributes with no field here: 公示日（指定）, 公示日（取消）, 算定基準, 駐車場の有無（台数）, 車中泊の可否 and 最終更新日 (all specific; 最終更新日 is NGSI-LD's modifiedAt)."
+fields:
+  nationalShelterId: { to: 全国共通避難所・避難場所ID（基本） }
+  localGovernmentCode: { to: 地方公共団体コード（基本） }
+  name: { to: 施設名（基本） }
+  address:
+    to: 所在地（住所）（基本）
+    note:
+      ja: 都道府県名と市区町村名（どちらも基本）は JapaneseAddress の addressRegion と addressLocality
+      en: 都道府県名 and 市区町村名 (both basic) are the addressRegion and addressLocality of the JapaneseAddress
+  location:
+    to: 緯度、経度（基本）
+    note:
+      ja: "[経度, 緯度] の点"
+      en: "a point [longitude, latitude]"
+  hazardTypes:
+    to: 対象とする災害（基本、8 項目）
+    note:
+      ja: "洪水 → flood、崖崩れ等 → landslide、高潮 → stormSurge、地震 → earthquake、津波 → tsunami、大規模な火事 → greatFire、内水氾濫 → inlandFlood、火山 → eruption。EEI の「該当する」が hazardTypes にその値があることに当たる"
+      en: "洪水 → flood, 崖崩れ等 → landslide, 高潮 → stormSurge, 地震 → earthquake, 津波 → tsunami, 大規模な火事 → greatFire, 内水氾濫 → inlandFlood, 火山 → eruption; EEI's 該当する (applies) is the value being in hazardTypes"
+  alsoDesignatedShelter: { to: 指定避難所との重複（基本） }
+  alsoWelfareShelter: { to: 指定福祉避難所との重複（基本） }
+  maxCapacity: { to: 想定収容人数（基本） }
+  telephone:
+    to: 管理担当連絡先（特定）
+    note:
+      ja: EEI は管理を担当する組織・部署・施設の連絡先。telephone は施設の電話番号
+      en: "EEI means the contact of the managing organisation, department or facility; telephone is the site's number"
+  nameKana:
+    to: null
+    note:
+      ja: 避難場所の項目には無い（避難所と一時滞在施設にはある）
+      en: not an attribute of 避難場所 (避難所 and 一時滞在施設 have it)
+  elevation:
+    to: null
+    note:
+      ja: 避難場所の項目には無い（避難所には標高がある。特定）
+      en: "not an attribute of 避難場所 (避難所 has 標高, specific)"
+  nameEn: { to: null }
+  externalSiteId: { to: null }
+  targetAreas: { to: null }
+  url: { to: null }
+  description: { to: null }
