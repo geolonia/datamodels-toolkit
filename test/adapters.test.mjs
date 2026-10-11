@@ -342,7 +342,7 @@ test('export reads a model\'s schema only from the catalog\'s own site', async (
 test('a redirect is followed only to https on a public host name', async () => {
   const { getter, publicUrl } = await import('../src/adapters/index.mjs');
   for (const ok of ['https://dkastl.github.io/models/schema/x.json', 'https://w3id.org/x/schema/a.json']) assert.ok(publicUrl(ok), ok);
-  for (const bad of ['http://example.org/x', 'https://169.254.169.254/x', 'https://127.0.0.1/x', 'https://[::1]/x', 'https://localhost/x', 'https://printer.local/x', 'https://db.internal/x', 'https://intranet/x', 'https://u:p@example.org/x']) assert.ok(!publicUrl(bad), bad);
+  for (const bad of ['http://example.org/x', 'https://169.254.169.254/x', 'https://127.0.0.1/x', 'https://[::1]/x', 'https://localhost/x', 'https://printer.local/x', 'https://db.internal/x', 'https://intranet/x', 'https://u:p@example.org/x', 'https://localhost./x', 'https://printer.local./x', 'https://intranet./x']) assert.ok(!publicUrl(bad), bad);
   const redirecting = (to) => async (url) => (url === 'https://w3id.org/n/schema/a.json'
     ? { ok: false, status: 302, headers: new Headers({ location: to }) }
     : { ok: true, status: 200, json: async () => ({ to: url }) });
@@ -350,4 +350,22 @@ test('a redirect is followed only to https on a public host name', async () => {
   await assert.rejects(getter(redirecting('http://169.254.169.254/latest/meta-data/'), 1000)('https://w3id.org/n/schema/a.json'), /redirects to http:\/\/169\.254\.169\.254\/latest\/meta-data\/, not followed/);
   const loop = async (url) => ({ ok: false, status: 302, headers: new Headers({ location: `${url}x` }) });
   await assert.rejects(getter(loop, 1000)('https://example.org/a'), /at most 5 times/);
+});
+
+test('PostGIS: schema values cannot add SQL of their own', () => {
+  const evil = (prop, required = []) => ({ type: 'Thing', kind: 'entity', catalog: { attributes: {} }, schema: { required: ['id', 'type', ...required], properties: { id: { type: 'string' }, type: { const: 'Thing' }, n: { 'x-iri': 'https://example.org/ns#n', ...prop } } } });
+  const ctx = { urls: catalogUrls('https://example.org'), languages: ['en'], refs: {} };
+  const s = { name: 's', version: '1.0.0' };
+  assert.throws(() => createTable(s, evil({ type: 'number', minimum: '0); DROP TABLE important; --' }), ctx), /minimum must be a number/);
+  assert.throws(() => createTable(s, evil({ type: 'string', maxLength: '1) OR (1=1' }), ctx), /maxLength must be a whole number/);
+  assert.throws(() => createTable(s, evil({ type: 'array', items: { type: 'string' }, minItems: '1); DROP TABLE x; --' }), ctx), /minItems must be a whole number/);
+  // A line break in a catalog value cannot end a -- comment.
+  const model = { ...evil({ type: 'string' }), links: { typeIri: 'https://example.org/ns#Thing\nDROP TABLE important;', schemaUrl: 'https://example.org/s.json', contextUrl: 'https://example.org/c.jsonld\r\nDROP TABLE x;' } };
+  const sql = createTable({ name: 's\nDROP TABLE y;', version: '1.0.0' }, model, ctx);
+  // The header stays three comment lines; elsewhere the values are inside quoted literals (quotes doubled).
+  const lines = sql.split('\n');
+  assert.ok(lines.slice(0, 3).every((l) => l.startsWith('-- ')), sql);
+  assert.match(lines[0], /^-- Thing: https:\/\/example\.org\/ns#Thing DROP TABLE important;$/);
+  const outsideLiterals = sql.replace(/'(?:[^']|'')*'/g, "''");
+  assert.ok(!/^DROP TABLE/m.test(outsideLiterals), outsideLiterals);
 });

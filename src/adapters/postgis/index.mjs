@@ -33,6 +33,13 @@ function sqlType(value) {
   return { string: 'text', integer: 'bigint', number: 'double precision', boolean: 'boolean' }[value.type];
 }
 
+// Schema values written into the SQL as they are, not as quoted literals: only finite numbers
+// (and non-negative integers for counts), so a schema can never add SQL of its own.
+const num = (v, what) => { if (typeof v === 'number' && Number.isFinite(v)) return String(v); throw new Error(`${what} must be a number, not ${JSON.stringify(v)}`); };
+const count = (v, what) => { if (Number.isInteger(v) && v >= 0) return String(v); throw new Error(`${what} must be a whole number of 0 or more, not ${JSON.stringify(v)}`); };
+/** A value in a -- comment: on one line, so it cannot end the comment. */
+const oneLine = (v) => String(v ?? '').replace(/[\r\n\u0085\u2028\u2029]+/g, ' ');
+
 /** The CHECK conditions of a plain value in column `col`. */
 function valueChecks(col, value) {
   const checks = [];
@@ -41,12 +48,12 @@ function valueChecks(col, value) {
   if (value.formats) checks.push(`${col} ~ ${literal(DATE_OR_DATE_TIME)}`);
   // PostgreSQL's regular expressions (ARE) read the catalog's patterns as JSON Schema does, lookaheads included.
   if (value.pattern) checks.push(`${col} ~ ${literal(value.pattern)}`);
-  if (value.minimum !== undefined) checks.push(`${col} >= ${value.minimum}`);
-  if (value.maximum !== undefined) checks.push(`${col} <= ${value.maximum}`);
-  if (value.exclusiveMinimum !== undefined) checks.push(`${col} > ${value.exclusiveMinimum}`);
-  if (value.exclusiveMaximum !== undefined) checks.push(`${col} < ${value.exclusiveMaximum}`);
-  if (value.minLength !== undefined) checks.push(`char_length(${col}) >= ${value.minLength}`);
-  if (value.maxLength !== undefined) checks.push(`char_length(${col}) <= ${value.maxLength}`);
+  if (value.minimum !== undefined) checks.push(`${col} >= ${num(value.minimum, `${col}: minimum`)}`);
+  if (value.maximum !== undefined) checks.push(`${col} <= ${num(value.maximum, `${col}: maximum`)}`);
+  if (value.exclusiveMinimum !== undefined) checks.push(`${col} > ${num(value.exclusiveMinimum, `${col}: exclusiveMinimum`)}`);
+  if (value.exclusiveMaximum !== undefined) checks.push(`${col} < ${num(value.exclusiveMaximum, `${col}: exclusiveMaximum`)}`);
+  if (value.minLength !== undefined) checks.push(`char_length(${col}) >= ${count(value.minLength, `${col}: minLength`)}`);
+  if (value.maxLength !== undefined) checks.push(`char_length(${col}) <= ${count(value.maxLength, `${col}: maxLength`)}`);
   return checks;
 }
 
@@ -107,7 +114,7 @@ export function createTable(subject, model, context) {
       const col = add(name, `${sqlType(c.item)}[]`, { notNull: c.required, texts: c.texts, iris: [c.iri] });
       const values = c.item.enum ?? (c.item.const !== undefined ? [c.item.const] : null);
       if (values) checks.push(`${col} <@ ARRAY[${values.map(literal).join(', ')}]::${sqlType(c.item)}[]`);
-      if (c.minItems) checks.push(`cardinality(${col}) >= ${c.minItems}`);
+      if (c.minItems) checks.push(`cardinality(${col}) >= ${count(c.minItems, `${col}: minItems`)}`);
       if (c.uniqueItems) { checks.push(`${UNIQUE_ITEMS}(${col})`); needsUnique = true; }
       // No empty values in a list: NGSI-LD has no null inside a value.
       checks.push(`array_position(${col}, NULL) IS NULL`);
@@ -123,9 +130,9 @@ export function createTable(subject, model, context) {
     if (cols.length) checks.push(cols.map((col) => `${col} IS NOT NULL`).join(' OR '));
   }
   const header = [
-    `-- ${model.type}: ${links.typeIri}`,
-    `-- ${subject.name} v${subject.version}. JSON Schema: ${links.schemaUrl}`,
-    `-- @context: ${links.contextUrl}`,
+    `-- ${oneLine(model.type)}: ${oneLine(links.typeIri)}`,
+    `-- ${oneLine(subject.name)} v${oneLine(subject.version)}. JSON Schema: ${oneLine(links.schemaUrl)}`,
+    `-- @context: ${oneLine(links.contextUrl)}`,
     '-- Columns are the attributes in snake_case; <attribute>_<field> columns are the fields of one value (an address).',
     ...(rules.other ? [`-- Not checked here: rules that span attributes (if/then), in the JSON Schema.`] : []),
   ];

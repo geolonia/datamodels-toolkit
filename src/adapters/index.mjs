@@ -27,7 +27,8 @@ export const normalUrl = (url) => { try { return new URL(url).href; } catch { re
 export function publicUrl(url) {
   let u;
   try { u = new URL(url); } catch { return false; }
-  const host = u.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  // A trailing dot is DNS notation for the same name (localhost. is localhost).
+  const host = u.hostname.replace(/^\[|\]$/g, '').replace(/\.+$/, '').toLowerCase();
   if (u.protocol !== 'https:' || u.username || u.password) return false;
   if (/^[\d.]+$/.test(host) || host.includes(':')) return false;
   return !/(^|\.)(localhost|local|internal|home\.arpa)$/.test(host) && host.includes('.');
