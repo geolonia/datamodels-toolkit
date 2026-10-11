@@ -2,7 +2,7 @@
 
 Command-line tools for the [datamodels.jp](https://datamodels.jp) catalog.
 
-`convert` turns a published list (CSV) into entities of a catalog model; `build` writes the files of a data model node, a site of your own in the [web of data models](https://github.com/geolonia/datamodels/issues/200). More commands come only when someone needs them for a real task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
+`convert` turns a published list (CSV) into entities of a catalog model; `export` writes files made from a model for tools that do not read NGSI-LD (a spreadsheet, an AI model, PostgreSQL); `build` writes the files of a data model node, a site of your own in the [web of data models](https://github.com/geolonia/datamodels/issues/200). More commands come only when someone needs them for a real task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
 
 ## Install
 
@@ -77,6 +77,41 @@ It copies the other model's schema at its current version, imports its `@context
 - **Default:** the same type with more attributes. The type keeps the other model's IRI (`x-alias-of`).
 - **`--subclass`:** a type of its own in this node's namespace, with the other model as its parent (`x-subclass-of`).
 
+## export
+
+```bash
+datamodels export disaster/EvacuationSite --to csv,table-schema       # a CSV template and its Table Schema
+datamodels export disaster/EvacuationSite --to ai --out schemas       # structured output for AI
+datamodels export disaster/EvacuationSite --to postgis                # a PostgreSQL / PostGIS table
+datamodels export road/RoadPatrol my-node --to postgis                # a model of your own node
+```
+
+Writes the files of one or more adapters for one entity model into `--out` (default: the current directory), named `<Type>.<ext>`. The model is the node's in `[dir]` (default: the current directory) when it has one; otherwise it is `<subject>/<Type>` (or its type IRI) in another node's `catalog.json`: `--index`, default the first node in `node.yaml`, else datamodels.jp. Every file uses the model's attribute names and IRIs, so data converts to the NGSI-LD form and back without a mapping.
+
+| `--to` | File | What it is |
+|---|---|---|
+| `csv` | `<Type>.csv` | The header row of a CSV file: one column per attribute. Fill in one row per entity in a spreadsheet. |
+| `table-schema` | `<Type>.tableschema.json` | A [Frictionless Table Schema](https://datapackage.org/standard/table-schema/) (v2) for those columns, so a CSV file can be checked with `frictionless validate` or another Table Schema tool: types, required columns, allowed values, patterns, limits. |
+| `ai` | `<Type>.ai.json` | A strict JSON Schema for the structured output of a large language model, to extract entities from text: `{ name, description, strict, schema }`, the `json_schema` of OpenAI's Structured Outputs, and `schema` is the `input_schema` of a Claude tool. |
+| `postgis` | `<Type>.sql` | `CREATE TABLE` for PostgreSQL with PostGIS: one row per entity, constraints for the model's rules, the location as a geometry with a GiST index, and the descriptions and IRIs in `COMMENT ON`. |
+
+How the model becomes columns, the same in the CSV file and the table:
+
+- One column per attribute, named as the attribute (`hazardTypes`); in SQL in snake_case (`hazard_types`). `id` is the first column and the primary key; `type` is the model.
+- `location`: in the CSV file `longitude` and `latitude` (WGS 84); a model that allows other shapes than a point also has a `location` column for a GeoJSON geometry. In SQL `geometry(<type>, 4326)`, with the type the model allows (`Point`, or `Geometry` for any).
+- A value type made of plain fields, such as `address` (JapaneseAddress), becomes one column per field: `address.postalCode` in the CSV file, `address_postal_code` in SQL, each with its own rules. One column per field, not one JSON column, so a spreadsheet can fill it and SQL can check and index each field.
+- A list of plain values: one column, the values separated by `;` (a Table Schema `list`); in SQL an array (`text[]`) whose values are checked.
+- Anything else (a JSON structure, such as the answers of a Decision): JSON in one column, checked with the attribute's JSON Schema (Table Schema `jsonSchema`; `jsonb` in SQL).
+- Rules on several attributes ("at least one of externalSiteId and nationalShelterId"): a `CHECK` in SQL, a sentence in the Table Schema's and the AI schema's descriptions. Other rules (if/then) stay in the JSON Schema; the files say so.
+
+The Table Schema has its titles and descriptions in the first language of the catalog (Japanese for datamodels.jp) and the others under `x-translations`; each column's IRI is `x-iri`, and `x-typeIri`, `x-schema` and `x-context` name the model. Table Schema has no short labels in the catalog to draw on: a title is the start of the description when that is short.
+
+The AI schema keeps to what both OpenAI's and Anthropic's structured outputs accept, as their documentation says on 2026-10-11 ([OpenAI, supported schemas](https://developers.openai.com/api/docs/guides/structured-outputs#supported-schemas), [Anthropic, JSON Schema limitations](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)): every object has `additionalProperties: false` and lists every property in `required`, and an optional attribute may be `null` instead; no `$ref` (the value types are written out); `anyOf` instead of `oneOf`; formats `date-time`, `date`, `time`, `duration`, `email`, `hostname`, `ipv4`, `ipv6` and `uuid` only; patterns without lookarounds; no `minimum`, `maximum`, `minLength`, `maxLength`, `maxItems` or `uniqueItems`, and `minItems` only 0 or 1. What it leaves out goes into the description, for example "(minimum 0; maximum 9)". `id` and `type` are not in it: your application sets them, and the key-values entity is the answer plus `id`, `type` and `@context`. Descriptions are in English. A model with an attribute that has no strict form (a map with any keys, such as Decision's answers) has no AI file.
+
+Claude's strict mode takes at most 16 properties with a union (a type with `null`) per request, and most models have more optional attributes; `export` says so. Use the schema there as a tool's `input_schema` without `strict`, or remove the attributes you do not need. OpenAI's strict mode takes it as it is.
+
+`build` writes the same files for every entity model of a node; see [build](#build).
+
 ## build
 
 ```bash
@@ -97,7 +132,7 @@ nodes:              # optional: nodes you know; a context may import theirs
   - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
 ```
 
-It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples, `llms.txt` and the pages. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`).
+It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples, `llms.txt`, the pages and the adapters' files: for every entity model the files of [export](#export) at `/adapters/<name>/<subject>/<Type>.<ext>` (`csv`, `table-schema`, `ai`, `postgis`), listed under `adapters` in the model's entry in `catalog.json`, as on datamodels.jp. Schemas that a model refers to on another node (such as datamodels.jp's JapaneseAddress) are read online; when one cannot be read, that model gets no adapter files and `build` says so. Adapter files are rebuilt every time and are not covered by the promise that published files never change. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`).
 
 The pages are plain HTML in a monospace font, with no JavaScript, so they read well with `curl` too ([Eleventy](https://www.11ty.dev/) writes them):
 
@@ -105,6 +140,7 @@ The pages are plain HTML in a monospace font, with no JavaScript, so they read w
 - One page per subject. With hash IRIs it is the namespace document (`/ns/<subject>`, written as `ns/<subject>.html`), with an anchor for every type and attribute, so every IRI opens on it.
 - One page per model (`/models/<subject>/<Type>/`), with an anchor per attribute, the standards it maps (`mapping/*.yaml`, with links to the tables) and its notes (`notes.yaml`: the sources, the decisions and their reasons), so readers can judge how well-founded it is.
 - For a model that a released version had and the current one does not (renamed or removed): a page at its old address that says which versions had it, links its last schema and @context, names the current model with the same type IRI when there is one, and lists the current models. The subject page keeps an anchor for every term that earlier versions minted, so their hash IRIs still open on it. Both come from the release snapshots (`datamodels release`, `bump`).
+- `/adapters/`: what each adapter writes and its file for every model. A model page links its row there, without naming a product.
 - `404.html`: what GitHub Pages and most static hosts show for an address with no page (for example the page of a model that a new version renamed). One page at the root, in the node's first language with the other languages' texts, linking to the index, `catalog.json` and every model.
 
 One set of pages per language of the node: the first language at the base URL (where the IRIs open), each other one under `/<lang>/` (for example `/en/`), with a link to switch in the header. Each page shows the node's texts in its language, falling back to the first language that has one; the fixed texts are in Japanese and English (English for other languages). When English is not the first language, `catalog.json` lists the English pages as `pageUrlEn`, as datamodels.jp does. The pages follow the device's light or dark setting.

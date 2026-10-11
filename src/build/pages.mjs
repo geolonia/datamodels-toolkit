@@ -37,7 +37,7 @@ const pick = (o, lang, languages) => {
 };
 
 /** What the templates show for the pages in `lang` (default: the node's first language), with every URL resolved. */
-export function pageData(subjects, { urls, node, lang = node.languages[0], former = new Map() }) {
+export function pageData(subjects, { urls, node, lang = node.languages[0], former = new Map(), adapters = [] }) {
   const { languages } = node;
   const t = pageTexts(lang);
   const texts = (o) => pick(o, lang, languages);
@@ -60,6 +60,9 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
   };
   const models = [];
   const formerModels = [];
+  // The adapters' files, by model: one row per model on the adapters page, which the model page links (product-neutral).
+  const adapterRows = [];
+  const adaptersPage = `${prefixOf(lang)}adapters/`;
   const out = subjects.map((subject) => {
     const su = urls.subjectUrls(subject);
     // The terms this subject mints, grouped by the model that defines them; each has its anchor here.
@@ -97,6 +100,12 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
         notes: (Array.isArray(model.notes?.notes) ? model.notes.notes : []).map((n) => texts(n)).filter((n) => n.length),
         subject: { name: subject.name, page: at(su.page) },
       };
+      const files = adapters.map((a) => a.urlFor(subject, model));
+      m.adapters = null;
+      if (files.some(Boolean)) {
+        m.adapters = `${adaptersPage}#${`${subject.name}-${model.type}`.toLowerCase()}`;
+        adapterRows.push({ anchor: `${subject.name}-${model.type}`.toLowerCase(), name: `${subject.name}/${model.type}`, page: m.page, files: files.map((u) => (u ? { url: u, name: u.split('/').pop() } : null)) });
+      }
       models.push(m);
       return m;
     });
@@ -120,16 +129,17 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
       models: subjectModels, termGroups, termExample: termGroups[0]?.terms[0]?.iri ?? '',
     };
   });
-  return { site, t, subjects: out, models, formerModels };
+  const adapterList = adapters.map((a) => ({ name: a.name, label: texts(a.label)[0] ?? { lang, text: a.name }, note: texts(a.note)[0] ?? null }));
+  return { site, t, subjects: out, models, formerModels, adapters: adapterList, adapterRows };
 }
 
 /** Write the pages into `out`, one set per language. Returns the paths written, relative to `out`. */
-export async function writePages(subjects, { urls, node, out }) {
+export async function writePages(subjects, { urls, node, out, adapters = [] }) {
   const written = [];
   const former = new Map();
   for (const s of subjects) former.set(s.name, await formerOf(s, { urls, languages: node.languages }));
   for (const lang of node.languages) {
-    const data = pageData(subjects, { urls, node, lang, former });
+    const data = pageData(subjects, { urls, node, lang, former, adapters });
     const dir = lang === node.languages[0] ? out : join(out, lang);
     const eleventy = new Eleventy(TEMPLATES, dir, {
       quietMode: true,

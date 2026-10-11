@@ -34,6 +34,9 @@ eleventyComputed:
 {%- for x in m.examples %}
 <dt>{{ t.example }}</dt><dd><a href="{{ x }}">{{ x }}</a></dd>
 {%- endfor %}
+{%- if m.adapters %}
+<dt>{{ t.adapters }}</dt><dd><a href="{{ m.adapters }}">{{ t.adaptersLine }}</a></dd>
+{%- endif %}
 </dl>
 <h2>{{ t.attributes }}</h2>
 {%- for a in m.attributes %}

@@ -86,7 +86,7 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   const desc = join(dir, 'models', 'road', 'subject.yaml');
   await writeFile(desc, (await readFile(desc, 'utf8')).replace('Road maintenance.', '"Road <b>maintenance</b>."'));
   const { pages, catalog } = await buildNode(dir);
-  assert.deepEqual(pages, ['404.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
+  assert.deepEqual(pages, ['404.html', 'adapters/index.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
   const read = (p) => readFile(join(dir, '_site', p), 'utf8');
   for (const p of pages) {
     const html = await read(p);
@@ -115,6 +115,12 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   assert.match(model, /<h3 id="route">route<\/h3>/);
   assert.match(model, /<dt>Extends<\/dt><dd><a href="https:\/\/datamodels\.jp\/ns\/task\/Task">/);
   assert.match(model, /<title>RoadPatrol: Data models by Example Inc\.<\/title>/);
+  // The adapters' files: the model page links its row on the adapters page, without naming a product.
+  assert.match(model, /<dt>Adapters<\/dt><dd><a href="https:\/\/models\.example\.org\/adapters\/#road-roadpatrol">Files for tools, made from this model<\/a><\/dd>/);
+  const adapters = await read('adapters/index.html');
+  assert.match(adapters, /<tr id="road-roadpatrol"><td><a href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/">road\/RoadPatrol<\/a><\/td><td><a href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv">RoadPatrol\.csv<\/a><\/td>/);
+  assert.deepEqual(catalog.models[0].adapters, Object.fromEntries(['csv', 'table-schema', 'ai', 'postgis'].map((n, i) => [n, `${BASE}/adapters/${n}/road/RoadPatrol.${['csv', 'tableschema.json', 'ai.json', 'sql'][i]}`])));
+  assert.equal(await read('adapters/csv/road/RoadPatrol.csv'), 'id,route\n');
   // The anchor follows the IRI, not the attribute's name.
   const sf = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
   const sj = JSON.parse(await readFile(sf, 'utf8'));
@@ -147,7 +153,7 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   await writeFile(join(road, 'RoadPatrol', 'mapping', 'city-ledger.yaml'), 'standard:\n  name: { ja: 市の道路台帳, en: The city road ledger }\n  url: https://example.org/ledger\nfields:\n  route: { to: 路線名 }\n');
   const { pages } = await buildNode(dir);
   // One 404.html, at the root: static hosts answer every missing address with it.
-  assert.deepEqual(pages, ['404.html', 'en/index.html', 'en/models/road/RoadPatrol/index.html', 'en/ns/road.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
+  assert.deepEqual(pages, ['404.html', 'adapters/index.html', 'en/adapters/index.html', 'en/index.html', 'en/models/road/RoadPatrol/index.html', 'en/ns/road.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
   const read = (p) => readFile(join(dir, '_site', p), 'utf8');
   const missing = await read('404.html');
   assert.match(missing, /<html lang="ja">/);
@@ -168,6 +174,9 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   assert.match(ja, /<link rel="alternate" hreflang="x-default" href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/">/);
   assert.match(ja, /<span lang="ja">日本語<\/span> \| <a href="https:\/\/models\.example\.org\/en\/models\/road\/RoadPatrol\/" hreflang="en" lang="en">English<\/a>/);
   assert.match(ja, /<dt>段階<\/dt><dd>試行<\/dd>/);
+  assert.match(ja, /<dt>アダプター<\/dt><dd><a href="https:\/\/models\.example\.org\/adapters\/#road-roadpatrol">/);
+  assert.match(en, /<dt>Adapters<\/dt><dd><a href="https:\/\/models\.example\.org\/en\/adapters\/#road-roadpatrol">/);
+  assert.match(await read('adapters/index.html'), /<h1>アダプター<\/h1>/);
   // Why the model is as it is: the standards it maps and its notes, in the page's language.
   assert.match(ja, /<h2>参照している標準<\/h2>\n<ul>\n<li><a href="https:\/\/example\.org\/ledger" lang="ja">市の道路台帳<\/a>（<a href="https:\/\/models\.example\.org\/mapping\/road\/RoadPatrol\/city-ledger\.yaml">対応表<\/a>）<\/li>/);
   assert.match(ja, /<h2>注記<\/h2>\n<ul>\n<li lang="ja">巡回の記録だけを扱う。<\/li>/);

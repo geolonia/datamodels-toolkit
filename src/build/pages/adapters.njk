@@ -1,0 +1,33 @@
+---js
+{
+  layout: "base.njk",
+  // Only for a node with adapter files.
+  eleventyComputed: {
+    permalink: (data) => (data.adapterRows.length ? "adapters/index.html" : false),
+    title: (data) => `${data.t.adapters}${data.t.titleSep}${data.site.title}`,
+    description: (data) => data.t.adaptersIntro,
+    path: "adapters/",
+    schema: "",
+  },
+}
+---
+<h1>{{ t.adapters }}</h1>
+<p>{{ t.adaptersIntro }}</p>
+<ul>
+{%- for r in t.adaptersRules %}
+<li>{{ r }}</li>
+{%- endfor %}
+</ul>
+<table>
+<tr><th>{{ t.adapter }}</th><th>{{ t.adapterWhat }}</th></tr>
+{%- for a in adapters %}
+<tr><td lang="{{ a.label.lang }}">{{ a.label.text }}</td><td{% if a.note %} lang="{{ a.note.lang }}"{% endif %}>{% if a.note %}{{ a.note.text }}{% endif %}</td></tr>
+{%- endfor %}
+</table>
+<h2 id="models">{{ t.byModel }}</h2>
+<table>
+<tr><th>{{ t.model }}</th>{% for a in adapters %}<th lang="{{ a.label.lang }}">{{ a.label.text }}</th>{% endfor %}</tr>
+{%- for r in adapterRows %}
+<tr id="{{ r.anchor }}"><td><a href="{{ r.page }}">{{ r.name }}</a></td>{% for f in r.files %}<td>{% if f %}<a href="{{ f.url }}">{{ f.name }}</a>{% else %}—{% endif %}</td>{% endfor %}</tr>
+{%- endfor %}
+</table>

@@ -1,0 +1,246 @@
+// The adapters (src/adapters/): a CSV template, a Table Schema, a strict JSON
+// Schema for AI, a PostgreSQL / PostGIS table, for the fixture models, and the
+// export command. With DATAMODELS_TEST_POSTGIS set to the name of a running
+// postgis/postgis container, the SQL of every fixture model is also loaded into it.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { execFile, spawnSync } from 'node:child_process';
+import { mkdtemp, writeFile, readFile, cp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { promisify } from 'node:util';
+import { catalogUrls, loadSubjects, buildNode } from '../src/build/index.mjs';
+import { ADAPTERS, localRefs, readRefs } from '../src/adapters/index.mjs';
+import { columnsOf, shortTitle, snake } from '../src/adapters/model.mjs';
+import { fieldsOf, tableSchemaOf, xsdPattern } from '../src/adapters/table-schema/index.mjs';
+import { csvHeader } from '../src/adapters/csv/index.mjs';
+import { structuredOutputOf, unionCount, NotStrict } from '../src/adapters/ai/index.mjs';
+import { createTable, ident } from '../src/adapters/postgis/index.mjs';
+import { exportModel } from '../src/export.mjs';
+
+const run = promisify(execFile);
+const BIN = join(import.meta.dirname, '..', 'bin', 'datamodels.mjs');
+const datamodels = (...args) => run(process.execPath, [BIN, ...args]).then((r) => ({ code: 0, ...r }), (e) => ({ code: e.code, stdout: e.stdout, stderr: e.stderr }));
+const DJ = 'https://datamodels.jp';
+const SITE_DIR = join(import.meta.dirname, 'fixtures', 'site');
+
+// The task and common subjects of datamodels.jp, from their sources (test/fixtures/catalog/).
+const urls = catalogUrls(DJ);
+const subjects = await loadSubjects(join(import.meta.dirname, 'fixtures', 'catalog', 'models'), { urls });
+const { refs } = await readRefs(subjects.flatMap((s) => s.models), { local: localRefs(subjects, urls), fetch: () => { throw new Error('no network in tests'); } });
+const context = { urls, languages: ['ja', 'en'], refs };
+const task = subjects.find((s) => s.name === 'task');
+const model = (type) => task.models.find((m) => m.type === type);
+
+/** fetch for the copy of datamodels.jp in test/fixtures/site/: catalog.json and the schemas. */
+const siteFetch = async (url) => {
+  const u = new URL(url);
+  if (u.origin !== DJ) return { ok: false, status: 404 };
+  try {
+    const text = await readFile(join(SITE_DIR, u.pathname), 'utf8');
+    return { ok: true, status: 200, json: async () => JSON.parse(text) };
+  } catch { return { ok: false, status: 404 }; }
+};
+const evacuationSite = await exportModel('disaster/EvacuationSite', ADAPTERS.map((a) => a.name), { index: `${DJ}/catalog.json`, fetch: siteFetch });
+const file = (r, adapter) => r.files.find((f) => f.adapter === adapter).content;
+
+test('columns: plain values, lists, a geometry, a value type split into its fields', () => {
+  const kinds = Object.fromEntries(columnsOf(model('Task'), context).map((c) => [c.name, c.kind]));
+  assert.deepEqual([kinds.name, kinds.keywords, kinds.relatedTo, kinds.location, kinds.start], ['scalar', 'list', 'list', 'geometry', 'scalar']);
+  assert.deepEqual(columnsOf(model('Task'), context).find((c) => c.name === 'start').value.formats, ['date', 'date-time']);
+  assert.throws(() => columnsOf({ type: 'X', schema: { properties: { a: { $ref: `${DJ}/schema/common/Nothing/v1.0.0.json`, 'x-iri': 'x' } } } }, context), /was not read/);
+  assert.equal(snake('EvacuationSite'), 'evacuation_site');
+  assert.equal(snake('abrMachiazaId'), 'abr_machiaza_id');
+  assert.equal(shortTitle('指定緊急避難場所の名称（通称や建物の名前）'), '指定緊急避難場所の名称');
+  assert.equal(shortTitle("Name of the site (its common name or the building's name)"), 'Name of the site');
+});
+
+test('Table Schema: one column per attribute, named as the attribute; the texts of each language', () => {
+  const ts = tableSchemaOf(task, model('Task'), context);
+  assert.equal(ts.$schema, 'https://datapackage.org/profiles/2.0/tableschema.json');
+  assert.deepEqual(ts.primaryKey, ['id']);
+  assert.equal(ts['x-typeIri'], `${DJ}/ns/task/Task`);
+  assert.equal(ts['x-context'], `${DJ}/context/task/v1.jsonld`);
+  const f = Object.fromEntries(ts.fields.map((x) => [x.name, x]));
+  assert.deepEqual(f.id.constraints, { required: true, unique: true });
+  assert.equal(f.name.description, '名称・件名');
+  assert.deepEqual(f.name['x-translations'].en, { title: 'Name or subject', description: 'Name or subject' });
+  assert.equal(f.name['x-iri'], 'https://uri.etsi.org/ngsi-ld/name');
+  assert.deepEqual([f.keywords.type, f.keywords.delimiter, f.keywords.itemType], ['list', ';', 'string']);
+  // Any geometry: longitude and latitude for a point, a GeoJSON column for the other shapes.
+  assert.deepEqual([f.longitude.type, f.latitude.type, f.location.type], ['number', 'number', 'geojson']);
+  assert.deepEqual(f.latitude.constraints, { minimum: -90, maximum: 90 });
+  // A date or a date-time: a string with a pattern; a lookahead has no XML Schema form and is kept aside.
+  assert.equal(f.start.type, 'string');
+  assert.ok(new RegExp(`^${f.start.constraints.pattern}$`).test('2026-07-11') && new RegExp(`^${f.start.constraints.pattern}$`).test('2026-07-11T09:00:00+09:00'));
+  assert.equal(f.estimatedDuration.constraints, undefined);
+  assert.match(f.estimatedDuration['x-pattern'], /\(\?!\$\)/);
+  assert.deepEqual(f.priority.constraints, { minimum: 0, maximum: 9 });
+  assert.equal(f.completedAt.type, 'datetime');
+  assert.equal(xsdPattern('^\\d{6}$'), '\\d{6}');
+  assert.equal(xsdPattern('^E[0-9]{10}11'), 'E[0-9]{10}11.*');
+});
+
+test('Table Schema: a point as longitude and latitude, the address as one column per field', () => {
+  const ts = JSON.parse(file(evacuationSite, 'table-schema'));
+  const f = Object.fromEntries(ts.fields.map((x) => [x.name, x]));
+  assert.ok(!f.location, 'a point needs no GeoJSON column');
+  assert.ok(f.longitude && f.latitude);
+  assert.deepEqual(f['address.postalCode'].constraints, { pattern: '\\d{3}-?\\d{4}' });
+  assert.deepEqual(f['address.addressCountry'].constraints, { enum: ['JP'] });
+  assert.equal(f['address.postalCode']['x-iri'], 'https://schema.org/postalCode');
+  assert.deepEqual(f.hazardTypes.constraints, { minLength: 1 });
+  assert.match(f.hazardTypes['x-translations'].en.description, /Several values separated by ;\. Allowed values: flood; landslide;/);
+  assert.match(f.hazardTypes.description, /使える値：flood; landslide;/);
+  assert.match(ts.description, /externalSiteId、nationalShelterId のどれか 1 つは必須です。$/);
+  assert.match(ts['x-translations'].en.description, /At least one of externalSiteId, nationalShelterId is needed\.$/);
+  // The CSV template is the header row of the same columns.
+  assert.equal(file(evacuationSite, 'csv'), `${ts.fields.map((x) => x.name).join(',')}\n`);
+  assert.equal(csvHeader(task, model('Milestone'), context), 'id,name,description,project,start,due,milestoneStatus,source,externalId,dateCreated,dateModified');
+});
+
+/** Every schema object in a JSON Schema. */
+function* walk(s, path = '') {
+  if (!s || typeof s !== 'object') return;
+  yield [s, path];
+  for (const [k, v] of Object.entries(s.properties ?? {})) yield* walk(v, `${path}.${k}`);
+  for (const [i, v] of (s.anyOf ?? []).entries()) yield* walk(v, `${path}|${i}`);
+  if (s.items) yield* walk(s.items, `${path}[]`);
+}
+
+test('AI: a strict schema that both OpenAI and Claude accept', () => {
+  for (const [subject, m] of [[task, model('Task')], [task, model('Project')], [task, model('Milestone')]]) {
+    const out = structuredOutputOf(subject, m, context);
+    assert.equal(out.strict, true);
+    assert.equal(out.name, m.type);
+    for (const [s, path] of walk(out.schema)) {
+      for (const k of ['$ref', 'oneOf', 'allOf', 'not', 'if', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'minLength', 'maxLength', 'maxItems', 'uniqueItems', 'const', 'patternProperties']) assert.ok(!(k in s), `${m.type}${path}: ${k}`);
+      if (s.minItems !== undefined) assert.ok(s.minItems <= 1, `${m.type}${path}: minItems`);
+      if (s.format) assert.ok(['date-time', 'date', 'time', 'duration', 'email', 'hostname', 'ipv4', 'ipv6', 'uuid'].includes(s.format), `${m.type}${path}: format ${s.format}`);
+      if (s.pattern) assert.doesNotMatch(s.pattern, /\(\?/, `${m.type}${path}: lookaround`);
+      if ([].concat(s.type).includes('object')) {
+        assert.equal(s.additionalProperties, false, `${m.type}${path}`);
+        assert.deepEqual(s.required, Object.keys(s.properties), `${m.type}${path}: every key required`);
+      }
+      if (s.enum && [].concat(s.type).includes('null')) assert.ok(s.enum.includes(null), `${m.type}${path}: null in a nullable enum`);
+    }
+    assert.ok(!('id' in out.schema.properties) && !('type' in out.schema.properties), 'the application sets id and type');
+  }
+  const t = structuredOutputOf(task, model('Task'), context).schema.properties;
+  assert.deepEqual(t.name.type, 'string', 'required: not nullable');
+  assert.deepEqual(t.description.type, ['string', 'null']);
+  assert.deepEqual(t.progress.enum, ['needs-action', 'in-process', 'completed', 'failed', 'cancelled', null]);
+  assert.match(t.priority.description, /\(minimum 0; maximum 9\)$/);
+  assert.match(t.project.description, /\(a URI\)$/);
+  assert.match(t.estimatedDuration.description, /must match the pattern/);
+  assert.deepEqual(t.start.anyOf.map((a) => a.format ?? a.type), ['date', 'date-time', 'null']);
+  // Any geometry the model allows, not only a point.
+  assert.deepEqual(t.location.anyOf.map((a) => a.properties?.type.enum[0] ?? a.type), ['Point', 'LineString', 'Polygon', 'MultiPoint', 'MultiLineString', 'MultiPolygon', 'GeometryCollection', 'null']);
+  const site = JSON.parse(file(evacuationSite, 'ai'));
+  assert.deepEqual(site.schema.properties.location.type, ['object', 'null']);
+  assert.deepEqual(site.schema.properties.location.properties.type.enum, ['Point']);
+  assert.deepEqual(site.schema.properties.address.properties.addressCountry.enum, ['JP', null]);
+  assert.match(site.description, /At least one of externalSiteId, nationalShelterId is not null\./);
+  assert.ok(unionCount(site.schema) > 16, 'too many unions for Claude\'s strict mode: export notes it');
+});
+
+test('AI: a model with a map of any keys has no file', () => {
+  const m = { type: 'Answer', kind: 'entity', catalog: {}, schema: { properties: { id: {}, type: {}, scores: { type: 'object', additionalProperties: { type: 'number' }, 'x-iri': 'https://example.org/scores', 'x-ngsi': { type: 'JsonProperty' } } } } };
+  assert.throws(() => structuredOutputOf(task, m, context), (e) => e instanceof NotStrict && /scores: an object with any keys/.test(e.message));
+  assert.equal(ADAPTERS.find((a) => a.name === 'ai').urlFor(task, m, context), null);
+  // The others keep it as JSON.
+  assert.equal(fieldsOf(task, m, context).find((f) => f.name === 'scores').type, 'object');
+  assert.match(createTable(task, m, context), /\n {2}scores jsonb,?\n/);
+});
+
+test('PostGIS: a table with constraints, a GiST index and comments', () => {
+  const sql = createTable(task, model('Project'), context);
+  assert.match(sql, /^CREATE TABLE project \($/m);
+  assert.match(sql, /^ {2}id text PRIMARY KEY,$/m);
+  assert.match(sql, /^ {2}name text NOT NULL,$/m);
+  assert.match(sql, /^ {2}"end" text,$/m, 'a reserved word is quoted');
+  assert.match(sql, /^ {2}location geometry\(Geometry, 4326\),$/m);
+  assert.match(sql, /^ {2}keywords text\[\],$/m);
+  assert.match(sql, /CHECK \(project_status IN \('active', 'closed', 'archived'\)\)/);
+  assert.match(sql, /CHECK \("end" ~ '\^\\d\{4\}/);
+  assert.match(sql, /^CREATE INDEX project_location_idx ON project USING gist \(location\);$/m);
+  assert.match(sql, /^COMMENT ON COLUMN project\.name IS '名称・件名\nName or subject\n<https:\/\/uri\.etsi\.org\/ngsi-ld\/name>';$/m);
+  assert.match(sql, /^COMMENT ON TABLE project IS '.*\n[\s\S]*<https:\/\/datamodels\.jp\/ns\/task\/Project>';$/m);
+  const site = file(evacuationSite, 'postgis');
+  assert.match(site, /^ {2}location geometry\(Point, 4326\),$/m);
+  assert.match(site, /^ {2}address_postal_code text,$/m);
+  assert.match(site, /CHECK \(address_postal_code ~ '\^\\d\{3\}-\?\\d\{4\}\$'\)/);
+  assert.match(site, /CHECK \(hazard_types <@ ARRAY\['flood', /);
+  assert.match(site, /CHECK \(cardinality\(hazard_types\) >= 1\)/);
+  assert.match(site, /CHECK \(external_site_id IS NOT NULL OR national_shelter_id IS NOT NULL\)/);
+  assert.match(site, /'共通ID''/, 'single quotes doubled');
+  assert.equal(ident('user'), '"user"');
+  assert.equal(ident('route'), 'route');
+});
+
+test('export: a model of another node, from its catalog.json', async () => {
+  assert.equal(evacuationSite.from, `${DJ}/catalog.json`);
+  assert.equal(evacuationSite.typeIri, `${DJ}/ns/disaster/EvacuationSite`);
+  assert.deepEqual(evacuationSite.files.map((f) => f.name), ['EvacuationSite.csv', 'EvacuationSite.tableschema.json', 'EvacuationSite.ai.json', 'EvacuationSite.sql']);
+  await assert.rejects(exportModel('disaster/Nothing', ['csv'], { index: `${DJ}/catalog.json`, fetch: siteFetch }), /not a model in https:\/\/datamodels\.jp\/catalog\.json/);
+  await assert.rejects(exportModel('common/Geometry', ['csv'], { index: `${DJ}/catalog.json`, fetch: siteFetch }), /a value type/);
+  await assert.rejects(exportModel('disaster/EvacuationSite', ['excel'], { index: `${DJ}/catalog.json`, fetch: siteFetch }), /no adapter excel/);
+});
+
+test('export on the command line: the model of a local node, into --out', async () => {
+  const out = await mkdtemp(join(tmpdir(), 'datamodels-export-'));
+  const r = await datamodels('export', 'road/RoadPatrol', join(import.meta.dirname, 'fixtures', 'node'), '--to', 'csv,postgis', '--out', out);
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal(await readFile(join(out, 'RoadPatrol.csv'), 'utf8'), 'id,route\n');
+  assert.match(await readFile(join(out, 'RoadPatrol.sql'), 'utf8'), /^CREATE TABLE road_patrol \($/m);
+  assert.match(r.stderr, /road\/RoadPatrol: https:\/\/models\.example\.org\/ns\/road#RoadPatrol/);
+  const bad = await datamodels('export', 'road/RoadPatrol', '--to', 'excel');
+  assert.equal(bad.code, 2);
+  assert.match(bad.stderr, /--to excel: not an adapter \(csv, table-schema, ai, postgis\)/);
+  assert.equal((await datamodels('export', 'road/RoadPatrol')).code, 2, '--to is required');
+});
+
+test('build: the schemas of other nodes are read online; a model whose schemas cannot be read gets no adapter files', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'datamodels-adapters-'));
+  await cp(join(import.meta.dirname, 'fixtures', 'node'), dir, { recursive: true });
+  const sf = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const schema = JSON.parse(await readFile(sf, 'utf8'));
+  schema.properties.address = { $ref: `${DJ}/schema/common/JapaneseAddress/v1.0.0.json`, 'x-iri': 'https://schema.org/address', 'x-ngsi': { type: 'Property' } };
+  await writeFile(sf, JSON.stringify(schema));
+  const cf = join(dir, 'models', 'road', 'RoadPatrol', 'catalog.yaml');
+  await writeFile(cf, `${await readFile(cf, 'utf8')}  address: { en: Where }\n`);
+  const r = await buildNode(dir, { fetch: siteFetch, pages: false });
+  assert.deepEqual(r.notes, []);
+  const csv = await readFile(join(dir, '_site', 'adapters', 'csv', 'road', 'RoadPatrol.csv'), 'utf8');
+  assert.match(csv, /^id,route,address\.addressCountry,address\.postalCode,/);
+  const offline = await buildNode(dir, { out: join(dir, 'offline'), fetch: async () => { throw new Error('offline'); } });
+  assert.match(offline.notes[0], /no adapter files for the models that use it: https:\/\/datamodels\.jp\/schema\/common\/JapaneseAddress\/v1\.0\.0\.json could not be read/);
+  assert.equal(offline.catalog.models[0].adapters, undefined);
+  assert.ok(!offline.pages.includes('adapters/index.html'), 'no adapters page without files');
+  assert.doesNotMatch(await readFile(join(dir, 'offline', 'models', 'road', 'RoadPatrol', 'index.html'), 'utf8'), /<dt>Adapters<\/dt>/);
+});
+
+// Opt-in: DATAMODELS_TEST_POSTGIS=<container> with a running postgis/postgis image whose init has finished.
+const container = process.env.DATAMODELS_TEST_POSTGIS;
+test('PostGIS: the SQL of every fixture model loads, and the checks reject a wrong row', { skip: !container && 'set DATAMODELS_TEST_POSTGIS to a running postgis container' }, async () => {
+  const psql = (sql) => spawnSync('docker', ['exec', '-i', container, 'psql', '-U', 'postgres', '-q', '-v', 'ON_ERROR_STOP=1'], { input: sql, encoding: 'utf8' });
+  const schema = `adapters_test_${process.pid}`;
+  const sqls = [
+    ...task.models.filter((m) => m.kind === 'entity').map((m) => createTable(task, m, context)),
+    file(evacuationSite, 'postgis'),
+    file(await exportModel('disaster/DesignatedShelter', ['postgis'], { index: `${DJ}/catalog.json`, fetch: siteFetch }), 'postgis'),
+    (await exportModel('road/RoadPatrol', ['postgis'], { dir: join(import.meta.dirname, 'fixtures', 'node') })).files[0].content,
+  ];
+  try {
+    const r = psql(`CREATE SCHEMA ${schema}; SET search_path TO ${schema}, public;\n${sqls.join('\n')}`);
+    assert.equal(r.status, 0, r.stderr);
+    const ok = psql(`SET search_path TO ${schema}, public; INSERT INTO evacuation_site (id, name, local_government_code, external_site_id, location, hazard_types) VALUES ('urn:ngsi-ld:EvacuationSite:1', '番町小学校', '131016', '1', ST_SetSRID(ST_MakePoint(139.734, 35.688), 4326), ARRAY['flood']);`);
+    assert.equal(ok.status, 0, ok.stderr);
+    const wrong = psql(`SET search_path TO ${schema}, public; INSERT INTO evacuation_site (id, name, local_government_code, external_site_id, hazard_types) VALUES ('urn:ngsi-ld:EvacuationSite:2', 'x', '131016', '2', ARRAY['meteor']);`);
+    assert.match(wrong.stderr, /violates check constraint "evacuation_site_hazard_types_check"/);
+    const lookahead = psql(`SET search_path TO ${schema}, public; INSERT INTO task (id, name, progress, estimated_duration) VALUES ('urn:ngsi-ld:Task:1', 'x', 'completed', 'P');`);
+    assert.match(lookahead.stderr, /violates check constraint "task_estimated_duration_check"/);
+  } finally {
+    psql(`DROP SCHEMA IF EXISTS ${schema} CASCADE;`);
+  }
+});

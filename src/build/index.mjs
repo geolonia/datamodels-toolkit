@@ -7,6 +7,6 @@ export { listReleases, snapshotRelease, verifyRelease, releaseContents } from '.
 export { attributeEntries, extensionEntry, catalogEntry, termRedirects } from './entries.mjs';
 export { publishCatalog } from './publish.mjs';
 export { llmsTxt } from './llms.mjs';
-export { readNode, loadNode, buildNode } from './node.mjs';
+export { readNode, loadNode, buildNode, nodeAdapters } from './node.mjs';
 export { pageData, writePages } from './pages.mjs';
 export { checkNode, contextTerms, contextDefs } from './check.mjs';

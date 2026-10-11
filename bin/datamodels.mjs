@@ -37,6 +37,14 @@
 //
 // add writes a new model into a subject of the node in dir: schema.json,
 // catalog.yaml, an example, and the type in the subject's @context.
+//
+//   datamodels export <subject>/<Type> [dir] --to csv,table-schema,ai,postgis [--out dir] [--index URL]
+//
+// export writes the files of the adapters (src/adapters/) for one entity
+// model: a CSV template, its Table Schema, a JSON Schema for the structured
+// output of AI models, a PostgreSQL / PostGIS table. The model is the node's
+// in dir when it has one; otherwise it is read from --index (default: the
+// first node in node.yaml, else datamodels.jp).
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
@@ -52,6 +60,9 @@ import { addModel } from '../src/add.mjs';
 import { releaseSubject } from '../src/release.mjs';
 import { upgradeNode, bumpSubject } from '../src/version.mjs';
 import { extendModel, extendableModels } from '../src/extend.mjs';
+import { exportModel, writeExport } from '../src/export.mjs';
+import { ADAPTERS } from '../src/adapters/index.mjs';
+import { unionCount } from '../src/adapters/ai/index.mjs';
 
 const USAGES = {
   convert: `usage: datamodels convert <subject>/<Type> <mapping> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--site URL|dir]`,
@@ -62,6 +73,7 @@ const USAGES = {
   bump: `usage: datamodels bump <subject> <patch|minor|major> [dir] [--offline]`,
   upgrade: `usage: datamodels upgrade [dir] [--to vX.Y.Z]`,
   extend: `usage: datamodels extend <model> <subject>/<Type> [dir] [--index URL] [--subclass]`,
+  export: `usage: datamodels export <subject>/<Type> [dir] --to ${ADAPTERS.map((a) => a.name).join(',')} [--out dir] [--index URL]`,
   init: `usage: datamodels init [dir] [--base-url URL] [--iris hash|slash] [--languages en,ja] [--publisher name] [--publisher-url URL] [--license id] [--subject name] [--github owner/name] [--yes]`,
 };
 const USAGE = Object.values(USAGES).join('\n');
@@ -73,7 +85,7 @@ const fail = (msg) => { throw new Exit(1, msg); };
 
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
-function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease, onExtend, onBump, onUpgrade }) {
+function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease, onExtend, onBump, onUpgrade, onExport }) {
   // An option's value: present, not empty (--out=) and not another option.
   const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
   const cli = new Command('datamodels')
@@ -96,7 +108,7 @@ function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease, onExte
     // exitOverride, the output and the help style are inherited from cli.
     .action(onConvert);
   cli.command('build')
-    .description("write the files a data model node publishes: catalog.json, @contexts, JSON Schemas, vocabularies, examples and llms.txt")
+    .description("write the files a data model node publishes: catalog.json, @contexts, JSON Schemas, vocabularies, examples, llms.txt, the pages and the adapters' files")
     .usage(USAGES.build.replace('usage: datamodels build ', ''))
     .argument('[dir]', 'the node: node.yaml and models/', '.')
     .option('--out <dir>', 'where to write the files (default: <dir>/_site)', value('--out'))
@@ -158,6 +170,15 @@ function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease, onExte
     .option('--index <URL>', "the other node's catalog.json (default: the first node in node.yaml, else datamodels.jp)", value('--index'))
     .option('--subclass', "a subtype with its own type IRI, instead of the same type with more attributes")
     .action(onExtend);
+  cli.command('export')
+    .description('write files made from a model for other tools: a CSV template and its Table Schema, a JSON Schema for the structured output of AI models, a PostgreSQL / PostGIS table')
+    .usage(USAGES.export.replace('usage: datamodels export ', ''))
+    .argument('<subject/Type>', 'the model, for example disaster/EvacuationSite, or its type IRI')
+    .argument('[dir]', "the node; its own model if it has one, else the other node's", '.')
+    .requiredOption('--to <adapters>', `one or more of ${ADAPTERS.map((a) => a.name).join(', ')}, comma-separated`, value('--to'))
+    .option('--out <dir>', 'where to write the files (default: the current directory)', value('--out'))
+    .option('--index <URL>', "another node's catalog.json (default: the first node in node.yaml, else datamodels.jp)", value('--index'))
+    .action(onExport);
   return cli;
 }
 
@@ -189,6 +210,7 @@ async function main(args) {
     onBump: async (subject, level, dir, options) => { code = await bump(subject, level, dir, options); },
     onUpgrade: async (dir, options) => { code = await upgrade(dir, options); },
     onExtend: async (model, target, dir, options) => { code = await extend(model, target, dir, options); },
+    onExport: async (target, dir, options) => { code = await exportFiles(target, dir, options); },
   });
   // datamodels --help lists the commands; datamodels help build is commander's.
   if (args.length === 1 && ['--help', '-h', 'help'].includes(args[0])) { cli.outputHelp(); return 0; }
@@ -252,6 +274,7 @@ async function convert(target, mappingName, file, { set: sets = [], normalized, 
 async function build(dir, { out }) {
   let r;
   try { r = await buildNode(dir, out ? { out } : {}); } catch (e) { fail(e.message); }
+  for (const n of r.notes) console.error(`  note: ${n}`);
   console.error(`${dir}: ${r.subjects.length} subject(s), ${r.catalog.models.length} model(s), written to ${out ?? join(dir, '_site')}`);
   return 0;
 }
@@ -311,6 +334,21 @@ async function extend(model, target, dir, { index, subclass }) {
   for (const f of r.added) console.error(`  added ${f}`);
   for (const f of r.changed) console.error(`  changed ${f}`);
   console.error(`${target}: ${r.typeIri}, extends ${r.extends.typeIri} v${r.extends.version}. Next: this node's attributes in schema.json (each with x-iri), context.jsonld and catalog.yaml, then datamodels check.`);
+  return 0;
+}
+
+async function exportFiles(target, dir, { to, out = '.', index }) {
+  const names = to.split(',').map((n) => n.trim()).filter(Boolean);
+  const unknown = names.filter((n) => !ADAPTERS.some((a) => a.name === n));
+  if (unknown.length || !names.length) usage(`--to ${unknown.join(', ') || to}: not an adapter (${ADAPTERS.map((a) => a.name).join(', ')})`, USAGES.export);
+  let r, written;
+  try { r = await exportModel(target, names, { dir, index }); written = await writeExport(r.files, out); } catch (e) { fail(e.message); }
+  for (const f of written) console.error(`  wrote ${f}`);
+  // Claude's strict mode allows 16 properties with a union (a type with null) per request.
+  const ai = r.files.find((f) => f.adapter === 'ai');
+  const unions = ai ? unionCount(JSON.parse(ai.content).schema) : 0;
+  if (unions > 16) console.error(`  note: ${unions} properties of the AI schema can be null; Claude's strict mode takes 16 per request, so use it there without strict, or remove the attributes you do not need (OpenAI's strict mode takes it as it is)`);
+  console.error(`${target}: ${r.typeIri}, from ${r.from}`);
   return 0;
 }
 
