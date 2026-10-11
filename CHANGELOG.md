@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-11
+
+Addresses that moved still lead somewhere: a 404 page in the node's style, pages for renamed models and anchors for former terms; `check` notes example files it does not read.
+
 ### Added
 
 - A model that a released version had and the current one does not keeps a page at its old address: which versions had it, its last files, the current model with the same type IRI (a rename), and the current models. The subject page lists the terms of earlier versions, each with its anchor, so their hash IRIs still open on it.
@@ -91,7 +95,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.1...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.2...main
+[0.3.2]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/geolonia/datamodels-toolkit/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/geolonia/datamodels-toolkit/compare/v0.2.0...v0.2.1
