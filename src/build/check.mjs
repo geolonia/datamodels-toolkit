@@ -182,6 +182,7 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
     addFormats(ajv);
     for (const s of subjects) for (const m of s.models) {
       const where = `${s.name}/${m.type}`;
+      for (const f of m.unreadExamples ?? []) notes.push(`${where}/examples/${f}: not read; a model has one example, example.json (and example-normalized.jsonld)`);
       let validate;
       // A schema another one referenced is already loaded (from the build, the same bytes): use it.
       try { validate = (m.schema.$id && ajv.getSchema(m.schema.$id)) || await ajv.compileAsync(m.schema); } catch (e) {
