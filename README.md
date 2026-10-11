@@ -45,7 +45,9 @@ datamodels init --base-url https://models.example.org --publisher "Example Inc."
   --publisher-url https://example.org/ --subject road --languages ja,en --yes
 ```
 
-Starts a data model node: `node.yaml`, the first subject in `models/`, a README, `.gitignore` and the workflow that checks pull requests and publishes to GitHub Pages ([GitHub Action](#github-action)). In a terminal it asks for what the options do not give; in CI and scripts it never asks, and a missing answer is a usage error. Defaults: hash IRIs, English, CC0-1.0.
+Starts a data model node: `node.yaml`, the first subject in `models/`, a README, `.gitignore`, the workflow that checks pull requests and publishes to GitHub Pages ([GitHub Action](#github-action)), a Dependabot configuration that proposes new releases of the Action, and `LICENSE`. In a terminal it asks for what the options do not give; in CI and scripts it never asks, and a missing answer is a usage error. Defaults: hash IRIs, English, CC0-1.0.
+
+`LICENSE` is the legal code of the licence, for CC0-1.0 and CC-BY-4.0. For another licence, init says so, and the licence text goes into `LICENSE` by hand. A licence file under another name (`LICENSE.md`, `LICENSE.txt`, `COPYING`) counts as `LICENSE`.
 
 It also works in an existing repository, for example one made by the Backstage scaffolder: it adds only the files that are missing, never overwrites one, and adds its lines to an existing `.gitignore`. It lists what it added and what it kept.
 

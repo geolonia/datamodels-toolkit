@@ -345,10 +345,11 @@ async function init(dir, options) {
   if (missing.length) usage(`missing ${missing.join(', ')}`, USAGES.init);
   const settings = initSettings(Object.fromEntries(Object.entries(answers).filter(([, v]) => v !== undefined)));
   if (settings.problems.length) fail(`init: nothing written:\n${settings.problems.map((p) => `  ${p}`).join('\n')}`);
-  const { added, kept, appended } = await writeNode(dir, settings);
+  const { added, kept, appended, notes } = await writeNode(dir, settings);
   for (const f of added) console.error(`  added ${f}`);
   for (const f of appended) console.error(`  added lines to ${f}`);
   for (const f of kept) console.error(`  kept ${f} (it exists)`);
+  for (const n of notes) console.error(`  ${n}`);
   if (answers.github) {
     const run = async (cmd, args, opts = {}) => (await promisify(execFile)(cmd, args, opts)).stdout;
     let steps;

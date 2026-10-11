@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Added
+
+- `datamodels init` writes `LICENSE` (the legal code of CC0-1.0 or CC-BY-4.0; for another licence it says that the file is missing) and `.github/dependabot.yml`, so Dependabot proposes new releases of the Action.
+
 ### Changed
 
 - `datamodels init` writes a workflow pinned to the v0.3.0 release of the Action, and a README whose `npx` commands run v0.3.0.

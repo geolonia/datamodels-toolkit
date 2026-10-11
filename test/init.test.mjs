@@ -19,7 +19,7 @@ test('init writes a node that passes check and builds', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'datamodels-init-'));
   const r = await datamodels('init', dir, ...OPTIONS);
   assert.equal(r.code, 0, r.stderr);
-  for (const f of ['node.yaml', 'models/road/subject.yaml', 'models/road/context.jsonld', '.github/workflows/publish.yml', 'README.md', '.gitignore']) assert.match(r.stderr, new RegExp(`added ${f.replace(/\./g, '\\.')}\\n`), f);
+  for (const f of ['node.yaml', 'models/road/subject.yaml', 'models/road/context.jsonld', '.github/workflows/publish.yml', '.github/dependabot.yml', 'README.md', 'LICENSE', '.gitignore']) assert.match(r.stderr, new RegExp(`added ${f.replace(/\./g, '\\.')}\\n`), f);
   // An empty subject is a valid node.
   assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
   const b = await datamodels('build', dir);
@@ -39,6 +39,26 @@ test('init writes a node that passes check and builds', async () => {
   const readme = await readFile(join(dir, 'README.md'), 'utf8');
   assert.ok(readme.includes('npx github:geolonia/datamodels-toolkit#v0.3.0 check\n'));
   assert.doesNotMatch(readme, /datamodels-toolkit (check|build)/);
+  // The licence: its legal code as LICENSE, named in the README.
+  assert.ok((await readFile(join(dir, 'LICENSE'), 'utf8')).startsWith('Creative Commons Legal Code\n\nCC0 1.0 Universal\n'));
+  assert.match(readme, /Licence: \[CC0-1\.0\]\(LICENSE\)\./);
+  assert.doesNotMatch(r.stderr, /no LICENSE/);
+  // Dependabot proposes new releases of the pinned Actions.
+  assert.match(await readFile(join(dir, '.github', 'dependabot.yml'), 'utf8'), /package-ecosystem: github-actions\n/);
+});
+
+test('init writes the licence it has a text for, and says when it has none', async () => {
+  const by = await mkdtemp(join(tmpdir(), 'datamodels-init-'));
+  let r = await datamodels('init', by, ...OPTIONS, '--license', 'CC-BY-4.0');
+  assert.equal(r.code, 0, r.stderr);
+  assert.ok((await readFile(join(by, 'LICENSE'), 'utf8')).startsWith('Attribution 4.0 International\n'));
+  const other = await mkdtemp(join(tmpdir(), 'datamodels-init-'));
+  r = await datamodels('init', other, ...OPTIONS, '--license', 'ODbL-1.0');
+  assert.equal(r.code, 0, r.stderr);
+  assert.doesNotMatch(r.stderr, /added LICENSE/);
+  assert.match(r.stderr, /no LICENSE: init has no text of ODbL-1\.0/);
+  assert.deepEqual((await readdir(other)).filter((f) => f.startsWith('LICENSE')), []);
+  assert.match(await readFile(join(other, 'README.md'), 'utf8'), /Licence: ODbL-1\.0\./);
 });
 
 test('init in an existing repository adds what is missing and keeps every file', async () => {
@@ -47,9 +67,13 @@ test('init in an existing repository adds what is missing and keeps every file',
   await writeFile(join(dir, 'README.md'), '# models\n\nMade by the scaffolder.\n');
   await writeFile(join(dir, 'catalog-info.yaml'), 'kind: Component\n');
   await writeFile(join(dir, '.gitignore'), '.DS_Store\nnode_modules\n');
+  await writeFile(join(dir, 'LICENSE.md'), 'Our licence.\n');
   let r = await datamodels('init', dir, ...OPTIONS);
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stderr, /kept README\.md \(it exists\)/);
+  // A licence file under another name is kept, and no LICENSE is added.
+  assert.match(r.stderr, /kept LICENSE\.md \(it exists\)/);
+  assert.doesNotMatch(r.stderr, /added LICENSE|no LICENSE/);
   assert.match(r.stderr, /added lines to \.gitignore/);
   assert.equal(await readFile(join(dir, 'README.md'), 'utf8'), '# models\n\nMade by the scaffolder.\n');
   assert.equal(await readFile(join(dir, 'catalog-info.yaml'), 'utf8'), 'kind: Component\n');

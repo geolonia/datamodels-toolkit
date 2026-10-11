@@ -3,6 +3,7 @@
 // 2026-10-10). In a folder that already has files, for example a repository
 // made by the Backstage scaffolder, it only adds what is missing: a file that
 // exists is left as it is, and .gitignore gets the lines it lacks.
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, readdir, writeFile, stat } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import YAML from 'yaml';
@@ -18,6 +19,11 @@ const CHECKOUT = 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 const GITIGNORE = ['_site/', 'node_modules/'];
 const SUBJECT_NAME = /^[a-z][a-z0-9-]*$/;
 const REPO_NAME = /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/;
+// The licences whose text init can write as LICENSE (src/licenses/<SPDX id>.txt, the legal code from creativecommons.org).
+// For another licence, the node needs a LICENSE written by hand.
+const licenseText = (id) => { const url = new URL(`./licenses/${id}.txt`, import.meta.url); return /^[A-Za-z0-9.-]+$/.test(id) && existsSync(url) ? readFileSync(url, 'utf8') : undefined; };
+// A licence file under another name counts as LICENSE.
+const LICENSE_FILES = ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'COPYING'];
 
 /**
  * The settings and the first subject from the answers, checked. Returns
@@ -51,9 +57,28 @@ ${yaml(node)}` },
 ${yaml({ name: subject, version: '0.1.0', source: 'minted', title: perLanguage(subject), description: perLanguage(`The models of ${subject}.`) })}` },
     { path: `models/${subject}/context.jsonld`, content: `${JSON.stringify({ '@context': { [subject]: namespace } }, null, 2)}\n` },
     { path: '.github/workflows/publish.yml', content: workflow() },
+    { path: '.github/dependabot.yml', content: DEPENDABOT },
     { path: 'README.md', content: readme({ node, subject }) },
+    ...(licenseText(node.license) ? [{ path: 'LICENSE', content: licenseText(node.license) }] : []),
   ];
 }
+
+// Dependabot proposes new releases of the Actions, the toolkit's included: it changes the SHA and the version comment together.
+const DEPENDABOT = `# Keeps the pinned Actions current, the datamodels-toolkit Action included. Written by datamodels init.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait 8 days before proposing a new release, to lower the risk of a freshly published (possibly hijacked) version.
+    cooldown:
+      default-days: 8
+    groups:
+      github-actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+`;
 
 function workflow() {
   return `# Checks the node on pull requests; on main, builds it and deploys it to GitHub Pages
@@ -115,6 +140,8 @@ A data model node: JSON Schemas, JSON-LD @contexts and vocabularies at ${node.ba
 - \`models/${subject}/\`: the first subject. A model is a folder in it with \`schema.json\`, \`catalog.yaml\` and \`examples/example.json\`, laid out as in [datamodels.jp](https://github.com/geolonia/datamodels/tree/main/models).
 - \`.github/workflows/publish.yml\`: checks pull requests, and publishes main to GitHub Pages.
 
+Licence: ${licenseText(node.license) ? `[${node.license}](LICENSE)` : node.license}.
+
 \`\`\`bash
 npx github:geolonia/datamodels-toolkit#${ACTION_VERSION} check
 npx github:geolonia/datamodels-toolkit#${ACTION_VERSION} build   # into _site/
@@ -126,13 +153,15 @@ const exists = (p) => stat(p).then(() => true, () => false);
 
 /**
  * Write the node's files into `dir`, never over an existing file. Returns
- * { added, kept, appended }: paths written, paths left as they were, and
- * .gitignore when lines were added to it.
+ * { added, kept, appended, notes }: paths written, paths left as they were,
+ * .gitignore when lines were added to it, and what is left to do by hand.
  */
 export async function writeNode(dir, settings) {
-  const added = [], kept = [], appended = [];
+  const added = [], kept = [], appended = [], notes = [];
   for (const f of nodeFiles(settings)) {
     const file = join(dir, f.path);
+    const other = f.path === 'LICENSE' ? await firstExisting(dir, LICENSE_FILES) : undefined;
+    if (other) { kept.push(other); continue; }
     if (await exists(file)) { kept.push(f.path); continue; }
     await mkdir(dirname(file), { recursive: true });
     await writeFile(file, f.content, { flag: 'wx' });
@@ -148,7 +177,13 @@ export async function writeNode(dir, settings) {
     await writeFile(gitignore, `${GITIGNORE.join('\n')}\n`, { flag: 'wx' });
     added.push('.gitignore');
   }
-  return { added, kept, appended };
+  if (!await firstExisting(dir, LICENSE_FILES)) notes.push(`no LICENSE: init has no text of ${settings.node.license}; add the licence text as LICENSE`);
+  return { added, kept, appended, notes };
+}
+
+async function firstExisting(dir, paths) {
+  for (const p of paths) if (await exists(join(dir, p))) return p;
+  return undefined;
 }
 
 /** owner/name of a GitHub remote URL (https or ssh), or null. */
