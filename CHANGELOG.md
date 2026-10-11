@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.4 release of the Action, and a README whose `npx` commands run v0.3.4.
+
 ## [0.3.4] - 2026-10-11
 
 Adapters: each entity model also as a CSV template with its Table Schema, a JSON Schema for the structured output of AI models (when the model has a strict form), and a PostgreSQL / PostGIS table (when its column names do not clash), to download from the model page or to make with `datamodels export`.
