@@ -20,10 +20,11 @@ datamodels.jp is a catalog of data models that work in Japan: JSON Schemas, JSON
 - Never redefine an NGSI-LD core term (`status`, `description`, `location`, `createdAt`, `modifiedAt`, `observedAt`, …). Name your own, for example `incidentStatus`.
 - Fixed value lists (`progress` and other statuses): when no value fits, leave it out and put the local wording in `statusLabel`; do not force the nearest value.
 - Locations are GeoJSON geometries in `location` (`$ref` to datamodels.jp's common Geometry, narrowed when needed). Addresses use the common JapaneseAddress.
-- Same thing under another name → **alias** (`x-alias-of`, same type IRI). More attributes, or a separate kind → **subclass** (`x-subclass-of`). With an alias whose name differs from the original (Redmine's `Issue` for datamodels.jp's `Task`), map the new name to the original IRI in your `@context` and set the original name to `null` there; otherwise JSON-LD compaction picks the shorter term and brokers answer with the original name.
+- In the datamodels.jp catalog: the same type under another name → **alias** (`x-alias-of`, exactly the same attributes and required fields); added attributes or a separate kind → **subclass** (`x-subclass-of`).
+- On your own node, `extend` works differently: by default the model keeps the original type IRI and adds attributes (an extension, like GTT's `Issue` for datamodels.jp's `Task`); `--subclass` makes a separate kind with its own type IRI. When the extension's name differs from the original, map the new name to the original IRI in your `@context` and set the original name to `null` there; otherwise JSON-LD compaction picks the shorter term and brokers answer with the original name.
 - Group models by subject (topic), never by customer, region or project.
 - Record the sources, the upstream types you considered and why, and what you left out in the model's `notes.yaml`. Map fields to an external standard in `mapping/<name>.yaml`.
-- Examples: one `examples/example.json` per model (key-values form), valid against the schema; ids `urn:ngsi-ld:<Type>:<local id>`; Japanese times with `+09:00`. Other files in `examples/` are not read (`check` notes them).
+- Examples: `examples/example.json` (key-values form), valid against the schema; ids `urn:ngsi-ld:<Type>:<local id>`; Japanese times with `+09:00`. The catalog also requires `examples/example-normalized.jsonld` for every entity model (not for value types); on a node it is optional. Other files in `examples/` are not read (`check` notes them).
 
 ## A node with datamodels-toolkit
 
