@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.3 release of the Action, and a README whose `npx` commands run v0.3.3.
+
 ## [0.3.3] - 2026-10-11
 
 An agent skill for modelling with datamodels.jp and the toolkit, and a one-line footer.
