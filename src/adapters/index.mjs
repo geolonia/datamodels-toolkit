@@ -42,13 +42,14 @@ export const textsOfEntry = (entry) => Object.fromEntries((entry?.attributes ?? 
  * a schema that cannot be read is a problem, not an error, so the caller
  * decides (build skips the models that need it).
  */
-export async function readRefs(models, { local = new Map(), entries = [], fetch: fetchUrl = globalThis.fetch, timeout = 20000 } = {}) {
+export async function readRefs(models, { local = new Map(), entries = [], fetch: fetchUrl = globalThis.fetch, timeout = 20000, offline = false } = {}) {
   const get = getter(fetchUrl, timeout);
   const refs = {};
   const problems = [];
   const urls = [...new Set(models.flatMap(refsOf))];
   for (const url of urls) {
     if (local.has(url)) { refs[url] = local.get(url); continue; }
+    if (offline) { problems.push(`${url} is on another site, not read offline`); continue; }
     try {
       const schema = await get(url);
       refs[url] = { schema, texts: textsOfEntry(entries.find((e) => e.schemaUrl === url)) };

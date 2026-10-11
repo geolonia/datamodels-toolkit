@@ -164,7 +164,7 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
   try {
     // The build also stops on a release snapshot (models/<subject>/releases/vX.Y.Z/) that differs from the sources.
     let built;
-    try { built = await buildNode(dir, { out, pages: false }); } catch (e) { return { problems: [e.message], notes }; }
+    try { built = await buildNode(dir, { out, pages: false, offline, fetch: fetchUrl, timeout }); } catch (e) { return { problems: [e.message], notes }; }
     const { node, subjects, exactPaths } = built;
     const urls = catalogUrls(node.baseUrl, { iris: node.iris });
     const getJson = async (url) => {

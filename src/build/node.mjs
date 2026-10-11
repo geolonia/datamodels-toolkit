@@ -81,9 +81,9 @@ export async function loadNode(dir) {
  * the node or online; a model whose schemas cannot be read gets no adapter
  * files, and `notes` says why.
  */
-export async function nodeAdapters(subjects, { urls, languages, fetch, timeout }) {
+export async function nodeAdapters(subjects, { urls, languages, fetch, timeout, offline = false }) {
   const models = subjects.flatMap((s) => s.models.filter((m) => m.kind === 'entity'));
-  const { refs, problems } = await readRefs(models, { local: localRefs(subjects, urls), fetch, timeout });
+  const { refs, problems } = await readRefs(models, { local: localRefs(subjects, urls), fetch, timeout, offline });
   const context = { urls, languages, refs };
   const notes = problems.map((p) => `no adapter files for the models that use it: ${p}`);
   const adapters = ADAPTERS.map((a) => ({
@@ -98,14 +98,15 @@ export async function nodeAdapters(subjects, { urls, languages, fetch, timeout }
  * Build the node in `dir` into `out` (default `<dir>/_site`): the files of
  * publishCatalog() with the files of the toolkit's adapters, llms.txt and the
  * pages (unless `pages: false`). `fetch` and `timeout` read the schemas of
- * other nodes that models refer to (tests pass a stand-in). Returns
+ * other nodes that models refer to (tests pass a stand-in); `offline` reads
+ * none, and those models get no adapter files. Returns
  * { node, subjects, catalog, exactPaths, redirects, pages, notes }.
  */
-export async function buildNode(dir, { out = join(dir, '_site'), now, pages: withPages = true, fetch = globalThis.fetch, timeout = 20000 } = {}) {
+export async function buildNode(dir, { out = join(dir, '_site'), now, pages: withPages = true, fetch = globalThis.fetch, timeout = 20000, offline = false } = {}) {
   const { node, urls, subjects } = await loadNode(dir);
   const head = { publisher: node.publisher, license: node.license, ...(node.licenseUrl ? { licenseUrl: node.licenseUrl } : {}), ...(node.nodes ? { nodes: node.nodes } : {}) };
   await mkdir(out, { recursive: true });
-  const { adapters, notes } = await nodeAdapters(subjects, { urls, languages: node.languages, fetch, timeout });
+  const { adapters, notes } = await nodeAdapters(subjects, { urls, languages: node.languages, fetch, timeout, offline });
   const result = await publishCatalog(subjects, { urls, outDir: out, languages: node.languages, head, adapters, ...(now ? { now } : {}) });
   const name = node.publisher.name.en ?? node.languages.map((l) => node.publisher.name[l]).find(Boolean) ?? Object.values(node.publisher.name)[0];
   await writeFile(join(out, 'llms.txt'), llmsTxt(subjects, { urls, name: `Data models by ${name}`, languages: node.languages }));

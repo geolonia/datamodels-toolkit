@@ -21,8 +21,8 @@ export const ident = (name) => (/^[a-z_][a-z0-9_]*$/.test(name) && !RESERVED.has
 /** A string literal: single quotes doubled (standard_conforming_strings is on by default, so backslashes stay). */
 export const literal = (v) => (typeof v === 'number' || typeof v === 'boolean' ? String(v) : `'${String(v).replace(/'/g, "''")}'`);
 
-// A date or a date-time, as in the catalog's examples.
-export const DATE_OR_DATE_TIME = '^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?)?$';
+// A date, or a date-time as JSON Schema's format takes it (RFC 3339): with seconds and Z or an offset.
+export const DATE_OR_DATE_TIME = '^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$';
 
 function sqlType(value) {
   if (value.formats) return 'text';

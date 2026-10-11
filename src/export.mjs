@@ -43,9 +43,11 @@ export async function exportModel(target, names, { dir = '.', index, fetch: fetc
   });
   let local = null;
   if (!index) local = await loadNode(dir).catch((e) => (/node\.yaml: not found/.test(e.message) ? null : Promise.reject(e)));
-  const [subjectName, type] = String(target).split('/');
-  let subject = local?.subjects.find((x) => x.name === subjectName);
-  let model = subject?.models.find((x) => x.type === type);
+  // <subject>/<Type>, or a type IRI: this node's model when it has one with that IRI.
+  const byIri = /^https?:\/\//.test(target);
+  const [subjectName, type] = byIri ? [] : String(target).split('/');
+  const pairs = (local?.subjects ?? []).flatMap((x) => x.models.map((m) => [x, m]));
+  let [subject, model] = pairs.find(([x, m]) => (byIri ? local.urls.modelUrls(x, m).typeIri === target : x.name === subjectName && m.type === type)) ?? [];
   let context, from;
   if (model) {
     const { refs, problems } = await readRefs([model], { local: localRefs(local.subjects, local.urls), fetch: fetchUrl, timeout });

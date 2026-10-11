@@ -29,8 +29,8 @@ export function xsdPattern(pattern) {
   return p;
 }
 
-// A date or a date-time: YYYY-MM-DD, optionally with a time and an offset.
-export const DATE_OR_DATE_TIME = '\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?)?';
+// A date, or a date-time as JSON Schema's format takes it (RFC 3339): with seconds and Z or an offset.
+export const DATE_OR_DATE_TIME = '\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?';
 
 /** The type, format and constraints of a plain value. */
 function typed(value) {
@@ -91,7 +91,8 @@ export function fieldsOf(subject, model, context) {
     } else if (c.kind === 'parts') {
       for (const p of c.parts) {
         const { f, constraints } = typed(p.value);
-        fields.push(field(`${c.name}.${p.name}`, joinTexts(languages, p.texts, inEach(languages, (t) => t.partOf(c.name))), languages, { ...f, 'x-iri': p.iri, constraints }));
+        // Required when the entity requires the value and the value requires the field, as in the PostGIS table.
+        fields.push(field(`${c.name}.${p.name}`, joinTexts(languages, p.texts, inEach(languages, (t) => t.partOf(c.name))), languages, { ...f, 'x-iri': p.iri, constraints: { ...(c.required && p.required ? { required: true } : {}), ...constraints } }));
       }
     } else if (c.kind === 'scalar') {
       const { f, constraints } = typed(c.value);

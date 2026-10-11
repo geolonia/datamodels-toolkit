@@ -244,3 +244,48 @@ test('PostGIS: the SQL of every fixture model loads, and the checks reject a wro
     psql(`DROP SCHEMA IF EXISTS ${schema} CASCADE;`);
   }
 });
+
+test('a date-time needs seconds and Z or an offset, as JSON Schema\'s format does', async () => {
+  const { DATE_OR_DATE_TIME: tsPattern } = await import('../src/adapters/table-schema/index.mjs');
+  const { DATE_OR_DATE_TIME: sqlPattern } = await import('../src/adapters/postgis/index.mjs');
+  for (const re of [new RegExp(`^${tsPattern}$`), new RegExp(sqlPattern)]) {
+    for (const ok of ['2026-07-11', '2026-07-11T09:00:00Z', '2026-07-11T09:00:00.5+09:00']) assert.match(ok, re);
+    for (const bad of ['2026-07-11T09:00', '2026-07-11T09:00:00', '2026-07-11T09:00Z']) assert.doesNotMatch(bad, re);
+  }
+});
+
+test('Table Schema: a field the value type requires is required when the entity requires the value', () => {
+  const ref = 'https://example.org/schema/Place/v1.0.0.json';
+  const where = { $ref: ref, 'x-iri': 'https://example.org/ns#where', 'x-ngsi': { type: 'Property' } };
+  const thing = (required) => ({ type: 'Thing', kind: 'entity', catalog: { attributes: {} }, schema: { required: ['id', 'type', ...required], properties: { id: { type: 'string' }, type: { const: 'Thing' }, where } } });
+  const refs = { [ref]: { schema: { type: 'object', required: ['city'], properties: { city: { type: 'string' }, zip: { type: 'string' } } }, texts: {} } };
+  const ctx = { urls: catalogUrls('https://example.org'), languages: ['en'], refs };
+  const fields = (required) => Object.fromEntries(fieldsOf({ name: 's', version: '1.0.0' }, thing(required), ctx).map((f) => [f.name, f.constraints ?? {}]));
+  assert.equal(fields(['where'])['where.city'].required, true);
+  assert.equal(fields(['where'])['where.zip'].required, undefined);
+  assert.equal(fields([])['where.city'].required, undefined, 'an optional value requires none of its fields');
+});
+
+test('export: a type IRI of the local node is its own model, not read from another node', async () => {
+  const noNetwork = () => { throw new Error('read the network'); };
+  const r = await exportModel('https://models.example.org/ns/road#RoadPatrol', ['csv'], { dir: join(import.meta.dirname, 'fixtures', 'node'), fetch: noNetwork });
+  assert.equal(r.files[0].content, 'id,route\n');
+  assert.equal(r.typeIri, 'https://models.example.org/ns/road#RoadPatrol');
+});
+
+test('check --offline reads no schema of another site for the adapters', async () => {
+  const { checkNode } = await import('../src/build/index.mjs');
+  const dir = await mkdtemp(join(tmpdir(), 'datamodels-adapters-'));
+  await cp(join(import.meta.dirname, 'fixtures', 'node'), dir, { recursive: true });
+  const sf = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const schema = JSON.parse(await readFile(sf, 'utf8'));
+  schema.properties.address = { $ref: `${DJ}/schema/common/JapaneseAddress/v1.0.0.json`, 'x-iri': 'https://schema.org/address', 'x-ngsi': { type: 'Property' } };
+  await writeFile(sf, JSON.stringify(schema));
+  // Neither the fetch it is given nor the global one.
+  const read = [];
+  const record = async (url) => { read.push(String(url)); throw new Error('offline'); };
+  const global = globalThis.fetch;
+  globalThis.fetch = record;
+  try { await checkNode(dir, { offline: true, fetch: record }); } finally { globalThis.fetch = global; }
+  assert.deepEqual(read.filter((u) => u.includes('JapaneseAddress')), []);
+});
