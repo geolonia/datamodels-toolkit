@@ -219,6 +219,14 @@ const subjects = await loadSubjects('models', { urls, languages: ['en'], subject
 await publishCatalog(subjects, { urls, outDir: 'dist', languages: ['en'], head: { license: 'CC0-1.0' } });
 ```
 
+## Agent skill
+
+`skills/datamodels/SKILL.md` gives an AI agent the catalog's modelling rules and this toolkit's workflow (find before you define, alias or subclass, `bump` before changing a published model, and more). It points the agent to https://datamodels.jp/llms.txt for the models themselves. For Claude Code, copy the folder into your project's `.claude/skills/` (or `~/.claude/skills/` for every project):
+
+```bash
+mkdir -p .claude/skills && cp -R path/to/datamodels-toolkit/skills/datamodels .claude/skills/
+```
+
 ## Development
 
 ```bash
