@@ -19,6 +19,8 @@ const en = {
   formerModel: (type, subject, versions) => `${type} was a model of ${subject} in ${versions.length > 1 ? `versions ${versions.slice(0, -1).join(', ')} and ${versions.at(-1)}` : `version ${versions[0]}`}. The current version no longer has it; its files stay online.`,
   renamedBefore: 'The same type is now named ', renamedAfter: '.', currentModels: 'The current models of this subject: ',
   formerTerms: 'Terms of earlier versions', formerTermsIntro: 'Terms that earlier versions of this subject defined and the current one does not. Their IRIs stay valid; the vocabulary of the version describes them.',
+  notFound: 'Not found',
+  notFoundText: 'There is no page at this address. Pages can move, for example when a new version of a subject renames a model. The models of this site are listed below and in catalog.json.',
   open: ' (', close: ')', comma: ', ', period: '.',
   kinds: { entity: 'entity', value: 'value type' },
   stages: { draft: 'draft', experimental: 'experimental', stable: 'stable', deprecated: 'deprecated' },
@@ -41,6 +43,8 @@ const ja = {
   formerModel: (type, subject, versions) => `${type} は、${subject} のバージョン ${versions.join('、')} のモデルでした。現在の版にはありません。ファイルは公開したままです。`,
   renamedBefore: '同じ型は、現在 ', renamedAfter: ' という名前です。', currentModels: 'このサブジェクトの現在のモデル：',
   formerTerms: '以前の版の用語', formerTermsIntro: 'このサブジェクトの以前の版が定めていて、現在の版には無い用語です。IRI はそのまま有効で、その版の語彙に説明があります。',
+  notFound: 'ページが見つかりません',
+  notFoundText: 'このアドレスにページはありません。サブジェクトの新しい版でモデルの名前が変わったときなどに、ページが移ることがあります。このサイトのモデルは、下と catalog.json にあります。',
   open: '（', close: '）', comma: '、', period: '。',
   kinds: { entity: 'エンティティ', value: '値型' },
   stages: { draft: 'ドラフト', experimental: '試行', stable: '安定', deprecated: '非推奨' },
@@ -50,4 +54,5 @@ const TEXTS = { en, ja };
 
 /** The fixed texts for `lang`, English where it has none of its own. */
 // Open Graph locales need a territory (ja_JP); a language without one known here gets none.
-export const pageTexts = (lang) => ({ ...en, ...(TEXTS[lang] ?? {}), label: TEXTS[lang]?.label ?? lang, locale: TEXTS[lang]?.locale ?? null });
+// textLang: the language the fixed texts are actually in (English for a language without its own).
+export const pageTexts = (lang) => ({ ...en, ...(TEXTS[lang] ?? {}), label: TEXTS[lang]?.label ?? lang, locale: TEXTS[lang]?.locale ?? null, textLang: TEXTS[lang] ? lang : 'en' });

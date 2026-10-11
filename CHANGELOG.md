@@ -7,6 +7,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 ### Added
 
 - A model that a released version had and the current one does not keeps a page at its old address: which versions had it, its last files, the current model with the same type IRI (a rename), and the current models. The subject page lists the terms of earlier versions, each with its anchor, so their hash IRIs still open on it.
+- `build` writes `404.html`, the page that GitHub Pages and most static hosts show for a missing address: in the node's style, in its languages, with links to the index, `catalog.json` and every model. It is not indexed and has no canonical URL.
 - `check` notes a file in a model's `examples/` other than `example.json` and `example-normalized.jsonld`: it is not read, published or validated.
 
 ### Changed

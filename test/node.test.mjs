@@ -86,7 +86,7 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   const desc = join(dir, 'models', 'road', 'subject.yaml');
   await writeFile(desc, (await readFile(desc, 'utf8')).replace('Road maintenance.', '"Road <b>maintenance</b>."'));
   const { pages, catalog } = await buildNode(dir);
-  assert.deepEqual(pages, ['index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
+  assert.deepEqual(pages, ['404.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
   const read = (p) => readFile(join(dir, '_site', p), 'utf8');
   for (const p of pages) {
     const html = await read(p);
@@ -144,8 +144,17 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   await mkdir(join(road, 'RoadPatrol', 'mapping'));
   await writeFile(join(road, 'RoadPatrol', 'mapping', 'city-ledger.yaml'), 'standard:\n  name: { ja: 市の道路台帳, en: The city road ledger }\n  url: https://example.org/ledger\nfields:\n  route: { to: 路線名 }\n');
   const { pages } = await buildNode(dir);
-  assert.deepEqual(pages, ['en/index.html', 'en/models/road/RoadPatrol/index.html', 'en/ns/road.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
+  // One 404.html, at the root: static hosts answer every missing address with it.
+  assert.deepEqual(pages, ['404.html', 'en/index.html', 'en/models/road/RoadPatrol/index.html', 'en/ns/road.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
   const read = (p) => readFile(join(dir, '_site', p), 'utf8');
+  const missing = await read('404.html');
+  assert.match(missing, /<html lang="ja">/);
+  assert.match(missing, /<h1 lang="ja">ページが見つかりません<\/h1>/);
+  assert.match(missing, /<p lang="ja">このアドレスにページはありません。/);
+  assert.match(missing, /<p lang="en">There is no page at this address\./);
+  assert.match(missing, /<meta name="robots" content="noindex">/);
+  assert.doesNotMatch(missing, /rel="canonical"|<link rel="alternate" hreflang=|og:url/, 'it answers at any address');
+  assert.match(missing, /<li><a href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/">road\/RoadPatrol<\/a><\/li>/);
   const ja = await read('models/road/RoadPatrol/index.html');
   const en = await read('en/models/road/RoadPatrol/index.html');
   assert.match(ja, /<html lang="ja">/);
@@ -260,6 +269,10 @@ test('a language without a known territory gets no Open Graph locale', async () 
   const fr = await readFile(join(dir, '_site', 'fr', 'index.html'), 'utf8');
   assert.match(fr, /<html lang="fr">/);
   assert.doesNotMatch(fr, /og:locale/);
+  // The 404 page marks the English fallback text as English, not as French.
+  const missing = await readFile(join(dir, '_site', '404.html'), 'utf8');
+  assert.match(missing, /<p lang="en">There is no page at this address\./);
+  assert.doesNotMatch(missing, /<p lang="fr">/);
   const en = await readFile(join(dir, '_site', 'index.html'), 'utf8');
   assert.match(en, /<meta property="og:locale" content="en_US">/);
   assert.doesNotMatch(en, /og:locale:alternate/);

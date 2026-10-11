@@ -1,0 +1,29 @@
+---js
+{
+  layout: "base.njk",
+  // GitHub Pages and most static hosts answer a missing address with /404.html: one page, in the first language, with the other languages' texts.
+  eleventyComputed: {
+    permalink: (data) => (data.site.home === data.site.first ? "404.html" : false),
+    title: (data) => `${data.t.notFound}${data.t.titleSep}${data.site.title}`,
+    description: (data) => data.t.notFoundText,
+    path: "",
+    schema: "",
+  },
+}
+---
+<h1 lang="{{ t.textLang }}">{{ t.notFound }}</h1>
+{%- if site.langs.length %}
+{%- for l in site.langs %}
+<p lang="{{ l.textLang }}">{{ l.notFoundText }}</p>
+{%- endfor %}
+{%- else %}
+<p lang="{{ t.textLang }}">{{ t.notFoundText }}</p>
+{%- endif %}
+<p><a href="{{ site.home }}">{{ site.title }}</a>{{ t.comma }}<a href="{{ site.catalog }}">catalog.json</a></p>
+<ul>
+{%- for s in subjects %}
+{%- for m in s.models %}
+<li><a href="{{ m.page }}">{{ s.name }}/{{ m.type }}</a></li>
+{%- endfor %}
+{%- endfor %}
+</ul>
