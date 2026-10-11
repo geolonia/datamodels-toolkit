@@ -9,7 +9,7 @@ datamodels.jp is a catalog of data models that work in Japan: JSON Schemas, JSON
 
 ## Find before you define
 
-1. Read https://datamodels.jp/llms.txt (an index for agents), then https://datamodels.jp/catalog.json (every model: type IRI, `@context`, schema, attributes, examples). Other known nodes and what they build on: https://datamodels.jp/en/toolkit/sites.
+1. Read https://datamodels.jp/llms.txt (an index for agents), then https://datamodels.jp/catalog.json (every model: type IRI, `@context`, schema, attributes, examples). Other known nodes and what they build on: https://datamodels.jp/en/guide/sites.
 2. Reuse in this order: a datamodels.jp model as it is; then [Smart Data Models](https://smartdatamodels.org/), NGSI-LD core terms or schema.org where they fit; define a new type only for what is missing.
 3. Reuse attribute names and their IRIs. The same meaning gets the same IRI; a new attribute gets an IRI in your own namespace.
 4. Where it goes: a model many organisations in Japan need → propose it to datamodels.jp (https://datamodels.jp/en/guide/contribute). Only you need it → your own node. Not about Japan → Smart Data Models.
