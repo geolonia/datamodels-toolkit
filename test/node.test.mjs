@@ -87,6 +87,11 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   }
   assert.match(subject, /<link rel="alternate" type="application\/ld\+json" href="https:\/\/models\.example\.org\/vocab\/road\/v0\.1\.0\.jsonld">/);
   assert.doesNotMatch(subject, /hreflang|<nav>/, 'one language: no links to other languages');
+  // Compact: grouped by model, one table row per term, the IRI rule stated once.
+  assert.match(subject, /<h3><a href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/">RoadPatrol<\/a><\/h3>\n<table>/);
+  assert.match(subject, /<tr id="route"><td><a href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/#route">route<\/a><\/td>/);
+  assert.match(subject, /for example https:\/\/models\.example\.org\/ns\/road#RoadPatrol\./);
+  assert.doesNotMatch(subject, /IRI: https/, 'no full IRI repeated per term');
   assert.match(subject, /Road &lt;b&gt;maintenance&lt;\/b&gt;\./, 'text is escaped');
   const model = await read('models/road/RoadPatrol/index.html');
   assert.match(model, /<h3 id="route">route<\/h3>/);

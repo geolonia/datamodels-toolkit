@@ -60,23 +60,26 @@ export function pageData(subjects, { urls, node, lang = node.languages[0] }) {
   const models = [];
   const out = subjects.map((subject) => {
     const su = urls.subjectUrls(subject);
-    const terms = [];
+    // The terms this subject mints, grouped by the model that defines them; each has its anchor here.
+    const termGroups = [];
     const minted = new Set();
     // The anchor of a term is the end of its IRI (after the namespace), which may differ from the attribute's name.
     const anchor = (iri, name) => (iri.startsWith(su.namespace) ? iri.slice(su.namespace.length) : name);
     const subjectModels = subject.models.map((model) => {
       const mu = urls.modelUrls(subject, model);
-      if (!model.schema['x-alias-of']) terms.push({ name: model.type, anchor: anchor(mu.typeIri, model.type), what: t.type, iri: mu.typeIri, page: at(mu.page), texts: texts(model.catalog.title) });
+      const terms = [];
+      if (!model.schema['x-alias-of']) terms.push({ name: model.type, anchor: anchor(mu.typeIri, model.type), type: true, iri: mu.typeIri, page: at(mu.page), texts: texts(model.catalog.title) });
       const required = new Set(model.schema.required ?? []);
       const attributes = attributesOf(model).map(([name, prop]) => {
         const iri = prop['x-iri'] ?? '';
         if (iri.startsWith(su.namespace) && !minted.has(iri)) {
           minted.add(iri);
-          terms.push({ name, anchor: anchor(iri, name), what: t.attributeOf(model.type), iri, page: `${at(mu.page)}#${name}`, texts: texts(model.catalog.attributes?.[name]) });
+          terms.push({ name, anchor: anchor(iri, name), type: false, iri, page: `${at(mu.page)}#${name}`, texts: texts(model.catalog.attributes?.[name]) });
         }
         const type = prop.$ref || prop.allOf ? 'object' : prop.type ?? (prop.anyOf ? prop.anyOf.map((a) => a.format ?? a.type).filter(Boolean).join(' or ') : '');
         return { name, iri, type: [type, prop.format].filter(Boolean).join(', '), required: required.has(name), texts: texts(model.catalog.attributes?.[name]) };
       });
+      if (terms.length) termGroups.push({ model: model.type, page: at(mu.page), terms });
       const m = {
         type: model.type, kind: t.kinds[model.kind] ?? model.kind, status: t.stages[model.catalog.status ?? 'draft'] ?? model.catalog.status,
         typeIri: mu.typeIri, page: at(mu.page), path: path(mu.page), file: file(mu.page),
@@ -100,7 +103,7 @@ export function pageData(subjects, { urls, node, lang = node.languages[0] }) {
       titles: texts(subject.title), descriptions: texts(subject.description),
       summary: (texts(subject.description)[0] ?? texts(subject.title)[0])?.text ?? subject.name,
       contextAlias: su.contextAlias, contextExact: su.contextExact, vocab: su.vocabExact, namespace: su.namespace,
-      models: subjectModels, terms,
+      models: subjectModels, termGroups, termExample: termGroups[0]?.terms[0]?.iri ?? '',
     };
   });
   return { site, t, subjects: out, models };

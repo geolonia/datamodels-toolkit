@@ -29,10 +29,12 @@ eleventyComputed:
 {%- endfor %}
 </ul>
 <h2>{{ t.terms }}</h2>
-<p>{{ t.termsIntro }}</p>
-<dl>
-{%- for x in s.terms %}
-<dt id="{{ x.anchor }}"><a href="{{ x.page }}">{{ x.name }}</a></dt>
-<dd>{{ x.what }}{{ t.period }} IRI: {{ x.iri }}{% for y in x.texts %}<br><span lang="{{ y.lang }}">{{ y.text }}</span>{% endfor %}</dd>
+<p>{{ t.termsIntro }}{{ s.termExample }}{{ t.period }}</p>
+{%- for g in s.termGroups %}
+<h3><a href="{{ g.page }}">{{ g.model }}</a></h3>
+<table>
+{%- for x in g.terms %}
+<tr id="{{ x.anchor }}"><td><a href="{{ x.page }}">{{ x.name }}</a>{% if x.type %}{{ t.open }}{{ t.type }}{{ t.close }}{% endif %}</td><td>{% for y in x.texts %}<span lang="{{ y.lang }}">{{ y.text }}</span>{% endfor %}</td></tr>
 {%- endfor %}
-</dl>
+</table>
+{%- endfor %}

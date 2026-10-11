@@ -13,6 +13,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Changed
 
+- The subject page (the namespace document with hash IRIs) lists its terms grouped by model, one table row each, with the IRI rule stated once instead of the full IRI under every term.
 - The pages come in one set per language of the node: the first language at the base URL, the others under `/<lang>/`, with a link to switch. Each text is shown once, in the page's language; the fixed texts are in Japanese and English. `catalog.json` lists the English pages as `pageUrlEn` when English is not the first language.
 - The index shows each subject's description, not only its title.
 
