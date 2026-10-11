@@ -149,7 +149,7 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   const read = (p) => readFile(join(dir, '_site', p), 'utf8');
   const missing = await read('404.html');
   assert.match(missing, /<html lang="ja">/);
-  assert.match(missing, /<h1>ページが見つかりません<\/h1>/);
+  assert.match(missing, /<h1 lang="ja">ページが見つかりません<\/h1>/);
   assert.match(missing, /<p lang="ja">このアドレスにページはありません。/);
   assert.match(missing, /<p lang="en">There is no page at this address\./);
   assert.match(missing, /<meta name="robots" content="noindex">/);
