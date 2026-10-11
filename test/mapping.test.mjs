@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import YAML from 'yaml';
 import { siteReader, loadTarget, isMappingFile, isViaFile } from '../src/catalog.mjs';
-import { mappedColumns } from '../src/convert.mjs';
+import { mappedColumns, mappingProblems } from '../src/convert.mjs';
 import { siteModel, templateMapping, targetsOf, matchColumns, flowRule, startMapping } from '../src/mapping.mjs';
 import { exportModel } from '../src/export.mjs';
 
@@ -371,4 +371,18 @@ test('mapping takes the values of a catalog rule along with its column', () => {
   const { chosen } = matchColumns(targets, ['種類'], catalog);
   assert.deepEqual(chosen.get('kind').rule, { values: { 病院: 'hospital' } });
   assert.equal(flowRule({ column: '種類', values: { 病院: 'hospital', '': false } }), '{ column: "種類", values: { "病院": "hospital", "": false } }');
+});
+
+test('a catalog rule with values and no transform stays a values lookup; for a boolean it is yesno with those values', async () => {
+  const model = await siteModel(reader, 'facility/AEDLocation');
+  const catalog = [{ name: 'x', mapping: { fields: {
+    pediatricSupport: { column: '小児対応', values: { 有: true, 無: false } },
+    restrictedAccess: { column: '外部', values: { 外部利用不可: 'yes' } },
+  } }, mappings: {} }];
+  const r = startMapping({ target: 'facility/AEDLocation', ...model, header: ['小児対応', '外部'], catalog, csv: 'a.csv' });
+  const m = YAML.parse(r.text);
+  assert.deepEqual(m.fields.pediatricSupport, { column: '小児対応', transform: 'yesno', values: { 有: true, 無: false } });
+  // Values that are not true or false: no transform (flag takes no values); the schema then checks the value.
+  assert.deepEqual(m.fields.restrictedAccess, { column: '外部', values: { 外部利用不可: 'yes' } });
+  assert.deepEqual(mappingProblems({ fields: m.fields }), []);
 });

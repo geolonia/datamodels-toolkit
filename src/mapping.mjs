@@ -94,6 +94,13 @@ function transformFor(t, { template = false, samples = [] } = {}) {
   return undefined;
 }
 
+/**
+ * The transform of a catalog rule that has values but no transform: the values
+ * do the mapping, so none (a transform for the type, such as integer, takes no
+ * values), or yesno for a boolean whose values are all true or false.
+ */
+const valuesTransform = (t, values) => (t.value?.type === 'boolean' && Object.values(values).every((v) => typeof v === 'boolean') ? 'yesno' : undefined);
+
 /** The rule of a geometry in the CSV template: longitude and latitude, and a GeoJSON column for other shapes. */
 const templateGeometry = (t) => {
   const prefix = t.name === 'location' ? '' : `${t.name}.`;
@@ -400,7 +407,7 @@ export function startMapping({ target, entry, model, languages, columns, header,
     const notes = [];
     let rule;
     if (c) {
-      const transform = c.rule?.transform ?? transformFor(t, { samples: samples(c.cols[0]) });
+      const transform = c.rule?.transform ?? (c.rule?.values ? valuesTransform(t, c.rule.values) : transformFor(t, { samples: samples(c.cols[0]) }));
       rule = { column: c.cols.length === 1 && t.kind !== 'geometry' ? c.cols[0] : c.cols, ...(transform ? { transform } : {}), ...(c.rule?.values ? { values: c.rule.values } : {}) };
       if (c.rule?.transform === 'flags') delete rule.column;
       if (c.from) notes.push(T.from(c.from));
