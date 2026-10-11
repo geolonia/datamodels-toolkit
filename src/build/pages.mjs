@@ -51,7 +51,7 @@ export function pageData(subjects, { urls, node, lang = node.languages[0] }) {
     name, title: t.dataModelsBy(name), description: `${t.introBefore}catalog.json${t.introAfter}`, locale: t.locale,
     lang, baseUrl: urls.baseUrl, home: prefixOf(lang), catalog: `${urls.baseUrl}/catalog.json`, llms: `${urls.baseUrl}/llms.txt`,
     // The other languages' versions of each page: prefix + the page's path.
-    langs: languages.length > 1 ? languages.map((l) => ({ lang: l, label: pageTexts(l).label, locale: pageTexts(l).locale, prefix: prefixOf(l), notFoundText: pageTexts(l).notFoundText })) : [],
+    langs: languages.length > 1 ? languages.map((l) => ({ lang: l, label: pageTexts(l).label, locale: pageTexts(l).locale, prefix: prefixOf(l), notFoundText: pageTexts(l).notFoundText, textLang: pageTexts(l).textLang })) : [],
     first: prefixOf(languages[0]),
     publisher: { name, url: node.publisher.url },
     license: node.license, licenseUrl: node.licenseUrl ?? `https://spdx.org/licenses/${node.license}.html`,

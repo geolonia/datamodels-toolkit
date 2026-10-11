@@ -108,7 +108,7 @@ The pages are plain HTML in a monospace font, with no JavaScript, so they read w
 
 One set of pages per language of the node: the first language at the base URL (where the IRIs open), each other one under `/<lang>/` (for example `/en/`), with a link to switch in the header. Each page shows the node's texts in its language, falling back to the first language that has one; the fixed texts are in Japanese and English (English for other languages). When English is not the first language, `catalog.json` lists the English pages as `pageUrlEn`, as datamodels.jp does. The pages follow the device's light or dark setting.
 
-Every page links to `catalog.json` (`<link rel="alternate" type="application/json">`) and carries a description, a canonical URL, its other languages (`hreflang`), Open Graph tags for link previews, and `<meta name="generator">`. The footer names the toolkit and links to the guide for publishing your own models. The exit code is 1 when the node is invalid, 2 for a usage error.
+Every page links to `catalog.json` (`<link rel="alternate" type="application/json">`) and carries a description, Open Graph tags for link previews, and `<meta name="generator">`. Every page but `404.html` also carries a canonical URL and its other languages (`hreflang`); `404.html` answers at any address, so it has neither and asks not to be indexed. The footer names the toolkit and links to the guide for publishing your own models. The exit code is 1 when the node is invalid, 2 for a usage error.
 
 ## check
 

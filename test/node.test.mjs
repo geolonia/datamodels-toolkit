@@ -269,6 +269,10 @@ test('a language without a known territory gets no Open Graph locale', async () 
   const fr = await readFile(join(dir, '_site', 'fr', 'index.html'), 'utf8');
   assert.match(fr, /<html lang="fr">/);
   assert.doesNotMatch(fr, /og:locale/);
+  // The 404 page marks the English fallback text as English, not as French.
+  const missing = await readFile(join(dir, '_site', '404.html'), 'utf8');
+  assert.match(missing, /<p lang="en">There is no page at this address\./);
+  assert.doesNotMatch(missing, /<p lang="fr">/);
   const en = await readFile(join(dir, '_site', 'index.html'), 'utf8');
   assert.match(en, /<meta property="og:locale" content="en_US">/);
   assert.doesNotMatch(en, /og:locale:alternate/);

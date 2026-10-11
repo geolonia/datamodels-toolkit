@@ -11,13 +11,13 @@
   },
 }
 ---
-<h1>{{ t.notFound }}</h1>
+<h1 lang="{{ t.textLang }}">{{ t.notFound }}</h1>
 {%- if site.langs.length %}
 {%- for l in site.langs %}
-<p lang="{{ l.lang }}">{{ l.notFoundText }}</p>
+<p lang="{{ l.textLang }}">{{ l.notFoundText }}</p>
 {%- endfor %}
 {%- else %}
-<p>{{ t.notFoundText }}</p>
+<p lang="{{ t.textLang }}">{{ t.notFoundText }}</p>
 {%- endif %}
 <p><a href="{{ site.home }}">{{ site.title }}</a>{{ t.comma }}<a href="{{ site.catalog }}">catalog.json</a></p>
 <ul>
