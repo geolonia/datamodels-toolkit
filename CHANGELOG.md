@@ -4,10 +4,15 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-10-11
+
+Adapters: every model also as a CSV template with its Table Schema, a JSON Schema for the structured output of AI models, and a PostgreSQL / PostGIS table, to download from the model page or to make with `datamodels export`.
+
 ### Added
 
 - `datamodels export <subject>/<Type> --to csv,table-schema,ai,postgis`: files made from one entity model for tools that do not read NGSI-LD. A CSV template and its Frictionless Table Schema (v2), a strict JSON Schema for the structured output of AI models (OpenAI and Claude), and a PostgreSQL / PostGIS `CREATE TABLE` with constraints, a GiST index and comments. They use the model's attribute names and IRIs. The model is the node's, or one of another node's `catalog.json` (default datamodels.jp), as for `extend`.
 - `build` writes the same files for every entity model at `/adapters/<name>/<subject>/<Type>.<ext>`, lists them under `adapters` in `catalog.json`, and adds an `/adapters/` page that explains them. Each model page has a Download line with its files and a link to that page. The adapters follow the interface of geolonia/datamodels (`adapters/README.md`), with a third argument for what the node knows. `@geolonia/datamodels/adapters` exports them, for datamodels.jp later.
+- What the adapters read from other sites is limited: a schema that a model refers to is read only from the `schema/` folder of a node listed in `node.yaml` (`export` from another catalog: that catalog's site and the nodes it lists), only over https, and only from a public address, checked when connecting and on every redirect. `check --offline` reads none.
 
 ### Changed
 
@@ -118,7 +123,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.3...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.4...main
+[0.3.4]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.0...v0.3.1
