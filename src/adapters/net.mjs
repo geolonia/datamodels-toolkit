@@ -12,6 +12,23 @@ const MAX_BYTES = 5 * 1024 * 1024;
 /** The four numbers of an IPv4 address, or null. */
 const v4 = (ip) => { const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(ip); return m ? m.slice(1).map(Number) : null; };
 
+/** The eight 16-bit groups of an IPv6 address, whatever its notation (::, an IPv4 tail), or null. */
+function hextets(ip) {
+  let s = ip.toLowerCase().replace(/%.*$/, '');
+  const tail = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(s);
+  if (tail) {
+    const [a, b, c, d] = tail.slice(1).map(Number);
+    s = `${s.slice(0, tail.index)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const [head, rest] = s.split('::');
+  const left = head ? head.split(':') : [];
+  const right = rest !== undefined && rest !== '' ? rest.split(':') : [];
+  const fill = s.includes('::') ? 8 - left.length - right.length : 0;
+  const all = [...left, ...Array(Math.max(fill, 0)).fill('0'), ...right];
+  if (all.length !== 8 || !all.every((x) => /^[0-9a-f]{1,4}$/.test(x))) return null;
+  return all.map((x) => parseInt(x, 16));
+}
+
 /** Whether an IP address is on the public internet: not loopback, private, link-local, shared, reserved or multicast. */
 export function isPublicAddress(ip) {
   const family = isIP(ip);
@@ -22,10 +39,19 @@ export function isPublicAddress(ip) {
       || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19)));
   }
   if (family === 6) {
-    const x = ip.toLowerCase();
-    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(x);
-    if (mapped) return isPublicAddress(mapped[1]);
-    return !(x === '::' || x === '::1' || /^f[cd]/.test(x) || /^fe[89ab]/.test(x) || /^ff/.test(x) || /^64:ff9b:/.test(x) || /^2001:db8:/.test(x));
+    const h = hextets(ip);
+    if (!h) return false;
+    // An IPv4 address inside IPv6 (::ffff:a.b.c.d or ::ffff:7f00:1, and the old ::a.b.c.d): classify the IPv4 address.
+    if (h.slice(0, 5).every((x) => x === 0) && (h[5] === 0xffff || h[5] === 0)) {
+      if (h[5] === 0 && h[6] === 0 && h[7] <= 1) return false; // :: and ::1
+      return isPublicAddress(`${h[6] >> 8}.${h[6] & 255}.${h[7] >> 8}.${h[7] & 255}`);
+    }
+    return !((h[0] & 0xfe00) === 0xfc00 // fc00::/7 unique local
+      || (h[0] & 0xffc0) === 0xfe80 // fe80::/10 link-local
+      || (h[0] & 0xffc0) === 0xfec0 // fec0::/10 site-local (old)
+      || (h[0] & 0xff00) === 0xff00 // multicast
+      || (h[0] === 0x64 && h[1] === 0xff9b) // NAT64, which reaches IPv4 addresses
+      || (h[0] === 0x2001 && h[1] === 0x0db8)); // documentation
   }
   return false;
 }

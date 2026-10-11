@@ -381,8 +381,8 @@ test('PostGIS: a string literal means the same whatever standard_conforming_stri
 test('the adapters connect only to public addresses, also for the first URL', async () => {
   const { isPublicAddress, publicFetch } = await import('../src/adapters/net.mjs');
   const { getter } = await import('../src/adapters/index.mjs');
-  for (const ok of ['8.8.8.8', '104.21.1.1', '2606:4700::1']) assert.ok(isPublicAddress(ok), ok);
-  for (const bad of ['127.0.0.1', '10.0.0.5', '172.16.0.1', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1', '::1', '::', 'fd00::1', 'fe80::1', '::ffff:127.0.0.1', '::ffff:10.0.0.1', 'not-an-ip']) assert.ok(!isPublicAddress(bad), bad);
+  for (const ok of ['8.8.8.8', '104.21.1.1', '2606:4700::1', '::ffff:808:808', '2a00:1450:4001::1']) assert.ok(isPublicAddress(ok), ok);
+  for (const bad of ['127.0.0.1', '10.0.0.5', '172.16.0.1', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1', '::1', '::', 'fd00::1', 'fe80::1', '::ffff:127.0.0.1', '::ffff:10.0.0.1', '::ffff:7f00:1', '::ffff:a00:1', '::ffff:a9fe:a9fe', '0:0:0:0:0:ffff:7f00:1', '::127.0.0.1', 'fc12::1', 'fec0::1', 'ff02::1', '64:ff9b::a00:1', '2001:db8::1', 'not-an-ip']) assert.ok(!isPublicAddress(bad), bad);
   await assert.rejects(publicFetch('https://127.0.0.1/x'), /127\.0\.0\.1 is not a public address/);
   await assert.rejects(publicFetch('https://[::1]/x'), /::1 is not a public address/);
   await assert.rejects(publicFetch('http://example.org/x'), /only https is read/);
@@ -392,4 +392,13 @@ test('the adapters connect only to public addresses, also for the first URL', as
   await assert.rejects(getter(stub, 1000)('http://169.254.169.254/schema/x.json'), /only https on a public host name/);
   await assert.rejects(getter(stub, 1000)('https://10.0.0.1/schema/x.json'), /only https on a public host name/);
   assert.deepEqual(read, []);
+});
+
+test('PostGIS: two attributes with the same column name give no table, not a broken one', async () => {
+  const { NoTable } = await import('../src/adapters/postgis/index.mjs');
+  const postgis = ADAPTERS.find((a) => a.name === 'postgis');
+  const thing = { type: 'Thing', kind: 'entity', catalog: { attributes: {} }, schema: { required: ['id', 'type'], properties: { id: { type: 'string' }, type: { const: 'Thing' }, fooBar: { type: 'string', 'x-iri': 'https://example.org/ns#fooBar' }, foo_bar: { type: 'string', 'x-iri': 'https://example.org/ns#foo_bar' } } } };
+  const ctx = { urls: catalogUrls('https://example.org'), languages: ['en'], refs: {} };
+  assert.throws(() => createTable({ name: 's', version: '1.0.0' }, thing, ctx), (e) => e instanceof NoTable && /foo_bar would hold both/.test(e.message));
+  assert.equal(postgis.urlFor({ name: 's', version: '1.0.0' }, thing, ctx), null);
 });

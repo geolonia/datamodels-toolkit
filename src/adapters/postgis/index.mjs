@@ -76,6 +76,9 @@ function comment(languages, texts, iris) {
 export const UNIQUE_ITEMS = 'datamodels_unique_items';
 const uniqueItemsFunction = `CREATE OR REPLACE FUNCTION ${UNIQUE_ITEMS}(anyarray) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT count(*) = count(DISTINCT x) FROM unnest($1) AS x $$;`;
 
+/** Why a model has no table. */
+export class NoTable extends Error {}
+
 /** The table's name: the type in snake_case (EvacuationSite → evacuation_site). */
 export const tableName = (model) => snake(model.type);
 
@@ -91,7 +94,12 @@ export function createTable(subject, model, context) {
   // The columns of each attribute, for the "at least one of" checks.
   const columnsOfAttribute = {};
   let needsUnique = false;
+  // Two attributes can give the same column name (fooBar and foo_bar, or address_postal_code and
+  // address.postalCode): such a model has no table, rather than one PostgreSQL refuses.
+  const used = new Map();
   const add = (name, type, { notNull = false, primaryKey = false, texts = {}, iris = [] } = {}) => {
+    if (used.has(name)) throw new NoTable(`${model.type}: the column ${name} would hold both ${used.get(name)} and ${iris.at(-1) ?? name}`);
+    used.set(name, iris.at(-1) ?? name);
     const col = ident(name);
     columns.push(`  ${col} ${type}${primaryKey ? ' PRIMARY KEY' : notNull ? ' NOT NULL' : ''}`);
     comments.push(`COMMENT ON COLUMN ${table}.${col} IS ${comment(languages, texts, iris)};`);
@@ -164,6 +172,10 @@ export default {
     ja: 'CREATE TABLE 文。列名は属性名の snake_case で、必須・使える値・パターンを制約で検査します。位置は SRID 4326 のジオメトリ（GiST インデックス付き）、説明と IRI は COMMENT にあります。',
     en: 'A CREATE TABLE statement: columns are the attribute names in snake_case, with constraints for required attributes, allowed values and patterns; location is a geometry in SRID 4326 with a GiST index; descriptions and IRIs are in the comments.',
   },
-  urlFor: adapterUrl('postgis', 'sql'),
+  urlFor: (subject, model, context) => {
+    const url = adapterUrl('postgis', 'sql')(subject, model, context);
+    if (!url) return null;
+    try { createTable(subject, model, context); return url; } catch (e) { if (e instanceof NoTable) return null; throw e; }
+  },
   content: createTable,
 };
