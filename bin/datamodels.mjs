@@ -50,6 +50,7 @@ import { promisify } from 'node:util';
 import { initSettings, writeNode, publishToGitHub } from '../src/init.mjs';
 import { addModel } from '../src/add.mjs';
 import { releaseSubject } from '../src/release.mjs';
+import { upgradeNode, bumpSubject } from '../src/version.mjs';
 import { extendModel, extendableModels } from '../src/extend.mjs';
 
 const USAGES = {
@@ -58,6 +59,8 @@ const USAGES = {
   check: `usage: datamodels check [dir] [--offline]`,
   add: `usage: datamodels add <subject>/<Type> [dir] [--value]`,
   release: `usage: datamodels release <subject> [dir] [--offline]`,
+  bump: `usage: datamodels bump <subject> <patch|minor|major> [dir] [--offline]`,
+  upgrade: `usage: datamodels upgrade [dir] [--to vX.Y.Z]`,
   extend: `usage: datamodels extend <model> <subject>/<Type> [dir] [--index URL] [--subclass]`,
   init: `usage: datamodels init [dir] [--base-url URL] [--iris hash|slash] [--languages en,ja] [--publisher name] [--publisher-url URL] [--license id] [--subject name] [--github owner/name] [--yes]`,
 };
@@ -70,7 +73,7 @@ const fail = (msg) => { throw new Exit(1, msg); };
 
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
-function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease, onExtend }) {
+function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease, onExtend, onBump, onUpgrade }) {
   // An option's value: present, not empty (--out=) and not another option.
   const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
   const cli = new Command('datamodels')
@@ -132,6 +135,20 @@ function program({ onConvert, onBuild, onCheck, onInit, onAdd, onRelease, onExte
     .argument('[dir]', 'the node: node.yaml and models/', '.')
     .option('--offline', 'do not compare the snapshot with the published files')
     .action(onRelease);
+  cli.command('bump')
+    .description("give a subject a new version: release the current one (it stays online), then raise the version in subject.yaml and the subject's schema URLs")
+    .usage(USAGES.bump.replace('usage: datamodels bump ', ''))
+    .argument('<subject>', 'the subject, for example road')
+    .argument('<level>', 'patch, minor or major (Semantic Versioning: major for a change that breaks existing data)')
+    .argument('[dir]', 'the node: node.yaml and models/', '.')
+    .option('--offline', 'release without comparing with the published files')
+    .action(onBump);
+  cli.command('upgrade')
+    .description("move the node to a release of datamodels-toolkit: the Action's pin in the workflows and npx in the README")
+    .usage(USAGES.upgrade.replace('usage: datamodels upgrade ', ''))
+    .argument('[dir]', 'the node', '.')
+    .option('--to <vX.Y.Z>', 'a release (default: the latest)', value('--to'))
+    .action(onUpgrade);
   cli.command('extend')
     .description("start a model from a model of another node, such as datamodels.jp's: a copy of its schema at its version, its @context imported, recorded in extends")
     .usage(USAGES.extend.replace('usage: datamodels extend ', ''))
@@ -169,6 +186,8 @@ async function main(args) {
     onInit: async (dir, options) => { code = await init(dir, options); },
     onAdd: async (target, dir, options) => { code = await add(target, dir, options); },
     onRelease: async (subject, dir, options) => { code = await release(subject, dir, options); },
+    onBump: async (subject, level, dir, options) => { code = await bump(subject, level, dir, options); },
+    onUpgrade: async (dir, options) => { code = await upgrade(dir, options); },
     onExtend: async (model, target, dir, options) => { code = await extend(model, target, dir, options); },
   });
   // datamodels --help lists the commands; datamodels help build is commander's.
@@ -261,6 +280,24 @@ async function release(subjectName, dir, { offline }) {
   for (const n of r.notes) console.error(`  note: ${n}`);
   if (!r.written) console.error(`${r.subject} v${r.version}: already released (${r.dir}), unchanged`);
   else console.error(`${r.subject} v${r.version}: released into ${r.dir}${r.online ? `, the same as the ${r.online} published file(s)` : ''}. Commit it; the next version leaves these files online.`);
+  return 0;
+}
+
+async function bump(subjectName, level, dir, { offline }) {
+  let r;
+  try { r = await bumpSubject(dir, subjectName, level, { offline }); } catch (e) { fail(e.message); }
+  for (const n of r.released.notes) console.error(`  note: ${n}`);
+  console.error(`  ${r.released.written ? 'released' : 'already released'} v${r.from} (${r.released.dir})`);
+  for (const f of r.changed) console.error(`  changed ${f}`);
+  console.error(`${r.subject}: ${r.from} → ${r.to}. Commit both; the site keeps v${r.from} and adds v${r.to}.`);
+  return 0;
+}
+
+async function upgrade(dir, { to }) {
+  let r;
+  try { r = await upgradeNode(dir, { to }); } catch (e) { fail(e.message); }
+  for (const f of r.changed) console.error(`  changed ${f}`);
+  console.error(r.changed.length ? `${dir}: datamodels-toolkit ${r.version} (${r.sha.slice(0, 7)}). Commit the changes.` : `${dir}: already at datamodels-toolkit ${r.version}, nothing changed`);
   return 0;
 }
 

@@ -134,6 +134,23 @@ Keeps the current version of a subject online. A node's site holds the current v
 
 Run it once a version is published, before you change its sources, and commit the snapshot. Online, it first compares the snapshot with the published files and refuses when the sources changed since, or when the site does not answer: then restore them (for example with git), release, and make the change with a new version. A snapshot that exists is kept; `build` stops when the sources of a released version change. `check` notes a published version that has no snapshot yet. `--offline` skips the comparison.
 
+## bump
+
+```bash
+datamodels bump road minor   # 0.1.0 → 0.2.0
+```
+
+Gives a subject a new version: `patch`, `minor` or `major`, as in [Semantic Versioning](https://semver.org/) (major for a change that breaks existing data). It runs `release` first, so the current version stays online and is compared with the published files, then raises `version` in `subject.yaml` and the version in the subject's own schema URLs (`$id`, and `$ref` between its models). `--offline` releases without the comparison.
+
+## upgrade
+
+```bash
+datamodels upgrade              # the latest release
+datamodels upgrade --to v0.3.0
+```
+
+Moves the node to a release of this toolkit: the Action in `.github/workflows/` is pinned to the release's commit SHA, with the tag as a comment, and `npx github:geolonia/datamodels-toolkit#vX.Y.Z` in the Markdown files at the top of the node runs that release. It reads the release from the GitHub API. Dependabot does the same for the workflow, a week or so later.
+
 ## GitHub Action
 
 This repository is also a GitHub Action: it runs `check` and `build` and deploys the node to GitHub Pages. A node's workflow:
