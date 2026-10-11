@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.1 release of the Action, and a README whose `npx` commands run v0.3.1.
+
 ## [0.3.1] - 2026-10-11
 
 A new node gets the files it lacked: `LICENSE` and a Dependabot configuration.
