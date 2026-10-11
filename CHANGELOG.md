@@ -4,6 +4,15 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Added
+
+- Page metadata: description, canonical URL, `hreflang` links, Open Graph tags, and `<meta name="generator">` with the toolkit's version. The footer names the toolkit and links to the guide for publishing your own data models.
+
+### Changed
+
+- The pages come in one set per language of the node: the first language at the base URL, the others under `/<lang>/`, with a link to switch. Each text is shown once, in the page's language; the fixed texts are in Japanese and English. `catalog.json` lists the English pages as `pageUrlEn` when English is not the first language.
+- The index shows each subject's description, not only its title.
+
 ## [0.2.1] - 2026-10-11
 
 ### Changed

@@ -53,7 +53,9 @@ export async function readNode(dir) {
 /** The node in `dir`: its settings, URLs and subjects with their models, checked. Returns { node, urls, subjects }. */
 export async function loadNode(dir) {
   const node = await readNode(dir);
-  const urls = catalogUrls(node.baseUrl, { iris: node.iris });
+  // English pages of their own (under /en/) when English is not the first language, as on datamodels.jp.
+  const pageEn = node.languages.includes('en') && node.languages[0] !== 'en' ? (url) => url.replace(node.baseUrl, `${node.baseUrl}/en`) : null;
+  const urls = catalogUrls(node.baseUrl, { iris: node.iris, pageEn });
   const modelsDir = join(dir, 'models');
   if (!(await stat(modelsDir).then((s) => s.isDirectory(), () => false))) throw new Error(`${modelsDir}: not found (the models of a node are in models/)`);
   // A context may import the contexts of the nodes this node knows, such as datamodels.jp's.

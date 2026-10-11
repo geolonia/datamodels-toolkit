@@ -3,12 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="{{ site.generator.name }} {{ site.generator.version }}">
 {#- title and alternate come from computed front matter, marked safe there: escaped once, here. #}
 <title>{{ title }}</title>
+<meta name="description" content="{{ description }}">
+<link rel="canonical" href="{{ site.home }}{{ path }}">
 <link rel="alternate" type="application/json" href="{{ site.catalog }}">
 {%- if alternate %}
 <link rel="alternate" type="application/ld+json" href="{{ alternate }}">
 {%- endif %}
+{%- if schema %}
+<link rel="alternate" type="application/schema+json" href="{{ schema }}">
+{%- endif %}
+{%- for l in site.langs %}
+<link rel="alternate" hreflang="{{ l.lang }}" href="{{ l.prefix }}{{ path }}">
+{%- endfor %}
+{%- if site.langs.length %}
+<link rel="alternate" hreflang="x-default" href="{{ site.first }}{{ path }}">
+{%- endif %}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{ site.title }}">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ description }}">
+<meta property="og:url" content="{{ site.home }}{{ path }}">
+<meta property="og:locale" content="{{ site.locale }}">
+{%- for l in site.langs %}{% if l.lang != site.lang %}
+<meta property="og:locale:alternate" content="{{ l.locale }}">
+{%- endif %}{% endfor %}
 <style>
 :root { color-scheme: light dark; }
 body { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height: 1.5; max-width: 88ch; margin: 2rem auto; padding: 0 1rem; }
@@ -17,18 +38,24 @@ a { color: inherit; }
 :target { outline: 2px solid; outline-offset: 4px; }
 dt { font-weight: bold; }
 dd { margin: 0 0 0.5rem 2ch; overflow-wrap: anywhere; }
+header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 2ch; }
 </style>
 </head>
 <body>
-<header><a href="{{ site.home }}">Data models by {{ site.name }}</a></header>
+<header><a href="{{ site.home }}">{{ site.title }}</a>
+{%- if site.langs.length %}
+<nav>{% for l in site.langs %}{% if l.lang == site.lang %}<span lang="{{ l.lang }}">{{ l.label }}</span>{% else %}<a href="{{ l.prefix }}{{ path }}" hreflang="{{ l.lang }}" lang="{{ l.lang }}">{{ l.label }}</a>{% endif %}{% if not loop.last %} | {% endif %}{% endfor %}</nav>
+{%- endif %}</header>
 <main>
 {{ content | safe }}
 </main>
 <footer>
 <hr>
-<p>Published by <a href="{{ site.publisher.url }}">{% for n in site.publisher.names %}<span lang="{{ n.lang }}">{{ n.text }}</span>{% if not loop.last %} / {% endif %}{% endfor %}</a>.
-Machine-readable files: <a href="{{ site.catalog }}">catalog.json</a>, <a href="{{ site.llms }}">llms.txt</a>.
-Licence: <a href="{{ site.licenseUrl }}">{{ site.license }}</a>.</p>
+<p>{{ t.publishedBy }}<a href="{{ site.publisher.url }}">{{ site.publisher.name }}</a>{{ t.period }}
+{{ t.machineReadable }}<a href="{{ site.catalog }}">catalog.json</a>{{ t.comma }}<a href="{{ site.llms }}">llms.txt</a>{{ t.period }}
+{{ t.licence }}<a href="{{ site.licenseUrl }}">{{ site.license }}</a>{{ t.period }}</p>
+<p>{{ t.madeWith }}<a href="{{ site.generator.url }}">{{ site.generator.name }}</a> {{ site.generator.version }}{{ t.period }}
+{{ t.ownBefore }}<a href="{{ t.guideUrl }}">{{ t.guide }}</a>{{ t.period }}</p>
 </footer>
 </body>
 </html>

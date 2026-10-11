@@ -6,7 +6,10 @@ pagination:
   alias: m
 permalink: "{{ m.file }}"
 eleventyComputed:
-  title: "{{ m.type | safe }}: data models by {{ site.name | safe }}"
+  title: "{{ m.type | safe }}{{ t.titleSep | safe }}{{ site.title | safe }}"
+  path: "{{ m.path | safe }}"
+  description: "{{ m.summary | safe }}"
+  schema: "{{ m.schema | safe }}"
 ---
 {%- from "texts.njk" import texts %}
 <p><a href="{{ m.subject.page }}">{{ m.subject.name }}</a></p>
@@ -14,29 +17,29 @@ eleventyComputed:
 {{ texts(m.titles) }}
 {{- texts(m.descriptions) }}
 <dl>
-<dt>Stage</dt><dd>{{ m.status }}</dd>
-<dt>Kind</dt><dd>{{ m.kind }}</dd>
-<dt>Type IRI</dt><dd>{{ m.typeIri }}</dd>
+<dt>{{ t.stage }}</dt><dd>{{ m.status }}</dd>
+<dt>{{ t.kind }}</dt><dd>{{ m.kind }}</dd>
+<dt>{{ t.typeIri }}</dt><dd>{{ m.typeIri }}</dd>
 {%- if m.subClassOf %}
-<dt>Subclass of</dt><dd><a href="{{ m.subClassOf }}">{{ m.subClassOf }}</a></dd>
+<dt>{{ t.subclassOf }}</dt><dd><a href="{{ m.subClassOf }}">{{ m.subClassOf }}</a></dd>
 {%- endif %}
 {%- if m.aliasOf %}
-<dt>Another name for</dt><dd><a href="{{ m.aliasOf }}">{{ m.aliasOf }}</a></dd>
+<dt>{{ t.aliasOf }}</dt><dd><a href="{{ m.aliasOf }}">{{ m.aliasOf }}</a></dd>
 {%- endif %}
 {%- for e in m.extends %}
-<dt>Extends</dt><dd><a href="{{ e.typeIri }}">{{ e.typeIri }}</a> v{{ e.version }} (<a href="{{ e.index }}">index</a>)</dd>
+<dt>{{ t.extendsLabel }}</dt><dd><a href="{{ e.typeIri }}">{{ e.typeIri }}</a> v{{ e.version }}{{ t.open }}<a href="{{ e.index }}">{{ t.index }}</a>{{ t.close }}</dd>
 {%- endfor %}
 <dt>JSON Schema</dt><dd><a href="{{ m.schema }}">{{ m.schema }}</a></dd>
 <dt>@context</dt><dd><a href="{{ m.context }}">{{ m.context }}</a></dd>
 {%- for x in m.examples %}
-<dt>Example</dt><dd><a href="{{ x }}">{{ x }}</a></dd>
+<dt>{{ t.example }}</dt><dd><a href="{{ x }}">{{ x }}</a></dd>
 {%- endfor %}
 </dl>
-<h2>Attributes</h2>
+<h2>{{ t.attributes }}</h2>
 {%- for a in m.attributes %}
 <h3 id="{{ a.name }}">{{ a.name }}</h3>
 {{ texts(a.texts) }}
-<p>{{ a.type or "any" }}{% if a.required %}, required{% endif %}. IRI: {{ a.iri }}</p>
+<p>{{ a.type or t.any }}{% if a.required %}{{ t.comma }}{{ t.required }}{% endif %}{{ t.period }} IRI: {{ a.iri }}</p>
 {%- else %}
-<p>None.</p>
+<p>{{ t.noAttributes }}</p>
 {%- endfor %}

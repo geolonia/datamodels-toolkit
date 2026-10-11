@@ -103,7 +103,9 @@ The pages are plain HTML in a monospace font, with no JavaScript, so they read w
 - One page per subject. With hash IRIs it is the namespace document (`/ns/<subject>`, written as `ns/<subject>.html`), with an anchor for every type and attribute, so every IRI opens on it.
 - One page per model (`/models/<subject>/<Type>/`), with an anchor per attribute.
 
-Every page links to `catalog.json` (`<link rel="alternate" type="application/json">`). The exit code is 1 when the node is invalid, 2 for a usage error.
+One set of pages per language of the node: the first language at the base URL (where the IRIs open), each other one under `/<lang>/` (for example `/en/`), with a link to switch in the header. Each page shows the node's texts in its language, falling back to the first language that has one; the fixed texts are in Japanese and English (English for other languages). When English is not the first language, `catalog.json` lists the English pages as `pageUrlEn`, as datamodels.jp does. The pages follow the device's light or dark setting.
+
+Every page links to `catalog.json` (`<link rel="alternate" type="application/json">`) and carries a description, a canonical URL, its other languages (`hreflang`), Open Graph tags for link previews, and `<meta name="generator">`. The footer names the toolkit and links to the guide for publishing your own models. The exit code is 1 when the node is invalid, 2 for a usage error.
 
 ## check
 

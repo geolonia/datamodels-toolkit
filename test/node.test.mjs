@@ -86,11 +86,12 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
     assert.ok(subject.includes(`id="${iri.split('#')[1]}"`), iri);
   }
   assert.match(subject, /<link rel="alternate" type="application\/ld\+json" href="https:\/\/models\.example\.org\/vocab\/road\/v0\.1\.0\.jsonld">/);
+  assert.doesNotMatch(subject, /hreflang|<nav>/, 'one language: no links to other languages');
   assert.match(subject, /Road &lt;b&gt;maintenance&lt;\/b&gt;\./, 'text is escaped');
   const model = await read('models/road/RoadPatrol/index.html');
   assert.match(model, /<h3 id="route">route<\/h3>/);
   assert.match(model, /<dt>Extends<\/dt><dd><a href="https:\/\/datamodels\.jp\/ns\/task\/Task">/);
-  assert.match(model, /<title>RoadPatrol: data models by Example Inc\.<\/title>/);
+  assert.match(model, /<title>RoadPatrol: Data models by Example Inc\.<\/title>/);
   // The anchor follows the IRI, not the attribute's name.
   const sf = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
   const sj = JSON.parse(await readFile(sf, 'utf8'));
@@ -104,6 +105,42 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   await writeFile(schemaFile, JSON.stringify({ ...JSON.parse(await readFile(schemaFile, 'utf8')), 'x-subclass-of': 'javascript:alert(1)' }));
   await buildNode(dir);
   assert.doesNotMatch(await read('models/road/RoadPatrol/index.html'), /javascript:/);
+});
+
+test('pages in every language: the first at the root, the others under /<lang>/, with links between them', async () => {
+  const dir = await node({ yaml: NODE_YAML.replace('languages: [en]', 'languages: [ja, en]').replace('name: { en: Example Inc. }', 'name: { ja: 例社, en: Example Inc. }') });
+  const road = join(dir, 'models', 'road');
+  await writeFile(join(road, 'subject.yaml'), 'name: road\nversion: 0.1.0\nsource: minted\ntitle: { ja: 道路, en: Roads }\ndescription: { ja: 道路の維持管理。, en: Road maintenance. }\n');
+  const cat = join(road, 'RoadPatrol', 'catalog.yaml');
+  await writeFile(cat, (await readFile(cat, 'utf8')).replace('title: { en: Road patrol }', 'title: { ja: 道路パトロール, en: Road patrol }').replace('description: { en: One patrol run. }', 'description: { ja: 1 回の巡回。, en: One patrol run. }').replace('route: { en: The route patrolled }', 'route: { ja: 巡回したルート, en: The route patrolled }'));
+  const { pages } = await buildNode(dir);
+  assert.deepEqual(pages, ['en/index.html', 'en/models/road/RoadPatrol/index.html', 'en/ns/road.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
+  const read = (p) => readFile(join(dir, '_site', p), 'utf8');
+  const ja = await read('models/road/RoadPatrol/index.html');
+  const en = await read('en/models/road/RoadPatrol/index.html');
+  assert.match(ja, /<html lang="ja">/);
+  assert.match(ja, /<title>RoadPatrol：例社 のデータモデル<\/title>/);
+  assert.match(ja, /<meta name="description" content="1 回の巡回。">/);
+  assert.match(ja, /<link rel="canonical" href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/">/);
+  assert.match(ja, /<link rel="alternate" hreflang="en" href="https:\/\/models\.example\.org\/en\/models\/road\/RoadPatrol\/">/);
+  assert.match(ja, /<link rel="alternate" hreflang="x-default" href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/">/);
+  assert.match(ja, /<span lang="ja">日本語<\/span> \| <a href="https:\/\/models\.example\.org\/en\/models\/road\/RoadPatrol\/" hreflang="en" lang="en">English<\/a>/);
+  assert.match(ja, /<dt>段階<\/dt><dd>試行<\/dd>/);
+  // Each text once, in the page's language.
+  assert.ok(ja.includes('道路パトロール') && !ja.includes('Road patrol'));
+  assert.match(en, /<html lang="en">/);
+  assert.match(en, /<title>RoadPatrol: Data models by Example Inc\.<\/title>/);
+  assert.match(en, /<meta property="og:locale" content="en_US">/);
+  assert.match(en, /<a href="https:\/\/models\.example\.org\/en\/ns\/road">road<\/a>/, 'links stay in the language');
+  assert.ok(en.includes('Road patrol') && !en.includes('道路パトロール'));
+  // The generator, in a meta tag and the footer.
+  const { version } = JSON.parse(await readFile(join(import.meta.dirname, '..', 'package.json'), 'utf8'));
+  assert.ok(ja.includes(`<meta name="generator" content="datamodels-toolkit ${version}">`));
+  assert.match(en, /Made with <a href="https:\/\/github\.com\/geolonia\/datamodels-toolkit">datamodels-toolkit<\/a>/);
+  assert.match(ja, /<a href="https:\/\/datamodels\.jp\/guide\/own-site">ガイド<\/a>/);
+  // The English page URL goes into catalog.json, as datamodels.jp's pageUrlEn.
+  const catalog = JSON.parse(await read('catalog.json'));
+  assert.equal(catalog.models[0].pageUrlEn, `${BASE}/en/models/road/RoadPatrol/`);
 });
 
 test('an eleventy.config.js where the command runs does not change the pages', async () => {
