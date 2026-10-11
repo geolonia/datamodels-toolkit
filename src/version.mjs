@@ -26,8 +26,9 @@ export async function upgradeNode(dir, { to, fetch: fetchUrl = globalThis.fetch,
     if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
     return res.json();
   };
-  const version = to ?? (await get('releases/latest')).tag_name;
-  if (!TAG.test(version ?? '')) throw new Error(`the latest release of ${REPO} has no vX.Y.Z tag (${JSON.stringify(version)})`);
+  // A release, not only a tag or branch of that name: the latest, or the one named.
+  const version = (await get(to ? `releases/tags/${to}` : 'releases/latest')).tag_name;
+  if (!TAG.test(version ?? '')) throw new Error(`the release of ${REPO} has no vX.Y.Z tag (${JSON.stringify(version)})`);
   const { sha } = await get(`commits/${version}`);
   if (!/^[0-9a-f]{40}$/.test(sha ?? '')) throw new Error(`${version}: no commit SHA from GitHub`);
 
@@ -54,10 +55,18 @@ const LEVELS = ['patch', 'minor', 'major'];
 
 /** The next version: `level` is patch, minor or major. */
 export function nextVersion(version, level) {
-  const [major, minor, patch] = version.split('.').map(Number);
-  if (level === 'major') return `${major + 1}.0.0`;
-  if (level === 'minor') return `${major}.${minor + 1}.0`;
-  return `${major}.${minor}.${patch + 1}`;
+  // BigInt: any number of digits stays exact (Number would round, or write 1e+21).
+  const [major, minor, patch] = version.split('.').map(BigInt);
+  if (level === 'major') return `${major + 1n}.0.0`;
+  if (level === 'minor') return `${major}.${minor + 1n}.0`;
+  return `${major}.${minor}.${patch + 1n}`;
+}
+
+/** A copy of `value` with every string $id and $ref that `rename` changes, changed; other keys untouched. */
+function renameRefs(value, rename) {
+  if (Array.isArray(value)) return value.map((v) => renameRefs(v, rename));
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, (k === '$id' || k === '$ref') && typeof v === 'string' ? rename(v) : renameRefs(v, rename)]));
 }
 
 /**
@@ -74,6 +83,20 @@ export async function bumpSubject(dir, subjectName, level, { offline = false, fe
   if (!subject) throw new Error(`no subject ${subjectName} in ${join(dir, 'models')} (subjects: ${subjects.map((s) => s.name).join(', ') || 'none'})`);
   const from = subject.version;
   const to = nextVersion(from, level);
+  // The new schemas first, so a schema that cannot be moved stops the bump before anything is written.
+  const own = (type, version) => urls.modelUrls({ name: subjectName, version }, { type, schema: {} }).schemaExact;
+  const schemas = [];
+  for (const m of subject.models) {
+    if (m.schema.$id !== undefined && m.schema.$id !== own(m.type, from)) throw new Error(`models/${subjectName}/${m.type}/schema.json: $id is ${m.schema.$id}, not ${own(m.type, from)}; correct it before bump`);
+    // A schema URL of this subject at the old version, in $id or $ref (a fragment stays as it is).
+    const rename = (url) => {
+      const [base, fragment] = url.split(/(?=#)/);
+      const hit = subject.models.find((x) => base === own(x.type, from));
+      return hit ? `${own(hit.type, to)}${fragment ?? ''}` : url;
+    };
+    const next = renameRefs(m.schema, rename);
+    if (JSON.stringify(next) !== JSON.stringify(m.schema)) schemas.push({ m, next });
+  }
   // The current version first: kept online, and refused if its sources changed after publishing.
   const released = await releaseSubject(dir, subjectName, { offline, ...(fetch ? { fetch } : {}), ...(timeout ? { timeout } : {}) });
 
@@ -84,13 +107,9 @@ export async function bumpSubject(dir, subjectName, level, { offline = false, fe
   if (!line.test(yaml)) throw new Error(`${yamlFile}: no line "version: ${from}" to change`);
   await writeFile(yamlFile, yaml.replace(line, `$1$2${to}$2$3`));
   changed.push(`models/${subjectName}/subject.yaml`);
-  // Schema URLs of this subject at the old version: /schema/<subject>/<Type>/v<from>.json.
-  const old = new RegExp(`(${urls.baseUrl.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}/schema/${subjectName}/[^/"]+/v)${from.replaceAll('.', '\\.')}(\\.json)`, 'g');
-  for (const m of subject.models) {
-    const file = join(m.dir, 'schema.json');
-    const text = await readFile(file, 'utf8');
-    const next = text.replace(old, `$1${to}$2`);
-    if (next !== text) { await writeFile(file, next); changed.push(`models/${subjectName}/${m.type}/schema.json`); }
+  for (const { m, next } of schemas) {
+    await writeFile(join(m.dir, 'schema.json'), `${JSON.stringify(next, null, 2)}\n`);
+    changed.push(`models/${subjectName}/${m.type}/schema.json`);
   }
   return { subject: subjectName, from, to, released, changed };
 }

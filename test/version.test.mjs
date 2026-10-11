@@ -38,7 +38,11 @@ async function node() {
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status });
 const github = (latest = 'v0.3.0') => async (url) => {
   if (url === `${API}/releases/latest`) return json({ tag_name: latest });
+  if (url === `${API}/releases/tags/v0.3.0`) return json({ tag_name: 'v0.3.0' });
   if (url === `${API}/commits/v0.3.0`) return json({ sha: NEW });
+  // A tag without a release: it has a commit, but no release.
+  if (url === `${API}/commits/v0.2.9`) return json({ sha: 'd'.repeat(40) });
+  if (url === `${API}/releases/tags/v0.2.9`) return json({ message: 'Not Found' }, 404);
   return json({ message: 'No commit found' }, 422);
 };
 
@@ -53,11 +57,14 @@ test('upgrade pins the Action to the release and runs it with npx', async () => 
   // A second run changes nothing; a release that does not exist is refused.
   assert.deepEqual((await upgradeNode(dir, { fetch: github() })).changed, []);
   await assert.rejects(upgradeNode(dir, { to: 'v9.9.9', fetch: github() }), /v9\.9\.9 is not a release of geolonia\/datamodels-toolkit/);
+  await assert.rejects(upgradeNode(dir, { to: 'v0.2.9', fetch: github() }), /v0\.2\.9 is not a release/, 'a tag is not enough, it must be a release');
+  assert.deepEqual((await upgradeNode(dir, { to: 'v0.3.0', fetch: github() })).version, 'v0.3.0');
   await assert.rejects(upgradeNode(dir, { to: 'main', fetch: github() }), /--to needs a release tag such as v0\.3\.0/);
 });
 
 test('bump releases the current version, then raises the version and the schema URLs', async () => {
   assert.deepEqual(['patch', 'minor', 'major'].map((l) => nextVersion('1.4.2', l)), ['1.4.3', '1.5.0', '2.0.0']);
+  assert.equal(nextVersion('999999999999999999999.0.0', 'major'), '1000000000000000000000.0.0', 'exact, no 1e+21');
   const dir = await node();
   const r = await bumpSubject(dir, 'road', 'minor', { offline: true });
   assert.deepEqual([r.from, r.to, r.released.written], ['0.1.0', '0.2.0', true]);
@@ -89,4 +96,26 @@ test('datamodels bump and upgrade: usage errors', async () => {
   assert.match(r.stderr, /usage: datamodels bump <subject> <patch\|minor\|major> \[dir\] \[--offline\]/);
   r = await datamodels('upgrade', '.', '--to');
   assert.equal(r.code, 2);
+});
+
+test('bump changes $id and $ref only, however the JSON writes them, and refuses an unexpected $id', async () => {
+  const dir = await node();
+  const file = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  // Escaped slashes are valid JSON; a $comment with the same URL is not a reference.
+  const schema = JSON.parse(await readFile(file, 'utf8'));
+  schema.$comment = `${BASE}/schema/road/Segment/v0.1.0.json is the segment`;
+  schema.properties.route.$ref = `${BASE}/schema/road/Segment/v0.1.0.json#/properties/from`;
+  await writeFile(file, JSON.stringify(schema).replaceAll('/', '\\/'));
+  await bumpSubject(dir, 'road', 'patch', { offline: true });
+  const after = JSON.parse(await readFile(file, 'utf8'));
+  assert.equal(after.$id, `${BASE}/schema/road/RoadPatrol/v0.1.1.json`);
+  assert.equal(after.properties.route.$ref, `${BASE}/schema/road/Segment/v0.1.1.json#/properties/from`, 'the fragment stays');
+  assert.equal(after.$comment, `${BASE}/schema/road/Segment/v0.1.0.json is the segment`);
+  // A schema whose $id is not its own URL: refused before anything is written or released.
+  const other = await node();
+  const f2 = join(other, 'models', 'road', 'Segment', 'schema.json');
+  await writeFile(f2, (await readFile(f2, 'utf8')).replace('/Segment/v0.1.0.json', '/Segment/v9.json'));
+  await assert.rejects(bumpSubject(other, 'road', 'minor', { offline: true }), /Segment\/schema\.json: \$id is .*v9\.json, not .*Segment\/v0\.1\.0\.json; correct it before bump/);
+  assert.match(await readFile(join(other, 'models', 'road', 'subject.yaml'), 'utf8'), /^version: 0\.1\.0/m);
+  await assert.rejects(readFile(join(other, 'models', 'road', 'releases', 'v0.1.0', 'context.jsonld')), { code: 'ENOENT' });
 });
