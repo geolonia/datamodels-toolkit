@@ -38,6 +38,21 @@ async function node({ yaml = NODE_YAML, context } = {}) {
   return dir;
 }
 
+test('the namespace page groups the terms by the model that first defines them', async () => {
+  const dir = await node({ context: { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', RoadSign: 'road:RoadSign', route: 'road:route', sign: 'road:sign' } });
+  const sign = join(dir, 'models', 'road', 'RoadSign');
+  await mkdir(sign, { recursive: true });
+  await writeFile(join(sign, 'schema.json'), JSON.stringify({ $id: `${BASE}/schema/road/RoadSign/v0.1.0.json`, type: 'object', properties: { id: {}, type: {}, sign: { type: 'string', 'x-iri': `${BASE}/ns/road#sign` }, route: { type: 'string', 'x-iri': `${BASE}/ns/road#route` } } }));
+  await writeFile(join(sign, 'catalog.yaml'), 'title: { en: Road sign }\ndescription: { en: One sign. }\nstatus: experimental\nattributes:\n  sign: { en: The text on the sign }\n  route: { en: The route the sign is on }\n');
+  await buildNode(dir);
+  const page = await readFile(join(dir, '_site', 'ns', 'road.html'), 'utf8');
+  const groups = Object.fromEntries(page.split('<h3>').slice(1).map((g) => [g.match(/">(\w+)<\/a><\/h3>/)[1], g.slice(0, g.indexOf('</table>'))]));
+  assert.deepEqual(Object.keys(groups), ['RoadPatrol', 'RoadSign']);
+  const ids = (g) => [...g.matchAll(/<tr id="(\w+)">/g)].map((m) => m[1]);
+  assert.deepEqual(ids(groups.RoadPatrol), ['RoadPatrol', 'route']);
+  assert.deepEqual(ids(groups.RoadSign), ['RoadSign', 'sign'], 'route is listed once, under the model that defines it first');
+});
+
 test('a node builds with hash IRIs, its publisher, licence and known nodes', async () => {
   const dir = await node();
   const { catalog, redirects, exactPaths } = await buildNode(dir, { now: new Date('2026-10-10T00:00:00Z') });
