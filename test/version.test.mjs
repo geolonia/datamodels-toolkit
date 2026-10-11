@@ -119,3 +119,12 @@ test('bump changes $id and $ref only, however the JSON writes them, and refuses 
   assert.match(await readFile(join(other, 'models', 'road', 'subject.yaml'), 'utf8'), /^version: 0\.1\.0/m);
   await assert.rejects(readFile(join(other, 'models', 'road', 'releases', 'v0.1.0', 'context.jsonld')), { code: 'ENOENT' });
 });
+
+test('bump checks the version line before it releases anything', async () => {
+  const dir = await node();
+  const yaml = join(dir, 'models', 'road', 'subject.yaml');
+  // A block scalar is a valid version for the loader, but not a line bump can change.
+  await writeFile(yaml, (await readFile(yaml, 'utf8')).replace('version: 0.1.0   # kept online when it changes', 'version: >-\n  0.1.0'));
+  await assert.rejects(bumpSubject(dir, 'road', 'minor', { offline: true }), /no line "version: 0\.1\.0" to change; write it on one line before bump/);
+  await assert.rejects(readFile(join(dir, 'models', 'road', 'releases', 'v0.1.0', 'context.jsonld')), { code: 'ENOENT' }, 'nothing released');
+});

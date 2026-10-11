@@ -97,14 +97,15 @@ export async function bumpSubject(dir, subjectName, level, { offline = false, fe
     const next = renameRefs(m.schema, rename);
     if (JSON.stringify(next) !== JSON.stringify(m.schema)) schemas.push({ m, next });
   }
+  // The version line too: one bump does all of it or nothing (a block scalar, say, is not changed by hand here).
+  const yamlFile = join(subject.dir, 'subject.yaml');
+  const yaml = await readFile(yamlFile, 'utf8');
+  const line = new RegExp(`^(version:[ \\t]*)(["']?)${from.replaceAll('.', '\\.')}\\2([ \\t]*(?:#.*)?)$`, 'm');
+  if (!line.test(yaml)) throw new Error(`${yamlFile}: no line "version: ${from}" to change; write it on one line before bump`);
   // The current version first: kept online, and refused if its sources changed after publishing.
   const released = await releaseSubject(dir, subjectName, { offline, ...(fetch ? { fetch } : {}), ...(timeout ? { timeout } : {}) });
 
   const changed = [];
-  const yamlFile = join(subject.dir, 'subject.yaml');
-  const yaml = await readFile(yamlFile, 'utf8');
-  const line = new RegExp(`^(version:[ \\t]*)(["']?)${from.replaceAll('.', '\\.')}\\2([ \\t]*(?:#.*)?)$`, 'm');
-  if (!line.test(yaml)) throw new Error(`${yamlFile}: no line "version: ${from}" to change`);
   await writeFile(yamlFile, yaml.replace(line, `$1$2${to}$2$3`));
   changed.push(`models/${subjectName}/subject.yaml`);
   for (const { m, next } of schemas) {
