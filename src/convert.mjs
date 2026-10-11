@@ -103,8 +103,10 @@ export function code6(v) {
 
 export const TRANSFORMS = ['text', 'code6', 'number', 'integer', 'numbers', 'flag', 'flags', 'boolean', 'split', 'geometry', 'json', 'municipality', 'machiazaId', 'nationalShelterType'];
 
-// How many columns a transform reads, when that is fixed: [fewest, most].
+// How many columns a transform reads: [fewest, most]. Any other transform, and a rule without
+// one, reads exactly one column; flags reads the columns of its values instead.
 const COLUMNS = { numbers: [2, Infinity], geometry: [1, 3] };
+const columnsRead = (transform) => COLUMNS[transform ?? 'text'] ?? (transform === 'flags' ? [] : [1, 1]);
 
 /** A number a spreadsheet wrote in exponent form (1.31E+11): its digits are lost, so it cannot be an id. */
 export const exponentForm = (v) => /^[+-]?\d+(\.\d+)?[eE][+-]?\d+$/.test(String(v ?? '').trim());
@@ -142,8 +144,9 @@ export function mappingProblems(mapping, mappings = {}) {
       const cols = rule.column === undefined ? [] : [].concat(rule.column);
       if (rule.column !== undefined && (!cols.length || cols.some((c) => typeof c !== 'string' || !c.trim()))) out.push(`${where}: column must be a column name or a list of them`);
       if (rule.transform !== undefined && !TRANSFORMS.includes(rule.transform)) out.push(`${where}: unknown transform "${rule.transform}" (known: ${TRANSFORMS.join(', ')})`);
-      const [min, max] = COLUMNS[rule.transform] ?? [];
-      if (min && rule.column !== undefined && (cols.length < min || cols.length > max)) out.push(`${where}: transform ${rule.transform} reads ${max === Infinity ? `at least ${min}` : `${min} to ${max}`} columns, got ${cols.length}`);
+      const [min, max] = TRANSFORMS.includes(rule.transform ?? 'text') ? columnsRead(rule.transform) : [];
+      const span = max === Infinity ? `at least ${min} columns` : min === max ? `exactly ${min} column` : `${min} to ${max} columns`;
+      if (min && rule.column !== undefined && (cols.length < min || cols.length > max)) out.push(`${where}: ${rule.transform ? `transform ${rule.transform}` : 'a rule without a transform'} reads ${span}, got ${cols.length}`);
       if (rule.transform === 'flags' && (!rule.values || typeof rule.values !== 'object' || Array.isArray(rule.values))) out.push(`${where}: transform flags needs values, as column: value`);
       if (rule.via && !mappings[rule.via]) out.push(`${where}: no mapping ${rule.via}`);
     }
@@ -235,22 +238,36 @@ function apply(rule, row, set) {
   }
 }
 
-// A field name with a dot (address.postalCode) is a field of a value: the values are nested.
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+// Two objects for the same value, merged; copies, as an object may be a value: of the mapping, the same for every row.
+const merged = (a, b) => {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) out[k] = isObject(out[k]) && isObject(v) ? merged(out[k], v) : v;
+  return out;
+};
+
+// A field name with a dot (address.postalCode) is a field of a value: the values are nested. The
+// order of the fields does not matter: the shorter names go first, so a value: for a whole object
+// and the fields named with a dot merge, and a field named with a dot, the more specific, wins.
 function nest(flat, problems) {
   const out = {};
-  for (const [key, value] of Object.entries(flat)) {
+  const depth = (k) => k.split('.').length;
+  for (const [key, value] of Object.entries(flat).sort(([a], [b]) => depth(a) - depth(b))) {
     const path = key.split('.');
     let at = out;
     for (const p of path.slice(0, -1)) {
       at[p] ??= {};
-      if (typeof at[p] !== 'object' || Array.isArray(at[p])) { problems.push(`${key}: ${p} already has a value of its own`); at = null; break; }
-      // A copy: the object may be a value: of the mapping, the same for every row.
+      if (!isObject(at[p])) { problems.push(`${key}: ${p} already has a value of its own`); at = null; break; }
       at[p] = { ...at[p] };
       at = at[p];
     }
-    if (at) at[path.at(-1)] = value;
+    if (!at) continue;
+    const last = path.at(-1);
+    at[last] = isObject(at[last]) && isObject(value) ? merged(at[last], value) : isObject(value) ? { ...value } : value;
   }
-  return out;
+  // The attributes in the order of the mapping, as before the sort.
+  const order = [...new Set(Object.keys(flat).map((k) => k.split('.')[0]))];
+  return Object.fromEntries(order.filter((k) => k in out).map((k) => [k, out[k]]));
 }
 
 const valueAt = (obj, path) => path.split('.').reduce((v, k) => (v && typeof v === 'object' ? v[k] : undefined), obj);
@@ -293,8 +310,26 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
     }
     return nest(out, problems);
   };
-  // The columns a top-level field reads, to see the value as the list wrote it.
-  const rawOf = (row, k) => [].concat(mapping.fields?.[k]?.column ?? []).map((c) => row[c]);
+  // The columns a value of the id comes from, followed through via and dotted field names, to see
+  // the value as the list wrote it: a transform such as integer turns 1.31E+11 into 131000000000.
+  const sourceColumns = (path) => {
+    const parts = path.split('.');
+    let map = mapping;
+    // Each step takes at least one part of the path, so a via cycle cannot loop here.
+    for (let i = 0; i < parts.length && map;) {
+      // The longest dotted field name that matches (address.code before address).
+      let j = parts.length;
+      while (j > i && !Object.hasOwn(map.fields ?? {}, parts.slice(i, j).join('.'))) j--;
+      if (j === i) return [];
+      const rule = map.fields[parts.slice(i, j).join('.')];
+      if (j === parts.length) return rule?.via ? [] : [].concat(rule?.column ?? []);
+      if (!rule?.via) return [];
+      map = mappings[rule.via];
+      i = j;
+    }
+    return [];
+  };
+  const rawOf = (row, k) => sourceColumns(k).map((c) => row[c]);
   const results = rows.map((row) => {
     const fixes = [], problems = [];
     const { id: own, ...attrs } = build(mapping, row, fixes, problems, true);
@@ -324,10 +359,18 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
   // The same id on several rows: a broker would keep only one of them, so every one of those rows is a problem.
   const where = (i) => (rows[i][LINE] ? `line ${rows[i][LINE]}` : `row ${i + 1}`);
   const byId = new Map();
-  results.forEach((r, i) => { if (r.entity.id) byId.set(r.entity.id, [...(byId.get(r.entity.id) ?? []), i]); });
+  results.forEach((r, i) => {
+    if (!r.entity.id) return;
+    if (!byId.has(r.entity.id)) byId.set(r.entity.id, []);
+    byId.get(r.entity.id).push(i);
+  });
   for (const [id, at] of byId) {
     if (at.length < 2) continue;
-    for (const i of at) results[i].problems.push(`id: ${id} is not unique (also ${at.filter((j) => j !== i).slice(0, 5).map(where).join(', ')}${at.length > 6 ? `, and ${at.length - 6} more` : ''})`);
+    // A whole list can share one id: name at most five other rows, from the first six.
+    for (const i of at) {
+      const peers = at.slice(0, 6).filter((j) => j !== i).slice(0, 5);
+      results[i].problems.push(`id: ${id} is not unique (also ${peers.map(where).join(', ')}${at.length > 6 ? `, and ${at.length - 6} more` : ''})`);
+    }
   }
   return results;
 }

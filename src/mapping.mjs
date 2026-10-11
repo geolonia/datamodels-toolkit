@@ -303,8 +303,8 @@ export function startMapping({ target, entry, model, languages, columns, header,
 
   // The id: a column named id as the CSV template has it, else a catalog mapping's template whose values all have a column.
   const idColumn = header.includes('id') && !targets.some((t) => t.name === 'id');
-  const has = (k) => chosen.has(k) || [...chosen.keys()].some((c) => c.startsWith(`${k}.`));
-  const fromCatalog = catalog.find((c) => typeof c.mapping?.convert?.id === 'string' && [...c.mapping.convert.id.matchAll(/\{([\w.]+)\}/g)].every((m) => has(m[1])));
+  // Only a value that is mapped itself: {address} with only address.addressLocality mapped would be an object in the id.
+  const fromCatalog = catalog.find((c) => typeof c.mapping?.convert?.id === 'string' && [...c.mapping.convert.id.matchAll(/\{([\w.]+)\}/g)].every((m) => chosen.has(m[1])));
   const idLike = [...chosen.keys()].find((k) => /(Id|ID)$/.test(k) && !k.includes('.'));
 
   const lines = [];

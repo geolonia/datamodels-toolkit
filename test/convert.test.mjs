@@ -271,3 +271,49 @@ test('the structure of a mapping of your own is checked before any row is read',
     'nmae: not an attribute of T', 'adress.x: not an attribute of T', 'type: not an attribute of T',
   ]);
 });
+
+test('a value for a whole object and its dotted fields merge in any order; a scalar and fields clash', () => {
+  const rows = [{ id: 'urn:ngsi-ld:T:1', zip: '100-0001' }];
+  const fields = { id: { column: 'id' }, address: { value: { addressCountry: 'JP', postalCode: 'none' } }, 'address.postalCode': { column: 'zip' } };
+  const reversed = { id: fields.id, 'address.postalCode': fields['address.postalCode'], address: fields.address };
+  for (const f of [fields, reversed]) {
+    const [r] = convertRows(rows, { fields: f }, { type: 'T' });
+    assert.deepEqual(r.problems, []);
+    assert.deepEqual(r.entity.address, { addressCountry: 'JP', postalCode: '100-0001' }, Object.keys(f).join(', '));
+  }
+  const [ordered] = convertRows([{ id: 'urn:ngsi-ld:T:1', zip: '1', n: 'x' }], { fields: { id: fields.id, 'address.postalCode': fields['address.postalCode'], name: { column: 'n' } } }, { type: 'T' });
+  assert.deepEqual(Object.keys(ordered.entity), ['id', 'type', 'address', 'name'], 'the attributes keep the order of the mapping');
+  assert.deepEqual(fields.address.value, { addressCountry: 'JP', postalCode: 'none' }, 'the mapping is not changed');
+  const [clash] = convertRows([{ a: 'x', b: '2' }], { fields: { id: { value: 'urn:ngsi-ld:T:1' }, 'addr.x': { column: 'b' }, addr: { column: 'a' } } }, { type: 'T' });
+  assert.deepEqual(clash.problems, ['addr.x: addr already has a value of its own'], 'also when the field with a dot comes first');
+});
+
+test('an id value in exponent form is found through via, before a transform turns it into a number (#56)', () => {
+  const map = { convert: { id: 'urn:ngsi-ld:T:{address.code}' }, fields: { address: { via: 'a/A/x' } } };
+  const sub = { fields: { code: { column: 'CODE', transform: 'integer' } } };
+  const [r] = convertRows([{ CODE: '1.31E+11' }], map, { type: 'T', mappings: { 'a/A/x': sub } });
+  assert.equal(r.entity.address.code, 131000000000);
+  assert.equal(r.entity.id, undefined);
+  assert.match(r.problems.join(), /address\.code is 1\.31E\+11, a number in exponent form/);
+  // And through a dotted field name.
+  const [d] = convertRows([{ CODE: '1.31E+11' }], { convert: map.convert, fields: { 'address.code': sub.fields.code } }, { type: 'T' });
+  assert.match(d.problems.join(), /address\.code is 1\.31E\+11/);
+});
+
+test('a transform of one value reads exactly one column', () => {
+  assert.deepEqual(mappingProblems({ fields: { a: { column: ['x', 'y'], transform: 'integer' }, b: { column: ['x', 'y'] }, c: { column: ['x'], transform: 'numbers' }, d: { column: ['x', 'y'], transform: 'numbers' }, e: { column: 'x' } } }), [
+    'a: transform integer reads exactly 1 column, got 2',
+    'b: a rule without a transform reads exactly 1 column, got 2',
+    'c: transform numbers reads at least 2 columns, got 1',
+  ]);
+});
+
+test('thousands of rows with one id are reported quickly (#56)', () => {
+  const map = { convert: { id: 'urn:ngsi-ld:T:{n}' }, fields: { n: { column: 'n' } } };
+  const rows = Array.from({ length: 30000 }, () => ({ n: 'same' }));
+  const start = performance.now();
+  const results = convertRows(rows, map, { type: 'T' });
+  const ms = performance.now() - start;
+  assert.equal(results[29999].problems[0], 'id: urn:ngsi-ld:T:same is not unique (also row 1, row 2, row 3, row 4, row 5, and 29994 more)');
+  assert.ok(ms < 1500, `${Math.round(ms)} ms`);
+});

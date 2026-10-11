@@ -12,7 +12,7 @@ import { promisify } from 'node:util';
 import YAML from 'yaml';
 import { siteReader, loadTarget, isMappingFile, isViaFile } from '../src/catalog.mjs';
 import { mappedColumns } from '../src/convert.mjs';
-import { siteModel, templateMapping, targetsOf, matchColumns, flowRule } from '../src/mapping.mjs';
+import { siteModel, templateMapping, targetsOf, matchColumns, flowRule, startMapping } from '../src/mapping.mjs';
 import { exportModel } from '../src/export.mjs';
 
 const run = promisify(execFile);
@@ -334,4 +334,13 @@ test('help lists mapping and the options of --check', async () => {
   assert.equal(r.code, 0);
   assert.match(r.stdout, /^usage: datamodels mapping /);
   for (const option of ['--out', '--site']) assert.match(r.stdout, new RegExp(`^ +${option} .*\\w`, 'm'), option);
+});
+
+test('the starter mapping takes a catalog id only when each value in it is mapped itself, not only a field of it', async () => {
+  const model = await siteModel(reader, 'disaster/EvacuationSite');
+  const catalog = [{ name: 'x', mapping: { convert: { id: 'urn:ngsi-ld:EvacuationSite:{address}' }, fields: { address: { via: 'v' } } }, mappings: { v: { fields: { addressLocality: { column: '市区町村' } } } } }];
+  const r = startMapping({ target: 'disaster/EvacuationSite', ...model, header: ['市区町村'], catalog, csv: 'a.csv' });
+  assert.ok(r.chosen.has('address.addressLocality'));
+  assert.equal(r.idTodo, true);
+  assert.equal(YAML.parse(r.text).convert.id, 'urn:ngsi-ld:EvacuationSite:{TODO}');
 });
