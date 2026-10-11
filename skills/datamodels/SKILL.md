@@ -18,7 +18,7 @@ datamodels.jp is a catalog of data models that work in Japan: JSON Schemas, JSON
 
 - Never change the meaning or type of an existing attribute; add a new one.
 - Never redefine an NGSI-LD core term (`status`, `description`, `location`, `createdAt`, `modifiedAt`, `observedAt`, …). Name your own, for example `incidentStatus`.
-- Fixed value lists (`progress` and other statuses): when no value fits, leave it out and put the local wording in `statusLabel`; do not force the nearest value.
+- Fixed value lists: never force the nearest value. Where the model has `statusLabel` (Task's `progress`, EvacuationShelter's `openingStatus`, RoadRestriction's `restrictionStatus`), leave the status out when no value fits and put the local wording in `statusLabel`. For other enums, follow the model's schema.
 - Locations are GeoJSON geometries in `location` (`$ref` to datamodels.jp's common Geometry, narrowed when needed). Addresses use the common JapaneseAddress.
 - In the datamodels.jp catalog: the same type under another name → **alias** (`x-alias-of`, exactly the same attributes and required fields); added attributes or a separate kind → **subclass** (`x-subclass-of`).
 - On your own node, `extend` works differently: by default the model keeps the original type IRI and adds attributes (an extension, like GTT's `Issue` for datamodels.jp's `Task`); `--subclass` makes a separate kind with its own type IRI. When the extension's name differs from the original, map the new name to the original IRI in your `@context` and set the original name to `null` there; otherwise JSON-LD compaction picks the shorter term and brokers answer with the original name.
@@ -34,7 +34,7 @@ Run the commands with `npx github:geolonia/datamodels-toolkit#<version>` (Node.j
 - `add <subject>/<Type>`: a new model (schema, catalog.yaml, example, notes.yaml).
 - `extend <model> <subject>/<Type>`: start a model from another node's model (`task/Task` on datamodels.jp, or its type IRI): the same type with more attributes, or a subtype with `--subclass`.
 - `check` before every pull request; `build` writes `_site/`.
-- **Published files never change.** Before changing a published model, `bump <subject> patch|minor|major`: it keeps the published version online and raises the version. A renamed model keeps a page at its old address; its old terms keep their anchors.
+- **A published exact version never changes:** its `@context`, vocabulary and schemas (`…/v0.1.0.jsonld`, `…/v0.1.0.json`). Before changing them, `bump <subject> patch|minor|major`: it keeps the published version online and raises the version. Pages, examples, mapping tables and notes are not versioned and can change without a bump. A renamed model keeps a page at its old address; its old terms keep their anchors.
 - `upgrade [--to vX.Y.Z]`: move the node to a newer toolkit release (the workflow pin and the `npx` lines). Dependabot also proposes releases.
 - Every attribute in `schema.json` needs an `x-iri`, a term in the subject's `context.jsonld` that expands to it, and a description in `catalog.yaml`. Check the JSON-LD expansion of the example when in doubt.
 
