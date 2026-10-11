@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-11
+
+A new node gets the files it lacked: `LICENSE` and a Dependabot configuration.
+
 ### Added
 
 - `datamodels init` writes `LICENSE` (the legal code of CC0-1.0 or CC-BY-4.0; for another licence it says that the file is missing) and `.github/dependabot.yml`, so Dependabot proposes new releases of the Action.
@@ -77,7 +81,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.0...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.1...main
+[0.3.1]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/geolonia/datamodels-toolkit/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/geolonia/datamodels-toolkit/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/geolonia/datamodels-toolkit/compare/v0.1.0...v0.2.0
