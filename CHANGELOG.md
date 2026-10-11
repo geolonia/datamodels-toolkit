@@ -8,9 +8,13 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 - `datamodels check` has the checks of datamodels.jp's validator for schemas and examples (geolonia/datamodels#226): the `type` const, `$id` and `x-version` of each schema, the `x-ngsi.type` names, polygon rings that close, the NGSI-LD rules of `example-normalized.jsonld` (attribute types, typed dates, the same id and vocab values as `example.json`, a valid key-values form, the alias URL in its `@context`), and a JSON-LD processor that expands the normalized example, the example of a value type and the vocabulary without losing anything. It also checks that an entity schema accepts the `@context` that data may carry.
 - `datamodels check` checks the mapping files of a node, as datamodels.jp's validator did (geolonia/datamodels#226): a correspondence table with a `standard` and its `name`, a `to` in every row, texts in the node's languages (a text that YAML cut at a comma is reported), known keys only, fields of the model, and `via` to another mapping file of the node without circles. The conversion rules are checked as `convert` applies them, so a catalog mapping may hold every rule that a mapping file of your own may: `values` on a rule of one column, the transforms `boolean`, `yesno`, `weekdays`, `time`, `geometry` and `json`, and field names with a dot.
+- `datamodels check --base <git ref>`: the release snapshots must be as they are at the ref, usually the branch a pull request goes into, so a published version is never changed or removed, offline too (geolonia/datamodels#226). It replaces datamodels.jp's list of hashes (`published-manifest.json`), which recorded the same files as the snapshots.
+- `datamodels check --all-released`: every subject's current version needs its release snapshot, for a catalog that releases before it publishes.
+- `prerelease: true` in `node.yaml`: before an official launch, published versions may be corrected in place; `check` notes the corrections instead of failing while the base branch and the change both have the flag, and refuses a change that removes the flag or sets it back to true.
 
 ### Fixed
 
+- `datamodels check` compares a released current version with the site once, not twice.
 - `datamodels check` validates an `example.json` without the `{"json": ...}` and `{"vocab": ...}` wrappers of `JsonProperty` and `VocabProperty` attributes, as the schema describes them; such an example was reported as invalid (datamodels.jp's Decision).
 - `datamodels check` reads the @contexts of the node's own subjects from the build, offline too, instead of from the site: an import of the node's own common context is checked against what is about to be published.
 
