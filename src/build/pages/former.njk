@@ -1,0 +1,26 @@
+---
+layout: base.njk
+pagination:
+  data: formerModels
+  size: 1
+  alias: m
+permalink: "{{ m.file }}"
+eleventyComputed:
+  title: "{{ m.type | safe }}{{ t.titleSep | safe }}{{ site.title | safe }}"
+  path: "{{ m.path | safe }}"
+  description: "{{ m.text | safe }}"
+  schema: "{{ m.schema | safe }}"
+---
+<p><a href="{{ m.subject.page }}">{{ m.subject.name }}</a></p>
+<h1 id="{{ m.type }}">{{ m.type }}</h1>
+<p>{{ m.text }}</p>
+{%- if m.renamed %}
+<p>{{ t.renamedBefore }}<a href="{{ m.renamed.page }}">{{ m.renamed.type }}</a>{{ t.renamedAfter }}</p>
+{%- endif %}
+<dl>
+<dt>JSON Schema</dt><dd><a href="{{ m.schema }}">{{ m.schema }}</a></dd>
+<dt>@context</dt><dd><a href="{{ m.context }}">{{ m.context }}</a></dd>
+</dl>
+{%- if m.current.length %}
+<p>{{ t.currentModels }}{% for x in m.current %}<a href="{{ x.page }}">{{ x.type }}</a>{% if not loop.last %}{{ t.comma }}{% endif %}{% endfor %}</p>
+{%- endif %}

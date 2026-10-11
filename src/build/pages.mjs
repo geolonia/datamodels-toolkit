@@ -12,6 +12,7 @@ import { join, relative } from 'node:path';
 import { attributesOf } from './urls.mjs';
 import { readFileSync } from 'node:fs';
 import { pageTexts } from './page-texts.mjs';
+import { formerOf } from './former.mjs';
 
 // Named in each page's generator meta tag and footer.
 const TOOLKIT = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
@@ -36,7 +37,7 @@ const pick = (o, lang, languages) => {
 };
 
 /** What the templates show for the pages in `lang` (default: the node's first language), with every URL resolved. */
-export function pageData(subjects, { urls, node, lang = node.languages[0] }) {
+export function pageData(subjects, { urls, node, lang = node.languages[0], former = new Map() }) {
   const { languages } = node;
   const t = pageTexts(lang);
   const texts = (o) => pick(o, lang, languages);
@@ -58,6 +59,7 @@ export function pageData(subjects, { urls, node, lang = node.languages[0] }) {
     generator: GENERATOR,
   };
   const models = [];
+  const formerModels = [];
   const out = subjects.map((subject) => {
     const su = urls.subjectUrls(subject);
     // The terms this subject mints, grouped by the model that defines them; each has its anchor here.
@@ -98,7 +100,19 @@ export function pageData(subjects, { urls, node, lang = node.languages[0] }) {
       models.push(m);
       return m;
     });
+    // A model or term the released versions had and the current one does not keeps its address (former.mjs).
+    const was = former.get(subject.name) ?? { models: [], terms: [] };
+    for (const f of was.models) {
+      const page = urls.modelUrls(subject, { type: f.type }).page;
+      const now = subjectModels.find((m) => m.typeIri === f.typeIri);
+      formerModels.push({
+        type: f.type, page: at(page), path: path(page), file: file(page), schema: f.schema, context: f.context,
+        text: t.formerModel(f.type, subject.name, f.versions), renamed: now ? { type: now.type, page: now.page } : null,
+        current: subjectModels.map((m) => ({ type: m.type, page: m.page })), subject: { name: subject.name, page: at(su.page) },
+      });
+    }
     return {
+      formerTerms: was.terms.map((x) => ({ anchor: x.anchor, version: x.versions.at(-1), vocab: x.vocab })),
       name: subject.name, version: subject.version, page: at(su.page), path: path(su.page), file: file(su.page),
       titles: texts(subject.title), descriptions: texts(subject.description),
       summary: (texts(subject.description)[0] ?? texts(subject.title)[0])?.text ?? subject.name,
@@ -106,14 +120,16 @@ export function pageData(subjects, { urls, node, lang = node.languages[0] }) {
       models: subjectModels, termGroups, termExample: termGroups[0]?.terms[0]?.iri ?? '',
     };
   });
-  return { site, t, subjects: out, models };
+  return { site, t, subjects: out, models, formerModels };
 }
 
 /** Write the pages into `out`, one set per language. Returns the paths written, relative to `out`. */
 export async function writePages(subjects, { urls, node, out }) {
   const written = [];
+  const former = new Map();
+  for (const s of subjects) former.set(s.name, await formerOf(s, { urls, languages: node.languages }));
   for (const lang of node.languages) {
-    const data = pageData(subjects, { urls, node, lang });
+    const data = pageData(subjects, { urls, node, lang, former });
     const dir = lang === node.languages[0] ? out : join(out, lang);
     const eleventy = new Eleventy(TEMPLATES, dir, {
       quietMode: true,

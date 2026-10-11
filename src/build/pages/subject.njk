@@ -40,3 +40,12 @@ eleventyComputed:
 {%- endfor %}
 </table>
 {%- endfor %}
+{%- if s.formerTerms.length %}
+<h2>{{ t.formerTerms }}</h2>
+<p>{{ t.formerTermsIntro }}</p>
+<table>
+{%- for x in s.formerTerms %}
+<tr id="{{ x.anchor }}"><th scope="row">{{ x.anchor }}</th><td><a href="{{ x.vocab }}">v{{ x.version }}</a></td></tr>
+{%- endfor %}
+</table>
+{%- endif %}
