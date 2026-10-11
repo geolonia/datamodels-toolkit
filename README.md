@@ -2,7 +2,7 @@
 
 Command-line tools for the [datamodels.jp](https://datamodels.jp) catalog.
 
-`convert` turns a published list (CSV) into entities of a catalog model, also a list of your own with a mapping you write with `mapping`; `export` writes files made from a model for tools that do not read NGSI-LD (a spreadsheet, an AI model, PostgreSQL); `build` writes the files of a data model node, a site of your own in the [web of data models](https://github.com/geolonia/datamodels/issues/200). More commands come only when someone needs them for a real task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
+`search` finds existing models in datamodels.jp and the nodes it links to; `convert` turns a published list (CSV) into entities of a catalog model, also a list of your own with a mapping you write with `mapping`; `export` writes files made from a model for tools that do not read NGSI-LD (a spreadsheet, an AI model, PostgreSQL); `build` writes the files of a data model node, a site of your own in the [web of data models](https://github.com/geolonia/datamodels/issues/200). More commands come only when someone needs them for a real task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
 
 ## Install
 
@@ -119,6 +119,29 @@ Writes a first mapping file for a CSV and a catalog model, for you or an AI agen
 - When the header has nearly all the columns of one of the catalog's mapping files, it says so: that mapping may convert the list as it is.
 
 Every part of the file has a comment of one line, in Japanese when the header is Japanese.
+
+## search
+
+```bash
+datamodels search 避難                                          # datamodels.jp and the nodes it lists
+datamodels search road closure --index https://models.example.org --depth 2
+datamodels search shelter --json                               # for scripts and AI agents
+```
+
+Finds existing models before you define one. It reads an index (`--index`: a `catalog.json`, or the address of a node; default https://datamodels.jp/catalog.json) and the indexes it links to, up to `--depth` links away (default 1, at most 5; 0 reads only the index): the nodes its `catalog.json` lists under `nodes`, and the indexes its models' `extends` name. Each index is read once, so links that lead back are not followed again, and at most 50 are read.
+
+Words count most in the type name, then the title, the attribute names, and the descriptions; a rare word counts more than a common one. English words need 3 letters or more; Japanese is matched by pairs of characters, so `避難` finds 指定避難所. Value types (such as an address) are listed too. Each line is a model: `<subject>/<Type>`, its titles, the node, and its page; `--limit` sets how many (default 10). `--json` gives each model's type IRI, version, schema, `@context` and index, which `extend` and `export` take (`--index`).
+
+Another site's index is read only over https, from a public address, as for `export`. A node that cannot be read is noted on standard error and skipped; the exit code is 1 only when the index you start at cannot be read.
+
+## nodes
+
+```bash
+datamodels nodes
+datamodels nodes --index https://models.gtt-project.org --depth 2 --json
+```
+
+Lists the nodes reachable from an index, the same way `search` finds them: name (the publisher), address, licence, number of models, and the node that links to it. It shows how the nodes of the [web of data models](https://github.com/geolonia/datamodels/issues/200) find each other ([geolonia/datamodels#222](https://github.com/geolonia/datamodels/issues/222)).
 
 ## init
 

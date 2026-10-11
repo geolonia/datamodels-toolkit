@@ -4,6 +4,13 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Added
+
+- `datamodels search <words…> [--index URL] [--depth N] [--limit N] [--json]`: find models by words in their type, title, attributes and description, in datamodels.jp (or another index) and the nodes it links to through `nodes` and `extends`, up to `--depth` links away (default 1). Japanese is matched by pairs of characters, as datamodels.jp matches model proposals. Each result names its node and page; `--json` adds the type IRI, schema, `@context` and index (geolonia/datamodels#222).
+- `datamodels nodes [--index URL] [--depth N] [--json]`: the nodes reachable from an index, with their name, address, licence, number of models and the node that links to them.
+- Both read other sites only over https and from a public address, each index once (a cycle ends), at most 50. A linked node that cannot be read is a note on standard error, not a failure.
+- The agent skill tells agents to look for an existing model with `datamodels search` before proposing one.
+
 ### Changed
 
 - `datamodels init` writes a workflow pinned to the v0.3.5 release of the Action, and a README whose `npx` commands run v0.3.5.
