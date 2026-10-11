@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-10-12
+
+Your own lists: convert any CSV with a mapping file of your own, start one with `datamodels mapping`, check the first rows with `convert --check`, or fill in the CSV template and convert it without a mapping.
+
 ### Added
 
 - `datamodels convert` takes a mapping file of your own: a path, or a name that ends in `.yaml` or `.yml`, as the mapping. Its `via` may name a catalog mapping or another file of your own, relative to its folder. A field name with a dot (`address.postalCode`) fills a field of a value. convert refuses a file of your own that still has a `# TODO:` comment or names an attribute the model does not have.
@@ -138,7 +142,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.4...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.5...main
+[0.3.5]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.1...v0.3.2
