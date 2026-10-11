@@ -16,6 +16,9 @@ async function remoteModel(target, from, get) {
   const entry = /^https?:\/\//.test(target) ? catalog.models.find((m) => m.typeIri === target) : catalog.models.find((m) => `${m.subject}/${m.type}` === target);
   if (!entry) throw new Error(`${target} is not a model in ${from}${/^https?:/.test(target) ? '' : ' (give <subject>/<Type> as listed there, or its type IRI)'}`);
   if (!entry.schemaUrl) throw new Error(`${from}: ${target} has no schemaUrl`);
+  // Only a schema of that catalog's own site, as for the $refs (src/adapters/index.mjs).
+  const schemaRoot = new URL('schema/', new URL('.', from)).href;
+  if (!String(entry.schemaUrl).startsWith(schemaRoot)) throw new Error(`${from}: the schema of ${target} (${entry.schemaUrl}) is not under ${schemaRoot}, not read`);
   const schema = await get(entry.schemaUrl);
   // The catalog's languages, in the order its titles give them (datamodels.jp: ja, en).
   const languages = Object.keys(entry.title ?? {}).length ? Object.keys(entry.title) : ['en'];

@@ -65,6 +65,17 @@ export function scalarOf(prop) {
   return out;
 }
 
+/** The part of `schema` a JSON Pointer fragment (#/$defs/Address) names, or undefined. */
+function pointer(schema, ref) {
+  let at = schema;
+  for (const raw of ref.slice(1).split('/').slice(1)) {
+    const key = decodeURIComponent(raw).replace(/~1/g, '/').replace(/~0/g, '~');
+    if (!at || typeof at !== 'object' || !(key in at)) return undefined;
+    at = at[key];
+  }
+  return at && typeof at === 'object' ? at : undefined;
+}
+
 /** The $ref of an attribute: { "$ref": url } or { "allOf": [{ "$ref": url }] }. */
 const refOf = (prop) => prop.$ref ?? (Array.isArray(prop.allOf) && prop.allOf.length === 1 ? prop.allOf[0]?.$ref : undefined);
 
@@ -92,7 +103,11 @@ export function columnsOf(model, { refs = {} } = {}) {
     }
     const ref = refOf(prop);
     if (ref) {
-      const target = refs[ref];
+      // A schema on a site (read by the caller), or a part of this model's own schema (#/$defs/...).
+      // Any other reference (a relative file) is kept as one JSON value.
+      const own = ref.startsWith('#') ? pointer(model.schema, ref) : undefined;
+      if (!/^https?:\/\//.test(ref) && own === undefined) return { ...base, kind: 'json', schema: prop };
+      const target = own !== undefined ? { schema: own, texts: {} } : refs[ref];
       if (!target) throw new Error(`${model.type}.${name}: the schema it refers to (${ref}) was not read`);
       const fields = Object.entries(target.schema.properties ?? {});
       const partRequired = new Set(target.schema.required ?? []);

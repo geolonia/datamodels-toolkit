@@ -317,3 +317,24 @@ test('PostGIS: a list without duplicates is checked by a function the file creat
   assert.match(sql, new RegExp(`CHECK \\(${UNIQUE_ITEMS}\\(hazard_types\\)\\)`));
   assert.doesNotMatch(createTable(task, model('Milestone'), context), /FUNCTION/, 'only when a list needs it');
 });
+
+test('a $ref to a part of the model\'s own schema is read there; a relative file is one JSON value', () => {
+  const thing = { type: 'Thing', kind: 'entity', catalog: { attributes: {} }, schema: {
+    $defs: { Place: { type: 'object', required: ['city'], properties: { city: { type: 'string' }, zip: { type: 'string' } } } },
+    required: ['id', 'type', 'where'],
+    properties: { id: { type: 'string' }, type: { const: 'Thing' }, where: { $ref: '#/$defs/Place', 'x-iri': 'https://example.org/ns#where' }, other: { $ref: 'Other.json', 'x-iri': 'https://example.org/ns#other' }, lost: { $ref: '#/$defs/Nothing', 'x-iri': 'https://example.org/ns#lost' } },
+  } };
+  const cols = Object.fromEntries(columnsOf(thing, { refs: {} }).map((c) => [c.name, c]));
+  assert.equal(cols.where.kind, 'parts');
+  assert.deepEqual(cols.where.parts.map((x) => [x.name, x.required]), [['city', true], ['zip', false]]);
+  assert.equal(cols.other.kind, 'json');
+  assert.equal(cols.lost.kind, 'json');
+});
+
+test('export reads a model\'s schema only from the catalog\'s own site', async () => {
+  const catalog = { models: [{ subject: 'x', type: 'Evil', kind: 'entity', typeIri: 'https://evil.example/ns#Evil', schemaUrl: 'http://169.254.169.254/latest/meta-data/x.json', title: { en: 'Evil' } }] };
+  const read = [];
+  const fetchStub = async (url) => { read.push(String(url)); return { ok: true, status: 200, json: async () => catalog }; };
+  await assert.rejects(exportModel('x/Evil', ['csv'], { index: 'https://evil.example/catalog.json', fetch: fetchStub }), /is not under https:\/\/evil\.example\/schema\/, not read/);
+  assert.deepEqual(read, ['https://evil.example/catalog.json']);
+});
