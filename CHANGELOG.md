@@ -4,6 +4,14 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-10-12
+
+More of the facility lists convert: yes/no columns, value lists, weekdays and times.
+
+### Added
+
+- Transforms for the facility lists (#54): `yesno` (有/無, あり/なし, ○/× and similar to true and false), `weekdays` (`月～金`, `月火水木金`, `土日祝`, `平日`, `12345` to the days of OpeningHours; a range wraps) and `time` (`9:00` and `9時` to `09:00`; `24:00` kept for a closing time, `0:00` kept as `00:00`). `values` on a one-column rule turns each text of the column into the model's value (`病院: hospital`), also with `split` and `yesno`. A text these do not know is a problem of the row, never a guess. `datamodels mapping` suggests `yesno` for a boolean column of 有 and 無, gives the fields of the opening hours a row each with `weekdays` and `time`, and keeps the `values` of a catalog rule.
+
 ### Changed
 
 - `datamodels init` writes a workflow pinned to the v0.3.5 release of the Action, and a README whose `npx` commands run v0.3.5.
@@ -19,7 +27,6 @@ Your own lists: convert any CSV with a mapping file of your own, start one with 
 - `datamodels convert --check [--rows N]`: converts the first rows (default 20), writes nothing, and reports the problems of the mapping, the columns the file lacks, the required attributes no row gets and the invalid rows with their first schema errors; the last line is a summary such as `18 of 20 rows valid`. Exit code 0 when every checked row is valid.
 - `datamodels convert <subject>/<Type> csv-template <file.csv>`: a CSV made from the model's CSV template converts without a mapping file.
 - Transforms `boolean` (true or false), `geometry` (longitude and latitude into a Point, or a GeoJSON column) and `json`. A field `id` gives the entity id as it is; a `convert.id` template that is only one value is not URL-encoded.
-- Transforms for the facility lists (#54): `yesno` (有/無, あり/なし, ○/× and similar to true and false), `weekdays` (`月～金`, `月火水木金`, `土日祝`, `平日`, `12345` to the days of OpeningHours; a range wraps) and `time` (`9:00` and `9時` to `09:00`; `24:00` kept for a closing time, `0:00` kept as `00:00`). `values` on a one-column rule turns each text of the column into the model's value (`病院: hospital`), also with `split` and `yesno`. A text these do not know is a problem of the row, never a guess. `datamodels mapping` suggests `yesno` for a boolean column of 有 and 無, gives the fields of the opening hours a row each with `weekdays` and `time`, and keeps the `values` of a catalog rule.
 - The agent skill has a "Convert your data" section: the steps with `mapping` and `--check`, and the rules (never invent values, leave unmatched columns out, ask about ambiguous columns).
 
 ### Changed
@@ -147,7 +154,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.5...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.6...main
+[0.3.6]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.2...v0.3.3
