@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { bumpSubject } from '../src/version.mjs';
 import { buildNode } from '../src/build/index.mjs';
+import { pageTexts } from '../src/build/page-texts.mjs';
 
 const BASE = 'https://models.example.org';
 const TASK = 'https://datamodels.jp/ns/task/Task';
@@ -60,6 +61,12 @@ test('a renamed model keeps a page at its old address, and its former terms keep
   assert.match(ns, /<h2>Terms of earlier versions<\/h2>/);
   for (const t of ['Ride', 'rideType']) assert.match(ns, new RegExp(`<tr id="${t}"><th scope="row">${t}</th><td><a href="https://models\\.example\\.org/vocab/road/v0\\.1\\.0\\.jsonld">v0\\.1\\.0</a></td></tr>`), t);
   assert.doesNotMatch(ns, /id="Ticket"/);
+});
+
+test('the versions of a former model are listed, not given as a range', () => {
+  assert.match(pageTexts('en').formerModel('Ride', 'road', ['0.1.0', '0.3.0']), /in versions 0\.1\.0 and 0\.3\.0\./);
+  assert.match(pageTexts('en').formerModel('Ride', 'road', ['0.1.0', '0.2.0', '0.4.0']), /in versions 0\.1\.0, 0\.2\.0 and 0\.4\.0\./);
+  assert.match(pageTexts('ja').formerModel('Ride', 'road', ['0.1.0', '0.3.0']), /バージョン 0\.1\.0、0\.3\.0 のモデル/);
 });
 
 test('a node without former models or terms gets no such pages or section', async () => {
