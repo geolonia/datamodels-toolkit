@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.5 release of the Action, and a README whose `npx` commands run v0.3.5.
+
 ## [0.3.5] - 2026-10-12
 
 Your own lists: convert any CSV with a mapping file of your own, start one with `datamodels mapping`, check the first rows with `convert --check`, or fill in the CSV template and convert it without a mapping.
