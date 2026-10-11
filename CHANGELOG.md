@@ -7,6 +7,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 ### Changed
 
 - `datamodels init` writes a workflow pinned to the v0.3.3 release of the Action, and a README whose `npx` commands run v0.3.3.
+- The footer links the Toolkit pages of datamodels.jp (`/toolkit/`), where the guide for publishing your own data models moved (geolonia/datamodels#228). The skill links their new addresses too. The old addresses redirect.
 
 ## [0.3.3] - 2026-10-11
 

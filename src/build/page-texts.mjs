@@ -14,7 +14,7 @@ const en = {
   standards: 'Standards referenced', mapping: 'mapping', notes: 'Notes',
   extendsLabel: 'Extends', index: 'index', example: 'Example', attributes: 'Attributes', required: 'required', any: 'any', noAttributes: 'None.',
   publishedBy: 'Published by ',
-  madeWith: 'Made with ', ownBefore: 'Publish your own data models: ', guide: 'the guide', guideUrl: 'https://datamodels.jp/en/guide/own-site',
+  madeWith: 'Made with ', ownBefore: 'Publish your own data models: ', guide: 'the guide', guideUrl: 'https://datamodels.jp/en/toolkit/',
   // Every version listed, not a range: a model can leave and come back.
   formerModel: (type, subject, versions) => `${type} was a model of ${subject} in ${versions.length > 1 ? `versions ${versions.slice(0, -1).join(', ')} and ${versions.at(-1)}` : `version ${versions[0]}`}. The current version no longer has it; its files stay online.`,
   renamedBefore: 'The same type is now named ', renamedAfter: '.', currentModels: 'The current models of this subject: ',
@@ -39,7 +39,7 @@ const ja = {
   standards: '参照している標準', mapping: '対応表', notes: '注記',
   extendsLabel: '拡張元', index: '索引', example: '例', attributes: '属性', required: '必須', any: '任意', noAttributes: 'ありません。',
   publishedBy: '公開：',
-  madeWith: '作成：', ownBefore: '自分のデータモデルを公開するには：', guide: 'ガイド', guideUrl: 'https://datamodels.jp/guide/own-site',
+  madeWith: '作成：', ownBefore: '自分のデータモデルを公開するには：', guide: 'ガイド', guideUrl: 'https://datamodels.jp/toolkit/',
   formerModel: (type, subject, versions) => `${type} は、${subject} のバージョン ${versions.join('、')} のモデルでした。現在の版にはありません。ファイルは公開したままです。`,
   renamedBefore: '同じ型は、現在 ', renamedAfter: ' という名前です。', currentModels: 'このサブジェクトの現在のモデル：',
   formerTerms: '以前の版の用語', formerTermsIntro: 'このサブジェクトの以前の版が定めていて、現在の版には無い用語です。IRI はそのまま有効で、その版の語彙に説明があります。',

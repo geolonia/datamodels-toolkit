@@ -9,7 +9,7 @@ datamodels.jp is a catalog of data models that work in Japan: JSON Schemas, JSON
 
 ## Find before you define
 
-1. Read https://datamodels.jp/llms.txt (an index for agents), then https://datamodels.jp/catalog.json (every model: type IRI, `@context`, schema, attributes, examples). Other known nodes and what they build on: https://datamodels.jp/en/guide/nodes.
+1. Read https://datamodels.jp/llms.txt (an index for agents), then https://datamodels.jp/catalog.json (every model: type IRI, `@context`, schema, attributes, examples). Other known nodes and what they build on: https://datamodels.jp/en/toolkit/sites.
 2. Reuse in this order: a datamodels.jp model as it is; then [Smart Data Models](https://smartdatamodels.org/), NGSI-LD core terms or schema.org where they fit; define a new type only for what is missing.
 3. Reuse attribute names and their IRIs. The same meaning gets the same IRI; a new attribute gets an IRI in your own namespace.
 4. Where it goes: a model many organisations in Japan need → propose it to datamodels.jp (https://datamodels.jp/en/guide/contribute). Only you need it → your own node. Not about Japan → Smart Data Models.
@@ -30,7 +30,7 @@ datamodels.jp is a catalog of data models that work in Japan: JSON Schemas, JSON
 
 Run the commands with `npx github:geolonia/datamodels-toolkit#<version>` (Node.js 24 or later); use the release the node pins (see its README).
 
-- `init`: `node.yaml`, the first subject, README, LICENSE (CC0-1.0, CC-BY-4.0), the GitHub Pages workflow and Dependabot. **The base URL is in every IRI: choose it once** (your domain, or a w3id.org address that redirects to it: https://datamodels.jp/en/guide/own-site#w3id). Then set Settings → Pages → Source: GitHub Actions.
+- `init`: `node.yaml`, the first subject, README, LICENSE (CC0-1.0, CC-BY-4.0), the GitHub Pages workflow and Dependabot. **The base URL is in every IRI: choose it once** (your domain, or a w3id.org address that redirects to it: https://datamodels.jp/en/toolkit/start#w3id). Then set Settings → Pages → Source: GitHub Actions.
 - `add <subject>/<Type>`: a new model (schema, catalog.yaml, example, notes.yaml).
 - `extend <model> <subject>/<Type>`: start a model from another node's model (`task/Task` on datamodels.jp, or its type IRI): the same type with more attributes, or a subtype with `--subclass`.
 - `check` before every pull request; `build` writes `_site/`.
