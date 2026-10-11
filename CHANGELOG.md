@@ -7,6 +7,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 ### Added
 
 - `datamodels check` has the checks of datamodels.jp's validator for schemas and examples (geolonia/datamodels#226): the `type` const, `$id` and `x-version` of each schema, the `x-ngsi.type` names, polygon rings that close, the NGSI-LD rules of `example-normalized.jsonld` (attribute types, typed dates, the same id and vocab values as `example.json`, a valid key-values form, the alias URL in its `@context`), and a JSON-LD processor that expands the normalized example, the example of a value type and the vocabulary without losing anything. It also checks that an entity schema accepts the `@context` that data may carry.
+- `datamodels check` checks the mapping files of a node, as datamodels.jp's validator did (geolonia/datamodels#226): a correspondence table with a `standard` and its `name`, a `to` in every row, texts in the node's languages (a text that YAML cut at a comma is reported), known keys only, fields of the model, and `via` to another mapping file of the node without circles. The conversion rules are checked as `convert` applies them, so a catalog mapping may hold every rule that a mapping file of your own may: `values` on a rule of one column, the transforms `boolean`, `yesno`, `weekdays`, `time`, `geometry` and `json`, and field names with a dot.
 
 ### Fixed
 

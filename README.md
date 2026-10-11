@@ -37,7 +37,7 @@ It reads `catalog.json`, the model's schema and the mapping file from the site, 
 - A field with `column` (one column or a list), an optional `transform`, a constant `value`, or `via` is converted.
 - The `convert.id` template names the entities: `{attribute}` is that attribute's value in the row (`{address.localGovernmentCode}` for a field of a value). A template that is only one value, such as `"{id}"`, takes the value as it is; inside a longer id a value is URL-encoded. A field `id` with a `column` gives the entity id as it is, when there is no template.
 - Fields with only `to` are documentation.
-- A field name with a dot fills a field of a value: `address.postalCode: { column: 郵便番号 }` (only in mapping files of your own; the catalog's mapping files use `via`).
+- A field name with a dot fills a field of a value: `address.postalCode: { column: 郵便番号 }`. The catalog's mapping files mostly use `via` instead, so that several models share the rules for an address.
 
 | `transform` | Columns | What it makes |
 |---|---|---|
@@ -202,7 +202,7 @@ datamodels build             # the node in the current directory, into _site/
 datamodels build my-node --out public
 ```
 
-A node is a folder with `node.yaml` and `models/`. `models/` is laid out as in [geolonia/datamodels](https://github.com/geolonia/datamodels/tree/main/models): one folder per subject with `subject.yaml` and `context.jsonld`, and one folder per model with `schema.json`, `catalog.yaml` and `examples/`. A node needs only one language and has no mapping files or ADOPTERS files ([what a node publishes](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
+A node is a folder with `node.yaml` and `models/`. `models/` is laid out as in [geolonia/datamodels](https://github.com/geolonia/datamodels/tree/main/models): one folder per subject with `subject.yaml` and `context.jsonld`, and one folder per model with `schema.json`, `catalog.yaml` and `examples/`. A node needs only one language and has no ADOPTERS files; mapping files (`mapping/*.yaml`) are optional ([what a node publishes](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
 
 ```yaml
 # node.yaml
@@ -245,6 +245,7 @@ The checks a node runs in CI before it publishes:
 - `example-normalized.jsonld`, when a model has one, follows the schema: each attribute has the `x-ngsi.type` of the schema (`Property` without one) and several instances only with `x-ngsi.multi`, a date or date-time value carries `"@type": "Date"` or `"DateTime"`, its `id` and `vocab` values are those of `example.json`, its key-values form is valid, and its `@context` is a list with the alias URL (`v1.jsonld`).
 - A JSON-LD processor expands `example-normalized.jsonld`: each attribute to its IRI and the type to the model's type IRI, a `vocab` value to a defined IRI (not the NGSI-LD default context), and nothing is lost when it is compacted again. The example of a value type is tried as the value of an attribute. The vocabulary must expand too. The node's own @contexts come from the build, offline too; the NGSI-LD core context v1.8 comes with the toolkit; any other is read online, and only noted when it cannot be read.
 - Every entity type and attribute is a term of the subject's `@context` (or an NGSI-LD core term such as `location`), and expands to the IRI in the schema (`x-iri`). Otherwise JSON-LD drops the attribute, or gives it another meaning. A term from a context imported by URL is checked online; offline it is only noted.
+- Each mapping file (`mapping/*.yaml`) is a correspondence table: a `standard` with a `name` (and optionally `url`, `license`, `note`), and for each field of the model a row with `to`, the item of the standard (`null` when it has none), and an optional `note`. Its texts are in the node's languages, and a key that is not a language tag is a text that YAML cut at a comma (quote it). A row may also carry the conversion rules of [convert](#convert), checked as convert applies them: the transform names, the columns each transform reads, `values`, one of `column`, `value` and `via`, a `convert.id` template, a field name with a dot. `via` names another mapping file of the node (`<subject>/<Type>/<name>`), and the files that `via` connects do not form a circle. A row for a position in an array (`coordinates[2]`) only documents it. Unknown keys are reported, so a typo does not go unseen.
 - Release snapshots in `models/<subject>/releases/vX.Y.Z/`, where the node keeps them, hold exactly what the sources produce.
 - An exact version (`v0.1.0`) that is already online is served unchanged. One that is not online yet is new.
 - A model does not redefine a term of a model it `extends`: the same name keeps the same IRI.
