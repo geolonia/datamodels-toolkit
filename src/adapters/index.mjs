@@ -16,14 +16,41 @@ import postgis from './postgis/index.mjs';
 
 export const ADAPTERS = [csv, tableSchema, ai, postgis];
 
-/** A reader of JSON URLs that reads each once. */
+/** A URL as fetch requests it: dot segments (also %2e%2e) resolved, so a prefix check sees the real path. */
+export const normalUrl = (url) => { try { return new URL(url).href; } catch { return null; } };
+
+/**
+ * Where a redirect may lead: an https URL on a host name, not an IP address,
+ * localhost or a local-only name. A node's address may redirect (w3id.org to
+ * GitHub Pages), but never into the network the build runs in.
+ */
+export function publicUrl(url) {
+  let u;
+  try { u = new URL(url); } catch { return false; }
+  const host = u.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (u.protocol !== 'https:' || u.username || u.password) return false;
+  if (/^[\d.]+$/.test(host) || host.includes(':')) return false;
+  return !/(^|\.)(localhost|local|internal|home\.arpa)$/.test(host) && host.includes('.');
+}
+
+const REDIRECTS = 5;
+
+/** A reader of JSON URLs that reads each once; it follows a redirect only to a publicUrl(). */
 export const getter = (fetchUrl, timeout) => {
   const cache = new Map();
   return (url) => {
     if (!cache.has(url)) {
       cache.set(url, (async () => {
         let res;
-        try { res = await fetchUrl(url, { signal: AbortSignal.timeout(timeout) }); } catch (e) { throw new Error(`${url} could not be read (${e.cause?.code ?? e.message})`); }
+        let at = url;
+        for (let hop = 0; ; hop++) {
+          try { res = await fetchUrl(at, { signal: AbortSignal.timeout(timeout), redirect: 'manual' }); } catch (e) { throw new Error(`${url} could not be read (${e.cause?.code ?? e.message})`); }
+          const location = res.status >= 300 && res.status < 400 ? res.headers?.get?.('location') : null;
+          if (!location) break;
+          const next = normalUrl(new URL(location, at).href);
+          if (hop >= REDIRECTS || !publicUrl(next)) throw new Error(`${url}: redirects to ${next ?? location}, not followed (only to https on a public host name, at most ${REDIRECTS} times)`);
+          at = next;
+        }
         if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
         return res.json().catch(() => { throw new Error(`${url}: not JSON`); });
       })());
@@ -52,10 +79,11 @@ export async function readRefs(models, { local = new Map(), entries = [], fetch:
   const urls = [...new Set(models.flatMap(refsOf))];
   for (const url of urls) {
     if (local.has(url)) { refs[url] = local.get(url); continue; }
-    if (!trusted.some((prefix) => url.startsWith(prefix))) { problems.push(`${url} is not read: only the schemas of the nodes in node.yaml are (${trusted.join(', ') || 'none listed'})`); continue; }
+    const href = normalUrl(url);
+    if (!href || !trusted.some((prefix) => href.startsWith(prefix))) { problems.push(`${url} is not read: only the schemas of the nodes in node.yaml are (${trusted.join(', ') || 'none listed'})`); continue; }
     if (offline) { problems.push(`${url} is on another site, not read offline`); continue; }
     try {
-      const schema = await get(url);
+      const schema = await get(href);
       refs[url] = { schema, texts: textsOfEntry(entries.find((e) => e.schemaUrl === url)) };
     } catch (e) { problems.push(e.message); }
   }

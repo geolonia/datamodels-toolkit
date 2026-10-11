@@ -298,7 +298,7 @@ test('check --offline reads no schema of another site for the adapters', async (
 
 test('a $ref outside the schema/ of a known node is never fetched', async () => {
   const { schemaPrefixes } = await import('../src/adapters/index.mjs');
-  const bad = ['http://169.254.169.254/latest/meta-data/x.json', 'http://localhost:8080/schema/x.json', `${DJ}/context/x.json`, 'https://datamodels.jp.example.com/schema/x.json'];
+  const bad = ['http://169.254.169.254/latest/meta-data/x.json', 'http://localhost:8080/schema/x.json', `${DJ}/context/x.json`, 'https://datamodels.jp.example.com/schema/x.json', `${DJ}/schema/../secret.json`, `${DJ}/schema/%2e%2e/secret.json`];
   const good = `${DJ}/schema/common/JapaneseAddress/v1.0.0.json`;
   const properties = Object.fromEntries([...bad, good].map((ref, i) => [`p${i}`, { $ref: ref }]));
   const thing = { type: 'Thing', kind: 'entity', schema: { properties: { id: { type: 'string' }, type: { const: 'Thing' }, ...properties } } };
@@ -337,4 +337,17 @@ test('export reads a model\'s schema only from the catalog\'s own site', async (
   const fetchStub = async (url) => { read.push(String(url)); return { ok: true, status: 200, json: async () => catalog }; };
   await assert.rejects(exportModel('x/Evil', ['csv'], { index: 'https://evil.example/catalog.json', fetch: fetchStub }), /is not under https:\/\/evil\.example\/schema\/, not read/);
   assert.deepEqual(read, ['https://evil.example/catalog.json']);
+});
+
+test('a redirect is followed only to https on a public host name', async () => {
+  const { getter, publicUrl } = await import('../src/adapters/index.mjs');
+  for (const ok of ['https://dkastl.github.io/models/schema/x.json', 'https://w3id.org/x/schema/a.json']) assert.ok(publicUrl(ok), ok);
+  for (const bad of ['http://example.org/x', 'https://169.254.169.254/x', 'https://127.0.0.1/x', 'https://[::1]/x', 'https://localhost/x', 'https://printer.local/x', 'https://db.internal/x', 'https://intranet/x', 'https://u:p@example.org/x']) assert.ok(!publicUrl(bad), bad);
+  const redirecting = (to) => async (url) => (url === 'https://w3id.org/n/schema/a.json'
+    ? { ok: false, status: 302, headers: new Headers({ location: to }) }
+    : { ok: true, status: 200, json: async () => ({ to: url }) });
+  assert.deepEqual(await getter(redirecting('https://n.github.io/schema/a.json'), 1000)('https://w3id.org/n/schema/a.json'), { to: 'https://n.github.io/schema/a.json' });
+  await assert.rejects(getter(redirecting('http://169.254.169.254/latest/meta-data/'), 1000)('https://w3id.org/n/schema/a.json'), /redirects to http:\/\/169\.254\.169\.254\/latest\/meta-data\/, not followed/);
+  const loop = async (url) => ({ ok: false, status: 302, headers: new Headers({ location: `${url}x` }) });
+  await assert.rejects(getter(loop, 1000)('https://example.org/a'), /at most 5 times/);
 });

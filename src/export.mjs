@@ -5,7 +5,7 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadNode } from './build/node.mjs';
 import { catalogUrls } from './build/urls.mjs';
-import { ADAPTERS, getter, textsOfEntry, readRefs, localRefs, schemaPrefixes } from './adapters/index.mjs';
+import { ADAPTERS, getter, textsOfEntry, readRefs, localRefs, schemaPrefixes, normalUrl } from './adapters/index.mjs';
 
 const DEFAULT_INDEX = 'https://datamodels.jp/catalog.json';
 
@@ -18,8 +18,9 @@ async function remoteModel(target, from, get) {
   if (!entry.schemaUrl) throw new Error(`${from}: ${target} has no schemaUrl`);
   // Only a schema of that catalog's own site, as for the $refs (src/adapters/index.mjs).
   const schemaRoot = new URL('schema/', new URL('.', from)).href;
-  if (!String(entry.schemaUrl).startsWith(schemaRoot)) throw new Error(`${from}: the schema of ${target} (${entry.schemaUrl}) is not under ${schemaRoot}, not read`);
-  const schema = await get(entry.schemaUrl);
+  const schemaUrl = normalUrl(entry.schemaUrl);
+  if (!schemaUrl?.startsWith(schemaRoot)) throw new Error(`${from}: the schema of ${target} (${entry.schemaUrl}) is not under ${schemaRoot}, not read`);
+  const schema = await get(schemaUrl);
   // The catalog's languages, in the order its titles give them (datamodels.jp: ja, en).
   const languages = Object.keys(entry.title ?? {}).length ? Object.keys(entry.title) : ['en'];
   const subject = { name: entry.subject, version: entry.version };
