@@ -6,6 +6,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Changed
 
+- The footer's first line is one short line, so it fits on desktop screens: the publisher, the licence, `catalog.json` and `llms.txt`, separated by dots.
 - `datamodels init` writes a workflow pinned to the v0.3.2 release of the Action, and a README whose `npx` commands run v0.3.2.
 
 ## [0.3.2] - 2026-10-11

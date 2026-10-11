@@ -64,9 +64,8 @@ header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 
 </main>
 <footer>
 <hr>
-<p>{{ t.publishedBy }}<a href="{{ site.publisher.url }}">{{ site.publisher.name }}</a>{{ t.period }}
-{{ t.machineReadable }}<a href="{{ site.catalog }}">catalog.json</a>{{ t.comma }}<a href="{{ site.llms }}">llms.txt</a>{{ t.period }}
-{{ t.licence }}<a href="{{ site.licenseUrl }}">{{ site.license }}</a>{{ t.period }}</p>
+{#- One short line: publisher, licence and the machine-readable files. #}
+<p>{{ t.publishedBy }}<a href="{{ site.publisher.url }}">{{ site.publisher.name }}</a> · <a href="{{ site.licenseUrl }}">{{ site.license }}</a> · <a href="{{ site.catalog }}">catalog.json</a> · <a href="{{ site.llms }}">llms.txt</a></p>
 <p>{{ t.madeWith }}<a href="{{ site.generator.url }}">{{ site.generator.name }}</a> {{ site.generator.version }}{{ t.period }}
 {{ t.ownBefore }}<a href="{{ t.guideUrl }}">{{ t.guide }}</a>{{ t.period }}</p>
 </footer>
