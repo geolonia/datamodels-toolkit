@@ -185,6 +185,7 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   assert.ok(ja.includes(`<meta name="generator" content="datamodels-toolkit ${version}">`));
   assert.match(en, /Made with <a href="https:\/\/github\.com\/geolonia\/datamodels-toolkit">datamodels-toolkit<\/a>/);
   assert.match(ja, /<a href="https:\/\/datamodels\.jp\/toolkit\/">ガイド<\/a>/);
+  assert.match(en, /<a href="https:\/\/datamodels\.jp\/en\/toolkit\/">the guide<\/a>/);
   // The English page URL goes into catalog.json, as datamodels.jp's pageUrlEn.
   const catalog = JSON.parse(await read('catalog.json'));
   assert.equal(catalog.models[0].pageUrlEn, `${BASE}/en/models/road/RoadPatrol/`);
