@@ -74,6 +74,11 @@ test('init in an existing repository adds what is missing and keeps every file',
   // A licence file under another name is kept, and no LICENSE is added.
   assert.match(r.stderr, /kept LICENSE\.md \(it exists\)/);
   assert.doesNotMatch(r.stderr, /added LICENSE|no LICENSE/);
+  // Without a README, the new one links to the licence file that is kept.
+  const bare = await mkdtemp(join(tmpdir(), 'datamodels-init-'));
+  await writeFile(join(bare, 'LICENSE.md'), 'Our licence.\n');
+  assert.equal((await datamodels('init', bare, ...OPTIONS)).code, 0);
+  assert.match(await readFile(join(bare, 'README.md'), 'utf8'), /Licence: \[CC0-1\.0\]\(LICENSE\.md\)\./);
   assert.match(r.stderr, /added lines to \.gitignore/);
   assert.equal(await readFile(join(dir, 'README.md'), 'utf8'), '# models\n\nMade by the scaffolder.\n');
   assert.equal(await readFile(join(dir, 'catalog-info.yaml'), 'utf8'), 'kind: Component\n');
