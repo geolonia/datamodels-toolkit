@@ -412,4 +412,9 @@ test('AI: the keywords next to anyOf hold in every branch', () => {
   const n = strict({ type: 'number', minimum: 0, anyOf: [{ maximum: 10 }, { const: 100 }] }, 'n');
   assert.match(n.anyOf[0].description, /minimum 0; maximum 10/);
   assert.throws(() => strict({ anyOf: [{ type: 'string' }], oneOf: [{ type: 'number' }] }, 'y'), NotStrict);
+  // A branch that repeats a keyword with another value: both must hold, so no strict form.
+  assert.throws(() => strict({ type: 'string', pattern: '^A', anyOf: [{ pattern: 'B$' }] }, 'p'), (e) => e instanceof NotStrict && /pattern next to anyOf and in the branch must both hold/.test(e.message));
+  assert.throws(() => strict({ type: 'string', anyOf: [{ type: 'number' }] }, 't'), NotStrict);
+  // The same value repeated is fine.
+  assert.equal(strict({ type: 'string', anyOf: [{ type: 'string', format: 'date' }] }, 'd').anyOf[0].format, 'date');
 });

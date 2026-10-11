@@ -55,10 +55,15 @@ export function strict(s, path) {
   if (branches && s.oneOf && s.anyOf) throw new NotStrict(`${path}: oneOf and anyOf together have no strict form`);
   if (branches) {
     // The keywords next to anyOf/oneOf apply to every branch (JSON Schema reads them together), so
-    // each branch gets them, the branch's own keywords winning: a date or a date-time with the same
-    // type, or a pattern and bounds that hold whichever branch is taken.
+    // each branch gets them: a date or a date-time of the same type, or a pattern and bounds that
+    // hold whichever branch is taken. A branch that gives the same keyword another value would need
+    // both to hold, which one strict schema cannot say: then the model has no AI file.
     const { anyOf, oneOf, description, ...siblings } = s;
-    const merged = branches.map((b, i) => strict({ ...siblings, ...b }, `${path}[${i}]`));
+    const merged = branches.map((b, i) => {
+      const clash = Object.keys(b ?? {}).find((k) => k !== 'description' && k in siblings && JSON.stringify(b[k]) !== JSON.stringify(siblings[k]));
+      if (clash) throw new NotStrict(`${path}[${i}]: ${clash} next to ${s.oneOf ? 'oneOf' : 'anyOf'} and in the branch must both hold, which has no strict form`);
+      return strict({ ...siblings, ...b }, `${path}[${i}]`);
+    });
     return { anyOf: merged, ...describe(text, notes) };
   }
   if (s.const !== undefined) return { type: typeOfValues([s.const]), enum: [s.const], ...describe(text, notes) };
