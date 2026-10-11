@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-11
+
+An agent skill for modelling with datamodels.jp and the toolkit, and a one-line footer.
+
 ### Added
 
 - An agent skill, `skills/datamodels/SKILL.md`: the catalog's modelling rules and the toolkit's workflow, pointing to datamodels.jp's `llms.txt` for the models.
@@ -104,7 +108,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.2...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.3...main
+[0.3.3]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/geolonia/datamodels-toolkit/compare/v0.2.1...v0.3.0
