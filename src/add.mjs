@@ -22,7 +22,7 @@ const json = (o) => `${JSON.stringify(o, null, 2)}\n`;
  * added to one subject at once never lose each other's entry, and a failure
  * leaves the context and models/ as they were.
  */
-export async function placeModel(subjectDir, type, { schema, catalog, example }, edit) {
+export async function placeModel(subjectDir, type, { schema, catalog, example, notes }, edit) {
   const modelDir = join(subjectDir, type);
   const contextFile = join(subjectDir, 'context.jsonld');
   const lock = `${contextFile}.tmp`;
@@ -47,6 +47,7 @@ export async function placeModel(subjectDir, type, { schema, catalog, example },
     await writeFile(join(staging, 'schema.json'), json(schema), { flag: 'wx' });
     await writeFile(join(staging, 'catalog.yaml'), catalog, { flag: 'wx' });
     await writeFile(join(staging, 'examples', 'example.json'), json(example), { flag: 'wx' });
+    if (notes) await writeFile(join(staging, 'notes.yaml'), notes, { flag: 'wx' });
     await writeFile(lock, json(context));
     await rename(staging, modelDir);
     moved = true;
@@ -96,12 +97,18 @@ export async function addModel(dir, target, { kind = 'entity' } = {}) {
 ${YAML.stringify({ title: perLanguage(type), description: perLanguage(`One ${type}.`), status: 'draft', attributes: {} }, { lineWidth: 0 })}`;
   const example = kind === 'value' ? {} : { id: `urn:ngsi-ld:${type}:example-1`, type };
   // The type goes into the @context, with the prefix that names the namespace when there is one.
-  await placeModel(subjectDir, type, { schema, catalog, example }, (context, terms) => {
+  // Why the model is as it is: shown on its page under Notes, next to the standards it maps (mapping/*.yaml).
+  const notes = `# Notes: the sources, the decisions and their reasons, what is left out. Shown on the model's page.
+# One item per note, in each language of the node, for example:
+#   - { ${node.languages.map((l) => `${l}: …`).join(', ')} }
+notes: []
+`;
+  await placeModel(subjectDir, type, { schema, catalog, example, notes }, (context, terms) => {
     const prefix = Object.entries(terms).find(([, v]) => v === namespace)?.[0];
     terms[type] = prefix ? `${prefix}:${type}` : mu.typeIri;
   });
   const at = `models/${subjectName}`;
   // A released version never changes: the build stops until the subject has a new version.
   const released = await exists(join(subjectDir, 'releases', `v${subject.version}`));
-  return { added: [`${at}/${type}/schema.json`, `${at}/${type}/catalog.yaml`, `${at}/${type}/examples/example.json`], changed: [`${at}/context.jsonld`], typeIri: mu.typeIri, released: released ? subject.version : null };
+  return { added: [`${at}/${type}/schema.json`, `${at}/${type}/catalog.yaml`, `${at}/${type}/examples/example.json`, `${at}/${type}/notes.yaml`], changed: [`${at}/context.jsonld`], typeIri: mu.typeIri, released: released ? subject.version : null };
 }

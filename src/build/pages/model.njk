@@ -43,3 +43,19 @@ eleventyComputed:
 {%- else %}
 <p>{{ t.noAttributes }}</p>
 {%- endfor %}
+{%- if m.standards.length %}
+<h2>{{ t.standards }}</h2>
+<ul>
+{%- for x in m.standards %}
+<li>{% if x.url %}<a href="{{ x.url }}" lang="{{ x.name.lang }}">{{ x.name.text }}</a>{% else %}<span lang="{{ x.name.lang }}">{{ x.name.text }}</span>{% endif %}{{ t.open }}<a href="{{ x.mapping }}">{{ t.mapping }}</a>{{ t.close }}</li>
+{%- endfor %}
+</ul>
+{%- endif %}
+{%- if m.notes.length %}
+<h2>{{ t.notes }}</h2>
+<ul>
+{%- for n in m.notes %}
+<li lang="{{ n[0].lang }}">{{ n[0].text }}</li>
+{%- endfor %}
+</ul>
+{%- endif %}

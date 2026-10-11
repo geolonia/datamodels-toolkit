@@ -87,6 +87,9 @@ export function pageData(subjects, { urls, node, lang = node.languages[0] }) {
         examples: Object.keys(model.examples).sort().map((f) => `${mu.examples}${f}`),
         subClassOf: httpOnly(model.schema['x-subclass-of']), aliasOf: httpOnly(model.schema['x-alias-of']),
         extends: model.catalog.extends ?? [], attributes,
+        // Why the model is as it is: the standards it maps (mapping/*.yaml) and its notes (notes.yaml).
+        standards: (model.mappings ?? []).map((x) => ({ name: texts(x.standard?.name)[0] ?? { lang, text: x.name }, url: httpOnly(x.standard?.url), mapping: `${mu.mapping}${x.name}.yaml` })),
+        notes: (Array.isArray(model.notes?.notes) ? model.notes.notes : []).map((n) => texts(n)).filter((n) => n.length),
         subject: { name: subject.name, page: at(su.page) },
       };
       models.push(m);

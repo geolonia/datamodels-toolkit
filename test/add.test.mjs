@@ -34,6 +34,11 @@ test('add writes an entity and a value type that build and pass check', async ()
   assert.deepEqual(context, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', Segment: 'road:Segment' });
   const schema = JSON.parse(await readFile(join(dir, 'models', 'road', 'RoadPatrol', 'schema.json'), 'utf8'));
   assert.equal(schema.$id, `${BASE}/schema/road/RoadPatrol/v0.1.0.json`);
+  // An empty notes.yaml, with a comment on what goes in it.
+  assert.ok(r.added.includes('models/road/RoadPatrol/notes.yaml'));
+  const notes = await readFile(join(dir, 'models', 'road', 'RoadPatrol', 'notes.yaml'), 'utf8');
+  assert.match(notes, /^# Notes: the sources, the decisions and their reasons/);
+  assert.match(notes, /\nnotes: \[\]\n$/);
 });
 
 test('add with slash IRIs, and with a context that has no prefix for the namespace', async () => {

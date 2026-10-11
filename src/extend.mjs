@@ -113,7 +113,12 @@ ${YAML.stringify({
     } catch { /* the minimal example */ }
   }
 
-  await placeModel(subjectDir, type, { schema, catalog, example }, (context, terms) => {
+  const notes = `# Notes: the sources, the decisions and their reasons, what is left out. Shown on the model's page.
+# Why this model extends ${entry.typeIri} v${entry.version}, and what it adds. One item per note, in each language of the node:
+#   - { ${node.languages.map((l) => `${l}: …`).join(', ')} }
+notes: []
+`;
+  await placeModel(subjectDir, type, { schema, catalog, example, notes }, (context, terms) => {
     // Import the other model's @context at its exact version, first, so this node's terms come after it.
     const parts = Array.isArray(context['@context']) ? context['@context'] : [context['@context']];
     if (!parts.includes(entry.contextUrl)) context['@context'] = [entry.contextUrl, ...parts];
@@ -124,7 +129,7 @@ ${YAML.stringify({
   if (nodeYaml) await writeFile(join(dir, 'node.yaml'), nodeYaml);
   const at = `models/${subjectName}`;
   return {
-    added: [`${at}/${type}/schema.json`, `${at}/${type}/catalog.yaml`, `${at}/${type}/examples/example.json`],
+    added: [`${at}/${type}/schema.json`, `${at}/${type}/catalog.yaml`, `${at}/${type}/examples/example.json`, `${at}/${type}/notes.yaml`],
     changed: [...(nodeYaml ? ['node.yaml'] : []), `${at}/context.jsonld`],
     typeIri,
     extends: { typeIri: entry.typeIri, version: entry.version, index: from },

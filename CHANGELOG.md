@@ -6,6 +6,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Added
 
+- Model pages show the standards the model maps (its `mapping/*.yaml`, with links to the tables) and its notes (`notes.yaml`). `datamodels add` and `extend` start an empty `notes.yaml`.
 - Page metadata: description, canonical URL, `hreflang` links, Open Graph tags, and `<meta name="generator">` with the toolkit's version. The footer names the toolkit and links to the guide for publishing your own data models.
 
 ### Changed

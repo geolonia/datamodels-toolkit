@@ -57,7 +57,7 @@ test('an extension: the same type, its schema copied, its @context imported, rec
   const dir = await node();
   const r = await extendModel(dir, 'task/Task', 'road/RoadTask', { fetch: fakeFetch(files) });
   assert.deepEqual(r, {
-    added: ['models/road/RoadTask/schema.json', 'models/road/RoadTask/catalog.yaml', 'models/road/RoadTask/examples/example.json'],
+    added: ['models/road/RoadTask/schema.json', 'models/road/RoadTask/catalog.yaml', 'models/road/RoadTask/examples/example.json', 'models/road/RoadTask/notes.yaml'],
     changed: ['node.yaml', 'models/road/context.jsonld'],
     typeIri: TASK,
     extends: { typeIri: TASK, version: '1.0.0', index: INDEX },
