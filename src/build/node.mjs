@@ -18,7 +18,7 @@ import { loadSubjects } from './load.mjs';
 import { publishCatalog } from './publish.mjs';
 import { llmsTxt } from './llms.mjs';
 import { writePages } from './pages.mjs';
-import { ADAPTERS, readRefs, localRefs, refsRead } from '../adapters/index.mjs';
+import { ADAPTERS, readRefs, localRefs, refsRead, schemaPrefixes } from '../adapters/index.mjs';
 
 // Every URL here is published: one with a user name or password in it would publish them too.
 const httpUrl = (s) => { if (typeof s !== 'string') return false; try { const u = new URL(s); return ['http:', 'https:'].includes(u.protocol) && !!u.hostname && !u.username && !u.password; } catch { return false; } };
@@ -81,9 +81,10 @@ export async function loadNode(dir) {
  * the node or online; a model whose schemas cannot be read gets no adapter
  * files, and `notes` says why.
  */
-export async function nodeAdapters(subjects, { urls, languages, fetch, timeout, offline = false }) {
+export async function nodeAdapters(subjects, { urls, languages, fetch, timeout, offline = false, nodes = [] }) {
   const models = subjects.flatMap((s) => s.models.filter((m) => m.kind === 'entity'));
-  const { refs, problems } = await readRefs(models, { local: localRefs(subjects, urls), fetch, timeout, offline });
+  // Schemas of other sites only from the nodes this node knows (node.yaml), as for @context imports.
+  const { refs, problems } = await readRefs(models, { local: localRefs(subjects, urls), fetch, timeout, offline, trusted: schemaPrefixes(nodes) });
   const context = { urls, languages, refs };
   const notes = problems.map((p) => `no adapter files for the models that use it: ${p}`);
   const adapters = ADAPTERS.map((a) => ({
@@ -106,7 +107,7 @@ export async function buildNode(dir, { out = join(dir, '_site'), now, pages: wit
   const { node, urls, subjects } = await loadNode(dir);
   const head = { publisher: node.publisher, license: node.license, ...(node.licenseUrl ? { licenseUrl: node.licenseUrl } : {}), ...(node.nodes ? { nodes: node.nodes } : {}) };
   await mkdir(out, { recursive: true });
-  const { adapters, notes } = await nodeAdapters(subjects, { urls, languages: node.languages, fetch, timeout, offline });
+  const { adapters, notes } = await nodeAdapters(subjects, { urls, languages: node.languages, fetch, timeout, offline, nodes: node.nodes });
   const result = await publishCatalog(subjects, { urls, outDir: out, languages: node.languages, head, adapters, ...(now ? { now } : {}) });
   const name = node.publisher.name.en ?? node.languages.map((l) => node.publisher.name[l]).find(Boolean) ?? Object.values(node.publisher.name)[0];
   await writeFile(join(out, 'llms.txt'), llmsTxt(subjects, { urls, name: `Data models by ${name}`, languages: node.languages }));

@@ -5,7 +5,7 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadNode } from './build/node.mjs';
 import { catalogUrls } from './build/urls.mjs';
-import { ADAPTERS, getter, textsOfEntry, readRefs, localRefs } from './adapters/index.mjs';
+import { ADAPTERS, getter, textsOfEntry, readRefs, localRefs, schemaPrefixes } from './adapters/index.mjs';
 
 const DEFAULT_INDEX = 'https://datamodels.jp/catalog.json';
 
@@ -25,7 +25,9 @@ async function remoteModel(target, from, get) {
     catalog: { title: entry.title, description: entry.description, attributes: textsOfEntry(entry) },
     links: { typeIri: entry.typeIri, schemaUrl: entry.schemaUrl, contextUrl: entry.contextAliasUrl ?? entry.contextUrl, pageUrl: entry.pageUrl },
   };
-  return { subject, model, languages, urls: catalogUrls(new URL('.', from).href), entries: catalog.models };
+  // Its schemas may refer to its own and those of the nodes it lists, such as datamodels.jp's.
+  const nodes = [{ url: new URL('.', from).href }, ...(Array.isArray(catalog.nodes) ? catalog.nodes : [])];
+  return { subject, model, languages, urls: catalogUrls(new URL('.', from).href), entries: catalog.models, nodes };
 }
 
 /**
@@ -50,7 +52,7 @@ export async function exportModel(target, names, { dir = '.', index, fetch: fetc
   let [subject, model] = pairs.find(([x, m]) => (byIri ? local.urls.modelUrls(x, m).typeIri === target : x.name === subjectName && m.type === type)) ?? [];
   let context, from;
   if (model) {
-    const { refs, problems } = await readRefs([model], { local: localRefs(local.subjects, local.urls), fetch: fetchUrl, timeout });
+    const { refs, problems } = await readRefs([model], { local: localRefs(local.subjects, local.urls), fetch: fetchUrl, timeout, trusted: schemaPrefixes(local.node.nodes) });
     if (problems.length) throw new Error(problems.join('\n'));
     context = { urls: local.urls, languages: local.node.languages, refs };
     from = dir;
@@ -58,7 +60,7 @@ export async function exportModel(target, names, { dir = '.', index, fetch: fetc
     from = index ?? local?.node.nodes?.[0]?.index ?? DEFAULT_INDEX;
     const r = await remoteModel(target, from, getter(fetchUrl, timeout));
     ({ subject, model } = r);
-    const { refs, problems } = await readRefs([model], { entries: r.entries, fetch: fetchUrl, timeout });
+    const { refs, problems } = await readRefs([model], { entries: r.entries, fetch: fetchUrl, timeout, trusted: schemaPrefixes(r.nodes) });
     if (problems.length) throw new Error(problems.join('\n'));
     context = { urls: r.urls, languages: r.languages, refs };
   }

@@ -209,6 +209,10 @@ test('build: the schemas of other nodes are read online; a model whose schemas c
   await writeFile(sf, JSON.stringify(schema));
   const cf = join(dir, 'models', 'road', 'RoadPatrol', 'catalog.yaml');
   await writeFile(cf, `${await readFile(cf, 'utf8')}  address: { en: Where }\n`);
+  // Not read while node.yaml does not list datamodels.jp: only the schemas of known nodes are.
+  const unknown = await buildNode(dir, { out: join(dir, 'unknown'), fetch: siteFetch, pages: false });
+  assert.match(unknown.notes[0], /JapaneseAddress\/v1\.0\.0\.json is not read: only the schemas of the nodes in node\.yaml are \(none listed\)/);
+  await writeFile(join(dir, 'node.yaml'), `${await readFile(join(dir, 'node.yaml'), 'utf8')}nodes:\n  - { url: ${DJ}/, index: ${DJ}/catalog.json }\n`);
   const r = await buildNode(dir, { fetch: siteFetch, pages: false });
   assert.deepEqual(r.notes, []);
   const csv = await readFile(join(dir, '_site', 'adapters', 'csv', 'road', 'RoadPatrol.csv'), 'utf8');
@@ -288,4 +292,18 @@ test('check --offline reads no schema of another site for the adapters', async (
   globalThis.fetch = record;
   try { await checkNode(dir, { offline: true, fetch: record }); } finally { globalThis.fetch = global; }
   assert.deepEqual(read.filter((u) => u.includes('JapaneseAddress')), []);
+});
+
+test('a $ref outside the schema/ of a known node is never fetched', async () => {
+  const { schemaPrefixes } = await import('../src/adapters/index.mjs');
+  const bad = ['http://169.254.169.254/latest/meta-data/x.json', 'http://localhost:8080/schema/x.json', `${DJ}/context/x.json`, 'https://datamodels.jp.example.com/schema/x.json'];
+  const good = `${DJ}/schema/common/JapaneseAddress/v1.0.0.json`;
+  const properties = Object.fromEntries([...bad, good].map((ref, i) => [`p${i}`, { $ref: ref }]));
+  const thing = { type: 'Thing', kind: 'entity', schema: { properties: { id: { type: 'string' }, type: { const: 'Thing' }, ...properties } } };
+  const read = [];
+  const r = await readRefs([thing], { fetch: async (url, o) => { read.push(String(url)); return siteFetch(url, o); }, trusted: schemaPrefixes([{ url: `${DJ}/` }]) });
+  assert.deepEqual(read, [good]);
+  assert.deepEqual(Object.keys(r.refs), [good]);
+  assert.equal(r.problems.length, bad.length);
+  assert.ok(r.problems.every((x) => / is not read: only the schemas of the nodes in node\.yaml are \(https:\/\/datamodels\.jp\/schema\/\)$/.test(x)));
 });

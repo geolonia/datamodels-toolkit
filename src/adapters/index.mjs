@@ -40,15 +40,19 @@ export const textsOfEntry = (entry) => Object.fromEntries((entry?.attributes ?? 
  * from its sources, any other from its URL (with the texts of `entries`, the
  * models of a catalog.json, when one lists it). Returns { refs, problems }:
  * a schema that cannot be read is a problem, not an error, so the caller
- * decides (build skips the models that need it).
+ * decides (build skips the models that need it). Only URLs under `trusted`
+ * (the schema/ folders of known nodes) are read: a $ref is written in a
+ * model, and the build runs with network access, so it must not reach any
+ * other address.
  */
-export async function readRefs(models, { local = new Map(), entries = [], fetch: fetchUrl = globalThis.fetch, timeout = 20000, offline = false } = {}) {
+export async function readRefs(models, { local = new Map(), entries = [], fetch: fetchUrl = globalThis.fetch, timeout = 20000, offline = false, trusted = [] } = {}) {
   const get = getter(fetchUrl, timeout);
   const refs = {};
   const problems = [];
   const urls = [...new Set(models.flatMap(refsOf))];
   for (const url of urls) {
     if (local.has(url)) { refs[url] = local.get(url); continue; }
+    if (!trusted.some((prefix) => url.startsWith(prefix))) { problems.push(`${url} is not read: only the schemas of the nodes in node.yaml are (${trusted.join(', ') || 'none listed'})`); continue; }
     if (offline) { problems.push(`${url} is on another site, not read offline`); continue; }
     try {
       const schema = await get(url);
@@ -69,6 +73,9 @@ export function localRefs(subjects, urls) {
   }
   return local;
 }
+
+/** The schema/ folder of each node: the URLs readRefs may read. */
+export const schemaPrefixes = (nodes = []) => nodes.filter((n) => typeof n?.url === 'string').map((n) => `${n.url.replace(/\/+$/, '')}/schema/`);
 
 /** Whether every schema a model refers to was read. */
 export const refsRead = (model, refs) => refsOf(model).every((u) => refs[u]);
