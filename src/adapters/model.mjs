@@ -89,7 +89,8 @@ export const GEOMETRY_TYPES = ['Point', 'LineString', 'Polygon', 'MultiPoint', '
  *   - 'geometry': a GeoProperty (`geometryTypes`: the GeoJSON types it allows);
  *   - 'parts': a value type whose fields are all plain values, such as an
  *     address (`parts`: [{ name, iri, required, texts, prop, value }], `valueIri`);
- *   - 'json': anything else, kept as one JSON value (`schema`: the attribute's schema).
+ *   - 'json': anything else, kept as one JSON value (`schema`: the attribute's schema;
+ *     `partTexts`: the texts of its fields, when it refers to a value type).
  * Throws when a referenced schema is not in `context.refs`.
  */
 export function columnsOf(model, { refs = {} } = {}) {
@@ -113,7 +114,7 @@ export function columnsOf(model, { refs = {} } = {}) {
       const partRequired = new Set(target.schema.required ?? []);
       const parts = fields.map(([part, p]) => ({ name: part, iri: p['x-iri'] ?? '', required: partRequired.has(part), texts: target.texts?.[part] ?? (p.description ? { en: p.description } : {}), prop: p, value: scalarOf(p) }));
       if (target.schema.type === 'object' && parts.length && parts.every((p) => p.value)) return { ...base, kind: 'parts', parts, valueIri: prop['x-ngsi']?.model ?? '' };
-      return { ...base, kind: 'json', schema: target.schema };
+      return { ...base, kind: 'json', schema: target.schema, partTexts: target.texts ?? {} };
     }
     const value = scalarOf(prop);
     if (value) return { ...base, kind: 'scalar', value };

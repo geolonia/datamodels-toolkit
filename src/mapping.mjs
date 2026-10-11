@@ -7,8 +7,8 @@
 import { SITE, mappingUrl } from './catalog.mjs';
 import { remoteModel } from './export.mjs';
 import { readRefs, schemaPrefixes } from './adapters/index.mjs';
-import { columnsOf, crossRules, shortTitle, textIn } from './adapters/model.mjs';
-import { mappedColumns } from './convert.mjs';
+import { columnsOf, crossRules, scalarOf, shortTitle, textIn } from './adapters/model.mjs';
+import { mappedColumns, WEEKDAYS, YES_NO } from './convert.mjs';
 
 /** The mapping name for a CSV whose header is the model's CSV template (datamodels export --to csv). */
 export const TEMPLATE = 'csv-template';
@@ -28,33 +28,69 @@ export async function siteModel(reader, target) {
 }
 
 /**
- * What a row of a mapping can fill: an attribute, or a field of a value made
- * of plain fields (address.postalCode), as the CSV template splits it.
+ * The fields of a value whose fields are plain values or lists of them, such
+ * as OpeningHours (dayOfWeek is a list): [{ name, required, texts, prop, value | item }],
+ * or null for any other value.
  */
-export function targetsOf(columns) {
-  return columns.flatMap((c) => (c.kind === 'parts'
-    ? c.parts.map((p) => ({ name: `${c.name}.${p.name}`, part: p.name, attribute: c.name, kind: 'scalar', value: p.value, required: c.required && p.required, texts: p.texts, prop: p.prop }))
-    : [c]));
+function listParts(c) {
+  const props = Object.entries(c.schema?.type === 'object' ? c.schema.properties ?? {} : {});
+  const required = new Set(c.schema?.required ?? []);
+  const parts = props.map(([name, p]) => {
+    const base = { name, required: required.has(name), texts: c.partTexts?.[name] ?? (p.description ? { en: p.description } : {}), prop: p };
+    const value = scalarOf(p);
+    if (value) return { ...base, kind: 'scalar', value };
+    const item = p?.type === 'array' ? scalarOf(p.items) : null;
+    return item ? { ...base, kind: 'list', item } : null;
+  });
+  return parts.length && parts.every(Boolean) ? parts : null;
+}
+
+/**
+ * What a row of a mapping can fill: an attribute, or a field of a value made
+ * of plain fields (address.postalCode), as the CSV template splits it. With
+ * `lists`, also a field of a value with lists among its fields
+ * (openingHoursSpecification.dayOfWeek), which the CSV template keeps as one
+ * JSON column, for the mappings that datamodels mapping writes.
+ */
+export function targetsOf(columns, { lists = false } = {}) {
+  return columns.flatMap((c) => {
+    if (c.kind === 'parts') return c.parts.map((p) => ({ name: `${c.name}.${p.name}`, part: p.name, attribute: c.name, kind: 'scalar', value: p.value, required: c.required && p.required, texts: p.texts, prop: p.prop }));
+    const parts = lists && c.kind === 'json' ? listParts(c) : null;
+    if (parts) return parts.map((p) => ({ ...p, name: `${c.name}.${p.name}`, part: p.name, attribute: c.name, required: c.required && p.required }));
+    return [c];
+  });
 }
 
 const pointOnly = (t) => t.geometryTypes.length === 1 && t.geometryTypes[0] === 'Point';
 const BOOLEAN_WORDS = ['true', 'True', 'TRUE', 'false', 'False', 'FALSE'];
+// A list of days of the week (OpeningHours.dayOfWeek).
+const dayList = (item) => Array.isArray(item?.enum) && item.enum.length > 0 && item.enum.every((v) => WEEKDAYS.includes(v));
+// A text whose pattern takes 09:00 and 17:30 but not 9:00: a time such as OpeningHours.opens.
+const timeText = (value) => {
+  if (value?.type !== 'string' || typeof value.pattern !== 'string') return false;
+  try { const re = new RegExp(value.pattern, 'u'); return re.test('09:00') && re.test('17:30') && !re.test('9:00') && !re.test('09'); } catch { return false; }
+};
 
 /**
  * The transform a value of this kind needs. In the CSV template a boolean is
  * true or false; in other lists usually 1 or empty (flag), unless the sample
- * values are true and false. A local government code gets code6, which also
- * repairs a lost leading zero.
+ * values are true and false (boolean) or 有 and 無 (yesno). A local government
+ * code gets code6, which also repairs a lost leading zero. Outside the CSV
+ * template, a list of weekdays gets weekdays and a time (HH:MM) gets time.
  */
 function transformFor(t, { template = false, samples = [] } = {}) {
-  if (t.kind === 'list') return 'split';
+  if (t.kind === 'list') return !template && dayList(t.item) ? 'weekdays' : 'split';
   if (t.kind === 'json') return 'json';
   if (t.kind === 'geometry') return 'geometry';
   const type = t.value?.type;
   if (type === 'integer') return 'integer';
   if (type === 'number') return 'number';
-  if (type === 'boolean') return template || (samples.length && samples.every((v) => BOOLEAN_WORDS.includes(v))) ? 'boolean' : 'flag';
+  if (type === 'boolean') {
+    if (template || (samples.length && samples.every((v) => BOOLEAN_WORDS.includes(v)))) return 'boolean';
+    return samples.length && samples.every((v) => Object.hasOwn(YES_NO, v)) ? 'yesno' : 'flag';
+  }
   if (!template && /localGovernmentCode$/i.test(t.part ?? t.name)) return 'code6';
+  if (!template && timeText(t.value)) return 'time';
   return undefined;
 }
 
@@ -138,7 +174,10 @@ function geometryCandidates(t, header) {
   return out;
 }
 
-/** Candidates from the catalog's mappings of the model: a column they read for the same attribute (score 5). */
+// What a catalog rule gives a row besides its column: the transform, and the values list of one column.
+const ruleOf = (r) => ({ ...(r?.transform ? { transform: r.transform } : {}), ...(r?.values && typeof r.values === 'object' && !Array.isArray(r.values) ? { values: r.values } : {}) });
+
+/** Candidates from the catalog's mappings of the model: a column they read for the same attribute (score 5), with its transform and values. */
 function catalogCandidates(catalog, targets, header) {
   const out = [];
   const has = (c) => header.includes(c);
@@ -155,7 +194,7 @@ function catalogCandidates(catalog, targets, header) {
         }
         for (const [part, r] of Object.entries(sub)) {
           const cols = [].concat(r?.column ?? []);
-          if (cols.length === 1 && has(cols[0]) && byName.has(`${field}.${part}`)) out.push({ score: 5, target: `${field}.${part}`, cols, rule: r.transform ? { transform: r.transform } : {}, from: name });
+          if (cols.length === 1 && has(cols[0]) && byName.has(`${field}.${part}`)) out.push({ score: 5, target: `${field}.${part}`, cols, rule: ruleOf(r), from: name });
         }
         continue;
       }
@@ -166,7 +205,7 @@ function catalogCandidates(catalog, targets, header) {
         continue;
       }
       const cols = [].concat(rule?.column ?? []);
-      if (cols.length && cols.every(has)) out.push({ score: 5, target: field, cols, rule: rule.transform ? { transform: rule.transform } : {}, from: name });
+      if (cols.length && cols.every(has)) out.push({ score: 5, target: field, cols, rule: ruleOf(rule), from: name });
     }
   }
   return out;
@@ -296,7 +335,7 @@ const TEXTS = {
 export function startMapping({ target, entry, model, languages, columns, header, rows = [], catalog = [], csv, out }) {
   const lang = header.some(cjk) && languages.includes('ja') ? 'ja' : 'en';
   const T = TEXTS[lang];
-  const targets = targetsOf(columns);
+  const targets = targetsOf(columns, { lists: true });
   const { chosen, maybe } = matchColumns(targets, header, catalog);
   const samples = (col) => rows.slice(0, 50).map((r) => r[col]).filter((v) => v !== undefined && v !== '');
   const describe = (t) => textIn(t.texts, lang, languages);

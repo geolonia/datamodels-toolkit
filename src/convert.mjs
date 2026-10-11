@@ -101,7 +101,76 @@ export function code6(v) {
   return { problem: `${s}: not a local government code` };
 }
 
-export const TRANSFORMS = ['text', 'code6', 'number', 'integer', 'numbers', 'flag', 'flags', 'boolean', 'split', 'geometry', 'json', 'municipality', 'machiazaId', 'nationalShelterType'];
+export const TRANSFORMS = ['text', 'code6', 'number', 'integer', 'numbers', 'flag', 'flags', 'boolean', 'yesno', 'split', 'weekdays', 'time', 'geometry', 'json', 'municipality', 'machiazaId', 'nationalShelterType'];
+
+// The transforms that take `values`, a list of the texts in a column and what each one becomes
+// (flags takes values too, but as column: value).
+const WITH_VALUES = ['text', 'split', 'yesno'];
+
+/** Yes and no as Japanese lists write them: what transform yesno reads without `values`. */
+export const YES_NO = Object.freeze({
+  有: true, 有り: true, あり: true, アリ: true, はい: true, '○': true, '〇': true, '◯': true,
+  無: false, 無し: false, なし: false, ナシ: false, いいえ: false, '×': false, '✕': false,
+});
+
+/** The days of the week as OpeningHours.dayOfWeek names them (schema.org DayOfWeek), Monday first, then public holidays. */
+export const WEEKDAYS = Object.freeze(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'PublicHolidays']);
+const DAY_CHARS = '月火水木金土日';
+// Words for more than one day, longest first so that 祝日 is not read as 祝 and 日 (Sunday).
+const DAY_WORDS = [['祝祭日', [7]], ['祝日', [7]], ['祭日', [7]], ['祝', [7]], ['平日', [0, 1, 2, 3, 4]], ['毎日', [0, 1, 2, 3, 4, 5, 6]]];
+
+/**
+ * The days of a weekday text: 月～金, 月-金, 月火水木金, 月・水・金, 土日祝, 平日, 毎日,
+ * 12345 as GIF writes them (1 is Monday, 7 Sunday), 月曜日～金曜日. A range wraps
+ * (金～月 is Friday to Monday). 平日 is Monday to Friday and 毎日 the seven days;
+ * public holidays (祝, 祝日) only when the text names them. Returns the day
+ * names in WEEKDAYS order, or null for anything else (第2土曜, 月～金（祝日を除く）).
+ */
+export function weekdays(text) {
+  const s = String(text ?? '').normalize('NFKC').replace(/曜日?/g, '').replace(/\s+/g, '');
+  const tokens = [];
+  for (let i = 0; i < s.length;) {
+    const word = DAY_WORDS.find(([w]) => s.startsWith(w, i));
+    if (word) { tokens.push({ days: word[1] }); i += word[0].length; continue; }
+    const c = s[i++];
+    if (DAY_CHARS.includes(c)) tokens.push({ day: DAY_CHARS.indexOf(c) });
+    else if (/[1-7]/.test(c)) tokens.push({ day: Number(c) - 1 });
+    else if (/[~〜\-ー−–]/.test(c)) tokens.push({ range: true });
+    else if (/[・、,/]/.test(c)) tokens.push({ sep: true });
+    else return null;
+  }
+  const out = new Set();
+  for (let j = 0; j < tokens.length; j++) {
+    const t = tokens[j];
+    if (t.sep) { if (!tokens[j - 1] || tokens[j - 1].sep || tokens[j - 1].range || !tokens[j + 1]) return null; continue; }
+    if (t.range) {
+      const [from, to] = [tokens[j - 1], tokens[j + 1]];
+      // One day at each end, not the end of another range (月～水～金), and two different days.
+      if (from?.day === undefined || to?.day === undefined || tokens[j - 2]?.range || from.day === to.day) return null;
+      for (let d = from.day; d !== to.day; d = (d + 1) % 7) out.add(d);
+      out.add(to.day);
+      j++;
+      continue;
+    }
+    for (const d of t.days ?? [t.day]) out.add(d);
+  }
+  return out.size ? [...out].sort((a, b) => a - b).map((d) => WEEKDAYS[d]) : null;
+}
+
+/**
+ * A time as HH:MM (HH:MM:SS when the text has seconds): 9:00 → 09:00, 9時 → 09:00,
+ * 9時30分 → 09:30, full-width digits and colon as half-width. 0:00 is 00:00, the
+ * start of the day; 24:00 is the end of the day, which OpeningHours allows only as
+ * a closing time (its schema rejects it as an opening time). Null for anything else.
+ */
+export function time(text) {
+  const s = String(text ?? '').normalize('NFKC').trim();
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s) ?? /^(\d{1,2})時(?:(\d{1,2})分)?$/.exec(s);
+  if (!m) return null;
+  const [h, min, sec] = [Number(m[1]), Number(m[2] ?? 0), m[3] === undefined ? undefined : Number(m[3])];
+  if (min > 59 || sec > 59 || h > 24 || (h === 24 && (min || sec))) return null;
+  return [h, min, ...(sec === undefined ? [] : [sec])].map((n) => String(n).padStart(2, '0')).join(':');
+}
 
 // How many columns a transform reads: [fewest, most]. Any other transform, and a rule without
 // one, reads exactly one column; flags reads the columns of its values instead.
@@ -148,6 +217,11 @@ export function mappingProblems(mapping, mappings = {}) {
       const span = max === Infinity ? `at least ${min} columns` : min === max ? `exactly ${min} column` : `${min} to ${max} columns`;
       if (min && rule.column !== undefined && (cols.length < min || cols.length > max)) out.push(`${where}: ${rule.transform ? `transform ${rule.transform}` : 'a rule without a transform'} reads ${span}, got ${cols.length}`);
       if (rule.transform === 'flags' && (!rule.values || typeof rule.values !== 'object' || Array.isArray(rule.values))) out.push(`${where}: transform flags needs values, as column: value`);
+      if (rule.values !== undefined && rule.transform !== 'flags') {
+        if (!isObject(rule.values) || !Object.keys(rule.values).length) out.push(`${where}: values must give each text of the column its value, such as { 病院: hospital }`);
+        else if (TRANSFORMS.includes(rule.transform ?? 'text') && !WITH_VALUES.includes(rule.transform ?? 'text')) out.push(`${where}: transform ${rule.transform} takes no values (values work without a transform, with split and with yesno)`);
+        else if (rule.transform === 'yesno' && Object.values(rule.values).some((v) => typeof v !== 'boolean')) out.push(`${where}: the values of transform yesno must be true or false`);
+      }
       if (rule.via && !mappings[rule.via]) out.push(`${where}: no mapping ${rule.via}`);
     }
   }
@@ -179,13 +253,27 @@ export function mappedColumns(mapping, mappings = {}) {
 
 const parseJson = (text) => { try { return JSON.parse(text); } catch { return undefined; } };
 
+// The texts a values list knows, for a problem: at most eight, the empty one left out.
+const known = (values) => { const ks = Object.keys(values).filter(Boolean); return ks.length > 8 ? `${ks.slice(0, 8).join(', ')}, …` : ks.join(', '); };
+
+/**
+ * The value of a text in a values list ({ 病院: hospital }). An empty cell is no value,
+ * unless the list gives the empty text one ("": false) and the file has the column.
+ * A text the list does not have is a problem; it is never taken as it is.
+ */
+function listed(values, col, text, present, what) {
+  if (text === '') return { value: present && Object.hasOwn(values, '') ? values[''] : undefined };
+  return Object.hasOwn(values, text) ? { value: values[text] } : { problem: `${col}: ${text} ${what ?? `is not in values (${known(values)})`}` };
+}
+
 // One attribute from one row. Returns { value } (undefined means leave it out), and optionally fix or problem.
 function apply(rule, row, set) {
   const cols = rule.column === undefined ? [] : [].concat(rule.column);
   const raw = cols.map((c) => row[c] ?? '');
   const one = raw[0] ?? '';
+  const values = rule.transform !== 'flags' && isObject(rule.values) ? rule.values : undefined;
   switch (rule.transform ?? 'text') {
-    case 'text': return { value: one || undefined };
+    case 'text': return values ? listed(values, cols[0], one, cols[0] in row) : { value: one || undefined };
     case 'code6': { if (!one) return { value: undefined }; const r = code6(one); return r.problem ? { problem: r.problem } : { value: r.value, fix: r.fix }; }
     case 'number': { if (!one) return { value: undefined }; const n = Number(one); return Number.isFinite(n) ? { value: n } : { problem: `${cols[0]}: ${one} is not a number` }; }
     case 'integer': { if (!one) return { value: undefined }; const n = Number(one.replace(/[,，人]/g, '')); return Number.isInteger(n) ? { value: n } : { problem: `${cols[0]}: ${one} is not a whole number` }; }
@@ -212,6 +300,15 @@ function apply(rule, row, set) {
       if (['false', 'False', 'FALSE', '0'].includes(one)) return { value: false };
       return { problem: `${cols[0]}: ${one} is not true or false` };
     }
+    // 有 and 無, あり and なし, ○ and ×: a text that is neither is reported, never read as false; empty is no value.
+    case 'yesno': return values ? listed(values, cols[0], one, cols[0] in row) : listed(YES_NO, cols[0], one, false, 'is not yes or no (有/無, 有り/無し, あり/なし, ○/×)');
+    case 'weekdays': { if (!one) return { value: undefined }; const days = weekdays(one); return days ? { value: days } : { problem: `${cols[0]}: ${one} is not a list of weekdays (such as 月～金, 月火水木金, 土日祝)` }; }
+    case 'time': {
+      if (!one) return { value: undefined };
+      const t = time(one);
+      if (!t) return { problem: `${cols[0]}: ${one} is not a time (such as 9:00, 09:00 or 9時)` };
+      return { value: t, fix: t !== one ? { repair: 'wrote the time as HH:MM', detail: `${one} → ${t}` } : undefined };
+    }
     // Two columns, longitude and latitude, make a Point; one column holds a GeoJSON geometry; with three,
     // the third is the GeoJSON for rows without longitude and latitude (the CSV template's columns).
     case 'geometry': {
@@ -226,7 +323,12 @@ function apply(rule, row, set) {
       return g && typeof g === 'object' && typeof g.type === 'string' && (Array.isArray(g.coordinates) || Array.isArray(g.geometries)) ? { value: g } : { problem: `${cols.at(-1)}: not a GeoJSON geometry` };
     }
     case 'json': { if (!one) return { value: undefined }; const v = parseJson(one); return v === undefined ? { problem: `${cols[0]}: not JSON` } : { value: v }; }
-    case 'split': { const vs = one.split(/[;；]/).map((x) => x.trim()).filter(Boolean); return { value: vs.length ? vs : undefined }; }
+    case 'split': {
+      const vs = one.split(/[;；]/).map((x) => x.trim()).filter(Boolean);
+      if (!values || !vs.length) return { value: vs.length ? vs : undefined };
+      const unknown = vs.filter((v) => !Object.hasOwn(values, v));
+      return unknown.length ? { problem: `${cols[0]}: ${unknown.join(', ')} ${unknown.length > 1 ? 'are' : 'is'} not in values (${known(values)})` } : { value: [...new Set(vs.map((v) => values[v]))] };
+    }
     // A municipality name ends in 市, 区, 町 or 村; a value that goes on (宇都宮市中央本町1-29) is the rest of the address.
     case 'municipality': return !one ? { value: undefined } : /[市区町村]$/.test(one) ? { value: one } : { value: undefined, fix: { repair: `left out ${cols[0]}: not a municipality name`, detail: one } };
     // The Address Base Registry town id is 7 digits; lists write it as 0008-001.

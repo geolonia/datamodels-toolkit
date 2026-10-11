@@ -1,0 +1,33 @@
+# Correspondence between AEDLocation and sheet 08 of the Digital Agency's
+# 自治体標準オープンデータセット (data item definition sheet A).
+standard:
+  name:
+    ja: 自治体標準オープンデータセット・データ項目定義書A（20260801版）シート「08.AED設置箇所一覧」（デジタル庁）
+    en: "Municipal standard open dataset, data item definition sheet A (2026-08-01), sheet '08. AED locations' (Digital Agency)"
+  url: https://www.digital.go.jp/resources/open_data/municipal-standard-data-set-test
+  license:
+    ja: "公共データ利用規約（第1.0版）（PDL1.0、CC BY 4.0 と互換）"
+    en: "Public Data License (Version 1.0) (PDL1.0), compatible with CC BY 4.0"
+  note:
+    ja: "このモデルが表す一覧そのもの。項目名は日本語名（英語名）で示す。住所、位置、連絡先、利用時間の列は、JapaneseAddress、Geometry、ContactPoint、OpeningHours の対応表のとおり。入れていない列：地方公共団体名（コードから分かる）、高度の種別・高度の値、画像1・画像2 とそのライセンス。"
+    en: "The list this model represents. Columns are given as the Japanese name (English item name). The address, location, contact and hours columns map as in the JapaneseAddress, Geometry, ContactPoint and OpeningHours tables. Columns left out: 地方公共団体名 (follows from the code), 高度の種別 and 高度の値 (height type and value), 画像1 and 画像2 with their licences."
+# How the converter (datamodels convert, geolonia/datamodels-toolkit) names the entities it makes from this list.
+convert:
+  id: "urn:ngsi-ld:AEDLocation:{localGovernmentCode}-{externalFacilityId}"
+fields:
+  localGovernmentCode: { to: 全国地方公共団体コード (localGovernmentCode), note: { ja: 一覧を公開する自治体。所在地の自治体は address.localGovernmentCode（所在地_全国地方公共団体コード）, en: "the publishing municipality; the municipality the facility lies in is address.localGovernmentCode (所在地_全国地方公共団体コード)" }, column: 全国地方公共団体コード, transform: code6 }
+  externalFacilityId: { to: ID (identifier), note: { ja: "エンティティの id はこの ID から作る（convert.id）。定義書では自治体の一覧の中で一意。同じ ID が複数の行にある一覧（表計算ソフトで丸められた 1.31E+11 など）は、行番号で補わず、一覧の ID を直してから変換する", en: "the entity id is made from this ID (convert.id); the definition sheet makes it unique within the municipality's list. A list that has one ID on several rows (for example 1.31E+11, rounded by a spreadsheet) is converted after its IDs are fixed, not by numbering rows" }, column: ID }
+  name: { to: 名称 (name), note: { ja: AED が設置されている建物などの名称, en: the name of the building or place where the AED is }, column: 名称 }
+  nameKana: { to: 名称_カナ (nameKana), column: 名称_カナ }
+  nameEn: { to: 名称_英字 (nameEn), column: 名称_英字 }
+  address: { to: "所在地_* (fullAddress, prefecture, city, streetAddress, cityBlock), 建物名等(方書) (buildingNameEtc), 町字ID (streetAddressId)", note: { ja: 詳細は JapaneseAddress の対応表, en: see the JapaneseAddress table }, via: common/JapaneseAddress/jichitai-opendata-address }
+  location: { to: "緯度 (latitude), 経度 (longitude)", note: { ja: "[経度, 緯度] の点", en: "a point [longitude, latitude]" }, via: common/Geometry/jichitai-opendata-location }
+  installationLocation: { to: 設置位置 (installationLocation), column: 設置位置 }
+  operatorName: { to: 団体名 (organizer), note: { ja: AED の設置主体の名称, en: the organisation that installed the AED }, column: 団体名 }
+  corporateNumber: { to: 法人番号 (legalEntityNumber), note: { ja: AED の設置主体の法人番号, en: the corporate number of the organisation that installed the AED }, column: 法人番号 }
+  contactPoint: { to: "電話番号 (contactPointPhoneNumber) … 郵便番号 (contactPointPostalCode)", note: { ja: 詳細は ContactPoint の対応表, en: see the ContactPoint table }, via: common/ContactPoint/jichitai-opendata-contact }
+  openingHoursSpecification: { to: "利用可能曜日 (serviceDay), 開始時間 (startTime), 終了時間 (endTime), 利用可能日時特記事項 (dateTimeRemarks)", note: { ja: "詳細は OpeningHours の対応表。設置場所の施設の時間に従うときは、曜日と時間が空欄で、特記事項にそう書かれる", en: "see the OpeningHours table. When the AED follows the hours of the building, the weekday and time columns are empty and the remarks say so" }, via: common/OpeningHours/jichitai-opendata-hours }
+  pediatricSupport: { to: 小児対応設備の有無 (pediatricSupport), note: { ja: 「有」なら true、「無」なら false。変換ツールにはまだこの変換が無い, en: "有 is true, 無 is false; the converter has no transform for this yet" } }
+  restrictedAccess: { to: 外部利用不可 (notForPublic), note: { ja: 「外部利用不可」と書かれていれば true、空欄なら false。変換ツールにはまだこの変換が無い, en: "true when the column says 外部利用不可, false when it is empty; the converter has no transform for this yet" } }
+  url: { to: URL (url), column: URL }
+  remarks: { to: 備考 (remarks), column: 備考 }

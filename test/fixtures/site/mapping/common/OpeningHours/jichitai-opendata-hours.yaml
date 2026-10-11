@@ -1,0 +1,23 @@
+# Correspondence between OpeningHours and the hours columns of the Digital
+# Agency's 自治体標準オープンデータセット (data item definition sheet A), as
+# named in datasets 05, 08 and 11.
+standard:
+  name:
+    ja: 自治体標準オープンデータセット・データ項目定義書A（20260801版）の利用可能曜日・時間の項目（デジタル庁）
+    en: "Municipal standard open dataset, data item definition sheet A (2026-08-01), weekday and hours columns (Digital Agency)"
+  url: https://www.digital.go.jp/resources/open_data/municipal-standard-data-set-test
+  license:
+    ja: "公共データ利用規約（第1.0版）（PDL1.0、CC BY 4.0 と互換）"
+    en: "Public Data License (Version 1.0) (PDL1.0), compatible with CC BY 4.0"
+  note:
+    ja: "05 子育て施設、08 AED、11 観光施設の列の名前。01 公共施設は特記事項が「利用可能時間特記事項」。10 医療機関と 13 公衆トイレは名前が違うので、別の対応表（jichitai-opendata-medical-hours、jichitai-opendata-toilet-hours）にある。曜日と時刻は GIF のコアデータパーツ「日付時刻」の表記。"
+    en: "Column names as in 05 childcare facilities, 08 AEDs and 11 tourist facilities; 01 public facilities names the remarks 利用可能時間特記事項. 10 medical institutions and 13 public toilets use other names and have tables of their own (jichitai-opendata-medical-hours, jichitai-opendata-toilet-hours). Weekdays and times follow GIF's core data part 日付時刻."
+fields:
+  dayOfWeek:
+    to: 利用可能曜日 (serviceDay)
+    note:
+      ja: "月火水木金（または 12345）を曜日の名前の配列にする（月 → Monday … 日 → Sunday）。変換ツールにはまだこの変換が無い"
+      en: "turn 月火水木金 (or 12345) into the array of day names (月 → Monday … 日 → Sunday); the converter has no transform for this yet"
+  opens: { to: 開始時間 (startTime), note: { ja: hh:mm, en: hh:mm }, column: 開始時間 }
+  closes: { to: 終了時間 (endTime), note: { ja: hh:mm, en: hh:mm }, column: 終了時間 }
+  description: { to: 利用可能日時特記事項 (dateTimeRemarks), column: 利用可能日時特記事項 }

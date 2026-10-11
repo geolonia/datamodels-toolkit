@@ -344,3 +344,31 @@ test('the starter mapping takes a catalog id only when each value in it is mappe
   assert.equal(r.idTodo, true);
   assert.equal(YAML.parse(r.text).convert.id, 'urn:ngsi-ld:EvacuationSite:{TODO}');
 });
+
+test('mapping suggests yesno for a boolean column of 有 and 無, and weekdays and time for the fields of the opening hours (#54)', async () => {
+  const csv = join(dir, 'aed.csv');
+  await writeFile(csv, '名称,利用可能曜日,開始時間,終了時間,pediatricSupport,外部利用不可\n中央区役所,月火水木金土日,0:00,0:00,有,\n築地社会教育会館,月～金,9:00,21:00,無,\n');
+  const r = await datamodels('mapping', 'facility/AEDLocation', csv, '--site', SITE_DIR);
+  assert.equal(r.code, 0, r.stderr);
+  const m = YAML.parse(r.stdout);
+  assert.deepEqual(m.fields['openingHoursSpecification.dayOfWeek'], { column: '利用可能曜日', transform: 'weekdays' });
+  assert.deepEqual(m.fields['openingHoursSpecification.opens'], { column: '開始時間', transform: 'time' });
+  assert.deepEqual(m.fields['openingHoursSpecification.closes'], { column: '終了時間', transform: 'time' });
+  assert.equal(m.fields.openingHoursSpecification, undefined);
+  // The comments of the fields come from the value type's catalog texts.
+  assert.match(r.stdout, /^ {2}openingHoursSpecification\.closes: .*# .*24:00 はその日の終わり/m);
+  // A boolean: yesno when the rows hold 有 and 無, flag when the column is empty.
+  assert.deepEqual(m.fields.pediatricSupport, { column: 'pediatricSupport', transform: 'yesno' });
+  assert.deepEqual(m.fields.restrictedAccess, { column: '外部利用不可', transform: 'flag' });
+  // The CSV template keeps the opening hours as one JSON column.
+  const model = await siteModel(reader, 'facility/AEDLocation');
+  assert.deepEqual(templateMapping(model.columns).fields.openingHoursSpecification, { column: 'openingHoursSpecification', transform: 'json' });
+});
+
+test('mapping takes the values of a catalog rule along with its column', () => {
+  const targets = [{ name: 'kind', kind: 'scalar', value: { type: 'string', enum: ['hospital'] }, texts: {} }];
+  const catalog = [{ name: 'x', mapping: { fields: { kind: { column: '種類', values: { 病院: 'hospital' } } } }, mappings: {} }];
+  const { chosen } = matchColumns(targets, ['種類'], catalog);
+  assert.deepEqual(chosen.get('kind').rule, { values: { 病院: 'hospital' } });
+  assert.equal(flowRule({ column: '種類', values: { 病院: 'hospital', '': false } }), '{ column: "種類", values: { "病院": "hospital", "": false } }');
+});

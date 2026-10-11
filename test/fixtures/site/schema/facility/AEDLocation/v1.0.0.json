@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodels.jp/schema/facility/AEDLocation/v1.0.0.json",
+  "title": "AEDLocation",
+  "description": "Where one AED (automated external defibrillator) is installed: one row of the list a municipality publishes as 自治体標準オープンデータセット dataset 08 (AED設置箇所一覧)",
+  "x-subclass-of": "https://datamodels.jp/ns/facility/Facility",
+  "x-version": "1.0.0",
+  "x-license-url": "https://datamodels.jp/LICENSE-CONTENT",
+  "x-model-tags": "facility, municipality, Japan",
+  "x-derived-from": "https://www.digital.go.jp/resources/open_data/municipal-standard-data-set-test",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "description": "Entity id (URN)"
+    },
+    "type": {
+      "type": "string",
+      "const": "AEDLocation",
+      "description": "Entity type"
+    },
+    "@context": {
+      "description": "JSON-LD context of the entity, optional: a context URL or a list of context URLs",
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "minItems": 1
+        }
+      ]
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the facility (名称)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://uri.etsi.org/ngsi-ld/name"
+    },
+    "nameKana": {
+      "type": "string",
+      "description": "Name in full-width katakana (名称_カナ)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/nameKana"
+    },
+    "nameEn": {
+      "type": "string",
+      "description": "Name in English (名称_英字 or 名称_英語)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/disaster/nameEn"
+    },
+    "externalFacilityId": {
+      "type": "string",
+      "description": "The facility's ID in the municipality's list (ID; unique within the municipality and the dataset). Together with localGovernmentCode it identifies the facility nationwide",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/facility/externalFacilityId"
+    },
+    "localGovernmentCode": {
+      "type": "string",
+      "pattern": "^\\d{6}$",
+      "description": "Local government code of the municipality that publishes the list (全国地方公共団体コード, 6 digits)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/common/localGovernmentCode"
+    },
+    "address": {
+      "$ref": "https://datamodels.jp/schema/common/JapaneseAddress/v1.0.0.json",
+      "description": "Address of the facility, as a JapaneseAddress value (common subject). Its localGovernmentCode is the code of the municipality the facility lies in, which can differ from the publisher's",
+      "x-ngsi": {
+        "type": "Property",
+        "model": "https://datamodels.jp/ns/common/JapaneseAddress"
+      },
+      "x-iri": "https://schema.org/address"
+    },
+    "location": {
+      "$ref": "https://datamodels.jp/schema/common/Geometry/v1.0.0.json",
+      "properties": {
+        "type": {
+          "const": "Point"
+        }
+      },
+      "description": "Where the facility is, as a point (緯度, 経度)",
+      "x-ngsi": {
+        "type": "GeoProperty",
+        "model": "https://datamodels.jp/ns/common/Geometry"
+      },
+      "x-iri": "https://uri.etsi.org/ngsi-ld/location"
+    },
+    "installationLocation": {
+      "type": "string",
+      "description": "Where in the building or site the AED is, for example 1階事務室 (設置位置)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/facility/installationLocation"
+    },
+    "operatorName": {
+      "type": "string",
+      "description": "Name of the organisation that runs the facility or, for equipment such as an AED, installed it (団体名, 法人の名称)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/facility/operatorName"
+    },
+    "corporateNumber": {
+      "type": "string",
+      "pattern": "^\\d{13}$",
+      "description": "Corporate number (法人番号, 13 digits, National Tax Agency) of the organisation that runs the facility or installed the equipment",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/facility/corporateNumber"
+    },
+    "contactPoint": {
+      "$ref": "https://datamodels.jp/schema/common/ContactPoint/v1.0.0.json",
+      "description": "How to get in touch, as a ContactPoint value (common subject): telephone, extension, fax, e-mail, web form, other channels, postal code",
+      "x-ngsi": {
+        "type": "Property",
+        "model": "https://datamodels.jp/ns/common/ContactPoint"
+      },
+      "x-iri": "https://schema.org/contactPoint"
+    },
+    "openingHoursSpecification": {
+      "$ref": "https://datamodels.jp/schema/common/OpeningHours/v1.0.0.json",
+      "description": "When the facility can be used, as an OpeningHours value (common subject): weekdays, opening and closing time, remarks",
+      "x-ngsi": {
+        "type": "Property",
+        "model": "https://datamodels.jp/ns/common/OpeningHours"
+      },
+      "x-iri": "https://schema.org/openingHoursSpecification"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Web page about the facility (URL)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://schema.org/url"
+    },
+    "remarks": {
+      "type": "string",
+      "description": "Remarks (備考)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/facility/remarks"
+    },
+    "pediatricSupport": {
+      "type": "boolean",
+      "description": "true when equipment for children, such as paediatric pads, is there (小児対応設備の有無: 有 → true, 無 → false)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/facility/pediatricSupport"
+    },
+    "restrictedAccess": {
+      "type": "boolean",
+      "description": "true when the AED is in a restricted area and not available to the general public (外部利用不可)",
+      "x-ngsi": {
+        "type": "Property"
+      },
+      "x-iri": "https://datamodels.jp/ns/facility/restrictedAccess"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "name",
+    "localGovernmentCode",
+    "externalFacilityId"
+  ],
+  "additionalProperties": false
+}

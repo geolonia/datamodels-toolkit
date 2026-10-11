@@ -4,13 +4,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { decodeCsv, parseCsv, code6, convertRows, mappingProblems, mappedColumns, unknownFields, exponentForm, TRANSFORMS, LINE } from '../src/convert.mjs';
+import { decodeCsv, parseCsv, code6, convertRows, mappingProblems, mappedColumns, unknownFields, exponentForm, weekdays, time, TRANSFORMS, LINE } from '../src/convert.mjs';
 import { siteReader, loadTarget } from '../src/catalog.mjs';
 
 const reader = siteReader(join(import.meta.dirname, 'fixtures', 'site'));
 const site = await loadTarget(reader, 'disaster/EvacuationSite', 'jichitai-opendata-site');
 const gsiSite = await loadTarget(reader, 'disaster/EvacuationSite', 'gsi-emergency-site');
 const shelter = await loadTarget(reader, 'disaster/DesignatedShelter', 'gsi-designated-shelter');
+const aed = await loadTarget(reader, 'facility/AEDLocation', 'jichitai-opendata-aed');
 const mappings = { ...site.mappings, ...gsiSite.mappings, ...shelter.mappings };
 const validSite = site.validate;
 
@@ -183,7 +184,7 @@ test('an unknown transform or a missing via mapping is found before any row is r
   ]);
   const inner = { fields: { c: { to: 'c', column: 'c', transform: 'lower' } } };
   assert.match(mappingProblems({ fields: { b: { to: 'b', via: 'x/X/y' } } }, { 'x/X/y': inner }).join(), /^x\/X\/y: c: unknown transform "lower"/);
-  for (const t of [site, gsiSite, shelter]) assert.deepEqual(mappingProblems(t.mapping, t.mappings), []);
+  for (const t of [site, gsiSite, shelter, aed]) assert.deepEqual(mappingProblems(t.mapping, t.mappings), []);
 });
 
 test('an explicit empty record in a one-column file is listed, like ",," in a wider one', () => {
@@ -316,4 +317,123 @@ test('thousands of rows with one id are reported quickly (#56)', () => {
   const ms = performance.now() - start;
   assert.equal(results[29999].problems[0], 'id: urn:ngsi-ld:T:same is not unique (also row 1, row 2, row 3, row 4, row 5, and 29994 more)');
   assert.ok(ms < 1500, `${Math.round(ms)} ms`);
+});
+
+// One column of a facility list into one value (#54). The rows are as the lists write them:
+// 13 公衆トイレ (有/無), 10 医療機関 (医療機関の種類, 災害拠点分類), 08 AED (曜日, 時間).
+const one = (field, rule, cells) => convertRows(cells.map((c, i) => ({ n: String(i), ...(c === undefined ? {} : { c }) })), { convert: { id: 'urn:ngsi-ld:T:{n}' }, fields: { n: { column: 'n' }, [field]: { column: 'c', ...rule } } }, { type: 'T' });
+
+test('yesno: 有 and 無, あり and なし, ○ and × are true and false; anything else is reported, never read as false', () => {
+  const r = one('wheelchairToilet', { transform: 'yesno' }, ['有', '無', '有り', '無し', 'あり', 'なし', '○', '×', '', '不明', '1', undefined]);
+  assert.deepEqual(r.slice(0, 8).map((x) => x.entity.wheelchairToilet), [true, false, true, false, true, false, true, false]);
+  assert.ok(r.slice(0, 9).every((x) => !x.problems.length));
+  // Empty, and a column the file does not have, give no value.
+  assert.equal('wheelchairToilet' in r[8].entity, false);
+  assert.equal('wheelchairToilet' in r[11].entity, false);
+  assert.deepEqual(r[9].problems, ['wheelchairToilet: c: 不明 is not yes or no (有/無, 有り/無し, あり/なし, ○/×)']);
+  assert.deepEqual(r[10].problems, ['wheelchairToilet: c: 1 is not yes or no (有/無, 有り/無し, あり/なし, ○/×)']);
+});
+
+test('yesno with values: the list\'s own words replace the default ones; "" gives an empty cell a value', () => {
+  // 08 AED: 外部利用不可 says 外部利用不可 or nothing.
+  const rule = { transform: 'yesno', values: { 外部利用不可: true, '': false } };
+  const r = one('restrictedAccess', rule, ['外部利用不可', '', '有', undefined]);
+  assert.deepEqual(r.map((x) => x.entity.restrictedAccess), [true, false, undefined, undefined]);
+  assert.deepEqual(r[2].problems, ['restrictedAccess: c: 有 is not in values (外部利用不可)']);
+});
+
+test('values: each text of the list becomes the model\'s value; an unknown text is reported, empty is no value', () => {
+  const kinds = { values: { 病院: 'hospital', 有床診療所: 'clinicWithBeds', 無床診療所: 'clinicWithoutBeds' } };
+  const r = one('medicalInstitutionType', kinds, ['病院', '無床診療所', '', '一般診療所']);
+  assert.deepEqual(r.map((x) => x.entity.medicalInstitutionType), ['hospital', 'clinicWithoutBeds', undefined, undefined]);
+  assert.deepEqual(r.slice(0, 3).map((x) => x.problems), [[], [], []]);
+  // Chuo City's list writes 一般診療所, which the definition sheet does not list: reported, not guessed.
+  assert.deepEqual(r[3].problems, ['medicalInstitutionType: c: 一般診療所 is not in values (病院, 有床診療所, 無床診療所)']);
+  // With split, each item of the list; the same value twice is kept once.
+  const s = one('hazards', { transform: 'split', values: { 洪水: 'flood', 内水氾濫: 'flood', 地震: 'earthquake' } }, ['洪水;地震', '洪水；内水氾濫', '', '洪水;津波;高潮']);
+  assert.deepEqual(s.map((x) => x.entity.hazards), [['flood', 'earthquake'], ['flood'], undefined, undefined]);
+  assert.deepEqual(s[3].problems, ['hazards: c: 津波, 高潮 are not in values (洪水, 内水氾濫, 地震)']);
+  // At most eight known texts are named in a problem.
+  const many = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`v${i}`, i]));
+  assert.match(one('x', { values: many }, ['w'])[0].problems[0], /\(v0, v1, v2, v3, v4, v5, v6, v7, …\)$/);
+});
+
+test('weekdays: the forms the lists use, ranges that wrap, and anything else reported', () => {
+  const WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  for (const text of ['月～金', '月〜金', '月-金', '月ー金', '月火水木金', '月・火・水・木・金', '月、火、水、木、金', '月曜日～金曜日', '平日', '12345', '1-5', '１２３４５']) assert.deepEqual(weekdays(text), WEEK, text);
+  assert.deepEqual(weekdays('土日祝'), ['Saturday', 'Sunday', 'PublicHolidays']);
+  assert.deepEqual(weekdays('土・日・祝日'), ['Saturday', 'Sunday', 'PublicHolidays']);
+  assert.deepEqual(weekdays('毎日'), [...WEEK, 'Saturday', 'Sunday']);
+  assert.deepEqual(weekdays('月火水木金土日'), [...WEEK, 'Saturday', 'Sunday']);
+  assert.deepEqual(weekdays('火水木金土日'), ['Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+  assert.deepEqual(weekdays('金～月'), ['Monday', 'Friday', 'Saturday', 'Sunday']);
+  assert.deepEqual(weekdays('月～水・金'), ['Monday', 'Tuesday', 'Wednesday', 'Friday']);
+  for (const text of ['月～金（祝日を除く）', '第2土曜', '不定休', '月～月', '月～水～金', '～金', '月～祝', '月・', '0', '8', '月 or 金']) assert.equal(weekdays(text), null, text);
+  const r = one('dayOfWeek', { transform: 'weekdays' }, ['月～金', '', '第2・第4土曜']);
+  assert.deepEqual(r.map((x) => x.entity.dayOfWeek), [WEEK, undefined, undefined]);
+  assert.deepEqual(r[2].problems, ['dayOfWeek: c: 第2・第4土曜 is not a list of weekdays (such as 月～金, 月火水木金, 土日祝)']);
+});
+
+test('time: H:MM, H時 and full-width digits become HH:MM, each change reported; 24:00 is kept; other forms are reported', () => {
+  for (const [text, want] of [['9:00', '09:00'], ['09:00', '09:00'], ['9時', '09:00'], ['9時30分', '09:30'], ['０:００', '00:00'], ['１７：３０', '17:30'], ['0:00', '00:00'], ['24:00', '24:00'], ['17:00:30', '17:00:30']]) assert.equal(time(text), want, text);
+  for (const text of ['24:30', '25:00', '9:60', '0900', '9', '9.00', '午前9時', '9:00～17:00']) assert.equal(time(text), null, text);
+  const r = one('opens', { transform: 'time' }, ['9:00', '09:00', '', '25:00']);
+  assert.deepEqual(r.map((x) => x.entity.opens), ['09:00', '09:00', undefined, undefined]);
+  assert.deepEqual(r[0].fixes, [{ field: 'opens', repair: 'wrote the time as HH:MM', detail: '9:00 → 09:00' }]);
+  assert.deepEqual(r[1].fixes, []);
+  assert.deepEqual(r[3].problems, ['opens: c: 25:00 is not a time (such as 9:00, 09:00 or 9時)']);
+});
+
+test('an AED row with weekdays, times and 有/無 becomes a valid AEDLocation; 24:00 opens is the schema\'s to reject', () => {
+  // The catalog mapping with the transforms of #54, as the follow-up in geolonia/datamodels will have them.
+  const hours = structuredClone(aed.mappings['common/OpeningHours/jichitai-opendata-hours']);
+  Object.assign(hours.fields.dayOfWeek, { column: '利用可能曜日', transform: 'weekdays' });
+  Object.assign(hours.fields.opens, { transform: 'time' });
+  Object.assign(hours.fields.closes, { transform: 'time' });
+  const map = structuredClone(aed.mapping);
+  Object.assign(map.fields.pediatricSupport, { column: '小児対応設備の有無', transform: 'yesno' });
+  Object.assign(map.fields.restrictedAccess, { column: '外部利用不可', transform: 'yesno', values: { 外部利用不可: true, '': false } });
+  assert.deepEqual(mappingProblems(map, { ...aed.mappings, 'common/OpeningHours/jichitai-opendata-hours': hours }), []);
+  // As Chuo City's list writes it (2026-10-11), with an ID of its own instead of 1.31E+11.
+  const row = { 全国地方公共団体コード: '131024', ID: '1', 名称: '中央区役所', 緯度: '35.670599', 経度: '139.77201', 設置位置: '1階正面玄関受付横', 利用可能曜日: '月火水木金土日', 開始時間: '0:00', 終了時間: '0:00', 小児対応設備の有無: '有', 外部利用不可: '' };
+  const convert = (r) => convertRows([r], map, { type: 'AEDLocation', mappings: { ...aed.mappings, 'common/OpeningHours/jichitai-opendata-hours': hours } })[0];
+  const a = convert(row);
+  assert.deepEqual(a.problems, []);
+  assert.deepEqual(a.entity.openingHoursSpecification, { dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], opens: '00:00', closes: '00:00' });
+  assert.deepEqual([a.entity.pediatricSupport, a.entity.restrictedAccess], [true, false]);
+  assert.deepEqual(a.fixes.map((f) => `${f.field}: ${f.detail}`), ['opens: 0:00 → 00:00', 'closes: 0:00 → 00:00']);
+  assert.ok(aed.validate(a.entity), aed.errorsText(aed.validate.errors));
+  // 24:00 closes the day; as an opening time the schema rejects it.
+  const b = convert({ ...row, 利用可能曜日: '月～金', 開始時間: '9:00', 終了時間: '24:00' });
+  assert.ok(aed.validate(b.entity), aed.errorsText(aed.validate.errors));
+  assert.equal(aed.validate(convert({ ...row, 開始時間: '24:00' }).entity), false);
+  // A weekday text, a time or a yes/no the transforms do not know: a problem of the row, nothing guessed.
+  const c = convert({ ...row, 利用可能曜日: '平日（祝日を除く）', 開始時間: '9時半', 小児対応設備の有無: 'なし（成人用のみ）' });
+  assert.deepEqual(c.problems, [
+    'dayOfWeek: 利用可能曜日: 平日（祝日を除く） is not a list of weekdays (such as 月～金, 月火水木金, 土日祝)',
+    'opens: 開始時間: 9時半 is not a time (such as 9:00, 09:00 or 9時)',
+    'pediatricSupport: 小児対応設備の有無: なし（成人用のみ） is not yes or no (有/無, 有り/無し, あり/なし, ○/×)',
+  ]);
+});
+
+test('values are checked before any row is read: a map, on a transform that takes it, true or false for yesno', () => {
+  assert.deepEqual(mappingProblems({ fields: {
+    a: { column: 'a', values: { 病院: 'hospital' } },
+    b: { column: 'b', transform: 'split', values: { 洪水: 'flood' } },
+    c: { column: 'c', transform: 'yesno', values: { 有: true, 無: false } },
+    d: { column: 'd', transform: 'integer', values: { 一: 1 } },
+    e: { column: 'e', values: ['病院'] },
+    f: { column: 'f', values: {} },
+    g: { column: 'g', transform: 'yesno', values: { 有: 'yes' } },
+    h: { column: 'h', transform: 'weekdays' },
+    i: { column: 'i', transform: 'time' },
+    j: { column: ['j', 'k'], transform: 'time' },
+  } }), [
+    'd: transform integer takes no values (values work without a transform, with split and with yesno)',
+    'e: values must give each text of the column its value, such as { 病院: hospital }',
+    'f: values must give each text of the column its value, such as { 病院: hospital }',
+    'g: the values of transform yesno must be true or false',
+    'j: transform time reads exactly 1 column, got 2',
+  ]);
+  for (const t of ['yesno', 'weekdays', 'time']) assert.ok(TRANSFORMS.includes(t), t);
 });

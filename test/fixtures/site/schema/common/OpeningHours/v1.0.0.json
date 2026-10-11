@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodels.jp/schema/common/OpeningHours/v1.0.0.json",
+  "title": "OpeningHours",
+  "x-kind": "value",
+  "description": "When a facility can be used, as the value of an openingHoursSpecification Property: the days of the week, the opening and closing time, and remarks on exceptions such as holidays. Fields follow the 利用可能曜日, 開始時間, 終了時間 and 特記事項 columns of the 自治体標準オープンデータセット, with schema.org OpeningHoursSpecification terms.",
+  "x-version": "1.0.0",
+  "x-license-url": "https://datamodels.jp/LICENSE-CONTENT",
+  "x-model-tags": "opening-hours, Japan",
+  "type": "object",
+  "properties": {
+    "dayOfWeek": {
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday",
+          "PublicHolidays"
+        ]
+      },
+      "description": "Days on which the hours apply, as schema.org DayOfWeek names. The datasets write them in GIF's weekday notation, 月火水木金 or 12345 (利用可能曜日): 月 or 1 → Monday … 日 or 7 → Sunday. PublicHolidays (schema.org) marks public holidays",
+      "x-iri": "https://schema.org/dayOfWeek"
+    },
+    "opens": {
+      "type": "string",
+      "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$",
+      "description": "Opening time, local time in Japan, HH:MM or HH:MM:SS as in GIF's time notation (開始時間)",
+      "x-iri": "https://schema.org/opens"
+    },
+    "closes": {
+      "type": "string",
+      "pattern": "^(([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?|24:00(:00)?)$",
+      "description": "Closing time, local time in Japan, HH:MM or HH:MM:SS as in GIF's time notation; 24:00 is the end of the day (終了時間)",
+      "x-iri": "https://schema.org/closes"
+    },
+    "description": {
+      "type": "string",
+      "description": "Remarks and exceptions in words, such as holidays or the New Year break (利用可能日時特記事項)",
+      "x-iri": "http://purl.org/dc/terms/description"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

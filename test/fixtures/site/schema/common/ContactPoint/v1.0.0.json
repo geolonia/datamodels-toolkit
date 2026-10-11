@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodels.jp/schema/common/ContactPoint/v1.0.0.json",
+  "title": "ContactPoint",
+  "x-kind": "value",
+  "description": "How to get in touch with a facility or an organisation, as the value of a contactPoint Property: telephone, extension, fax, e-mail, web form, other channels and the postal code. Fields follow the contact columns of the 自治体標準オープンデータセット and GIF's core data model 連絡先 (contact point), with schema.org ContactPoint terms where the meaning matches.",
+  "x-version": "1.0.0",
+  "x-license-url": "https://datamodels.jp/LICENSE-CONTENT",
+  "x-model-tags": "contact, Japan",
+  "type": "object",
+  "properties": {
+    "telephone": {
+      "type": "string",
+      "description": "Telephone number as written by the publisher, for example 03-3264-2111. Several numbers are separated by ' / ' (電話番号)",
+      "x-iri": "https://schema.org/telephone"
+    },
+    "telephoneExtension": {
+      "type": "string",
+      "description": "Extension of the telephone number (内線番号)",
+      "x-iri": "https://datamodels.jp/ns/common/telephoneExtension"
+    },
+    "faxNumber": {
+      "type": "string",
+      "description": "Fax number (FAX番号)",
+      "x-iri": "https://schema.org/faxNumber"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-mail address (連絡先メールアドレス)",
+      "x-iri": "https://schema.org/email"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Web page or web form for getting in touch (連絡先FormURL)",
+      "x-iri": "https://schema.org/url"
+    },
+    "otherChannels": {
+      "type": "string",
+      "description": "Other ways to get in touch, such as social media accounts, and remarks on the contact, as free text (連絡先備考（その他、SNSなど）)",
+      "x-iri": "https://datamodels.jp/ns/common/otherChannels"
+    },
+    "postalCode": {
+      "type": "string",
+      "description": "Postal code of the contact, 7 digits with or without hyphen. It can differ from the postal code of the facility's address (郵便番号)",
+      "pattern": "^\\d{3}-?\\d{4}$",
+      "x-iri": "https://schema.org/postalCode"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

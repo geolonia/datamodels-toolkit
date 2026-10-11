@@ -47,13 +47,22 @@ It reads `catalog.json`, the model's schema and the mapping file from the site, 
 | `numbers` | 2 or more | a list of numbers |
 | `flag` | 1 | `1` is true, `0` or empty is false |
 | `boolean` | 1 | `true`/`false` (also `TRUE`, `True`, `1`, `0`); empty is no value |
+| `yesno` | 1 | `有`, `有り`, `あり`, `○` are true; `無`, `無し`, `なし`, `×` are false (also `アリ`/`ナシ`, `はい`/`いいえ`, `〇`, `◯`, `✕`); empty is no value. `values` replaces these words: `values: { 外部利用不可: true, "": false }` |
 | `flags` | `values` | a list of the values whose column holds `1`: `values: { 洪水: flood, 地震: earthquake }` |
 | `split` | 1 | a list, split at `;` or `；` |
+| `weekdays` | 1 | the days of OpeningHours (`Monday` … `Sunday`, `PublicHolidays`) from `月～金`, `月-金`, `月火水木金`, `月・水・金`, `土日祝`, `月曜日～金曜日`, `12345` (1 is Monday, 7 Sunday), `平日` (Monday to Friday) and `毎日` (the seven days). A range wraps: `金～月` is Friday to Monday. `祝` and `祝日` are `PublicHolidays`, only when the text names them |
+| `time` | 1 | a time as `HH:MM`: `9:00`, `9時` and `9時30分` become `09:00` and `09:30`, full-width digits half-width; seconds are kept (`17:00:30`). Each change is listed as a repair |
 | `geometry` | 1 to 3 | two columns, longitude and latitude, make a GeoJSON Point; one column holds a GeoJSON geometry; with three, the third is the GeoJSON for rows without longitude and latitude |
 | `json` | 1 | the JSON in the column |
 | `municipality` | 1 | a municipality name; a value that goes on (`宇都宮市中央本町1-29`) is left out and reported |
 | `machiazaId` | 1 | the 7-digit town id of the Address Base Registry, without its hyphen |
 | `nationalShelterType` | 1 | `general` or `welfare`, from the type code in a 全国共通避難所・避難場所 ID |
+
+`values` turns the texts of one column into the model's values: `medicalInstitutionType: { column: 医療機関の種類, values: { 病院: hospital, 有床診療所: clinicWithBeds, 無床診療所: clinicWithoutBeds } }`. It works without a transform, with `split` (each item of the list) and with `yesno`. An empty cell is no value, unless `values` has an entry for `""`. A text that `values` does not have is a problem of the row; it is never taken as it is.
+
+No transform guesses. A text outside the forms above, such as `不明` for `yesno`, `月～金（祝日を除く）` or `第2土曜` for `weekdays` and `25:00` or `9時半` for `time`, is a problem of the row, named with its column and the text.
+
+Times: `time` reads the hours 0 to 24. `0:00` becomes `00:00`, the start of the day, also as a closing time: the OpeningHours schema allows `00:00` for both, and the definition sheet does not say that `0:00` to `0:00` means open all day, so the converter does not turn it into `24:00`. `24:00` is kept: the schema allows it as a closing time (the end of the day) and rejects it as an opening time, so such a row is invalid. `24:30` and `25:00` are problems.
 
 It detects UTF-8 and Shift_JIS. It repairs only what it can prove, such as a local government code that lost its leading zero or lacks its check digit (the check digit decides), and lists every repair on standard error. Invalid rows are left out and listed by line. An id that more than one row gets, and an id value in exponent form such as `1.31E+11` (a spreadsheet rounded the number and its digits are lost), make those rows invalid. The exit code is 1 when a row is invalid or a file cannot be read, and 2 for a usage error.
 
@@ -103,7 +112,8 @@ Writes a first mapping file for a CSV and a catalog model, for you or an AI agen
 - One row per attribute, and per field of a value (`address.postalCode`) and for the location, as the CSV template splits them. Required attributes come first.
 - A column fills a row when its name is the attribute's, also written otherwise (`postal_code`, `Postal Code`), or the attribute's Japanese or English name in the catalog, or a column the catalog's mapping files of the model read for it (with their transform). Longitude and latitude columns (`lng`, `経度`, …) become the location. A column that only shares part of the Japanese name is marked as a guess; two columns that fit equally well are left to you, listed as candidates.
 - A row without a column says `# TODO: which column?`. Write the column, or delete the row when the list has nothing for it.
-- `transform` follows the attribute's type: `integer`, `number`, `flag` for a boolean (`boolean` when the column holds true and false), `split` for a list, `geometry` for the location, `code6` for a local government code.
+- `transform` follows the attribute's type: `integer`, `number`, `flag` for a boolean (`boolean` when the column holds true and false, `yesno` when it holds 有 and 無 or the other words of `yesno`), `split` for a list, `weekdays` for a list of days of the week, `time` for a time (HH:MM), `geometry` for the location, `code6` for a local government code. A rule taken from a catalog mapping keeps its `values`.
+- A value whose fields include a list, such as the opening hours, gets one row per field too (`openingHoursSpecification.dayOfWeek`, `openingHoursSpecification.opens`); the CSV template keeps it as one JSON column.
 - `convert.id` comes from a catalog mapping of the model when the columns it needs are there; otherwise it is a TODO.
 - The CSV columns that no row reads are listed at the end, as a comment.
 - When the header has nearly all the columns of one of the catalog's mapping files, it says so: that mapping may convert the list as it is.

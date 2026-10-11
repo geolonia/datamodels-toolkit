@@ -11,6 +11,7 @@ export const TARGETS = [
   ['disaster/EvacuationSite', 'jichitai-opendata-site'],
   ['disaster/EvacuationSite', 'gsi-emergency-site'],
   ['disaster/DesignatedShelter', 'gsi-designated-shelter'],
+  ['facility/AEDLocation', 'jichitai-opendata-aed'],
 ];
 const out = join(import.meta.dirname, '..', 'test', 'fixtures', 'site');
 const live = siteReader(SITE);

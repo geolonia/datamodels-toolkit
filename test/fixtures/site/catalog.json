@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "generatedAt": "2026-10-11T12:09:04.123Z",
+  "generatedAt": "2026-10-11T15:14:22.985Z",
   "license": "CC0-1.0",
   "licenseUrl": "https://datamodels.jp/LICENSE-CONTENT",
   "models": [
@@ -3568,29 +3568,6 @@
             "ja": "元のシステムでの更新日時",
             "en": "Last modification time in the system of record"
           }
-        }
-      ],
-      "extensions": [
-        {
-          "id": "gtt-project",
-          "organization": {
-            "ja": "GTT プロジェクト",
-            "en": "GTT Project"
-          },
-          "url": "https://models.gtt-project.org/models/redmine/Issue/",
-          "version": "1.0.0",
-          "contextUrl": "https://models.gtt-project.org/context/redmine/v0.jsonld",
-          "terms": [
-            {
-              "name": "category",
-              "iri": "https://models.gtt-project.org/ns/redmine#category",
-              "description": {
-                "ja": "Redmine の課題のカテゴリー名",
-                "en": "The Redmine issue category name"
-              }
-            }
-          ],
-          "since": "2026-10"
         }
       ],
       "adapters": {
