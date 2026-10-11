@@ -115,8 +115,8 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   assert.match(model, /<h3 id="route">route<\/h3>/);
   assert.match(model, /<dt>Extends<\/dt><dd><a href="https:\/\/datamodels\.jp\/ns\/task\/Task">/);
   assert.match(model, /<title>RoadPatrol: Data models by Example Inc\.<\/title>/);
-  // The adapters' files: the model page links its row on the adapters page, without naming a product.
-  assert.match(model, /<dt>Adapters<\/dt><dd><a href="https:\/\/models\.example\.org\/adapters\/#road-roadpatrol">Files for tools, made from this model<\/a><\/dd>/);
+  // The adapters' files: the model page links each file to download, and its row on the adapters page, without naming a product.
+  assert.match(model, /<dt>Download<\/dt><dd><a href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv" download lang="en">CSV template<\/a> · <a href="https:\/\/models\.example\.org\/adapters\/table-schema\/road\/RoadPatrol\.tableschema\.json" download lang="en">Table Schema<\/a> · <a [^>]*ai\/road\/RoadPatrol\.ai\.json" download lang="en">Structured output for AI<\/a> · <a [^>]*postgis\/road\/RoadPatrol\.sql" download lang="en">PostgreSQL \/ PostGIS table<\/a> \(<a href="https:\/\/models\.example\.org\/adapters\/#road-roadpatrol">about these files<\/a>\)<\/dd>/);
   const adapters = await read('adapters/index.html');
   assert.match(adapters, /<tr id="road-roadpatrol"><td><a href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/">road\/RoadPatrol<\/a><\/td><td><a href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv">RoadPatrol\.csv<\/a><\/td>/);
   assert.deepEqual(catalog.models[0].adapters, Object.fromEntries(['csv', 'table-schema', 'ai', 'postgis'].map((n, i) => [n, `${BASE}/adapters/${n}/road/RoadPatrol.${['csv', 'tableschema.json', 'ai.json', 'sql'][i]}`])));
@@ -174,8 +174,8 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   assert.match(ja, /<link rel="alternate" hreflang="x-default" href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/">/);
   assert.match(ja, /<span lang="ja">日本語<\/span> \| <a href="https:\/\/models\.example\.org\/en\/models\/road\/RoadPatrol\/" hreflang="en" lang="en">English<\/a>/);
   assert.match(ja, /<dt>段階<\/dt><dd>試行<\/dd>/);
-  assert.match(ja, /<dt>アダプター<\/dt><dd><a href="https:\/\/models\.example\.org\/adapters\/#road-roadpatrol">/);
-  assert.match(en, /<dt>Adapters<\/dt><dd><a href="https:\/\/models\.example\.org\/en\/adapters\/#road-roadpatrol">/);
+  assert.match(ja, /<dt>ダウンロード<\/dt><dd><a href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv" download lang="ja">CSV テンプレート<\/a>.*（<a href="https:\/\/models\.example\.org\/adapters\/#road-roadpatrol">これらのファイルについて<\/a>）<\/dd>/);
+  assert.match(en, /<dt>Download<\/dt><dd><a href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv" download lang="en">CSV template<\/a>.* \(<a href="https:\/\/models\.example\.org\/en\/adapters\/#road-roadpatrol">about these files<\/a>\)<\/dd>/);
   assert.match(await read('adapters/index.html'), /<h1>アダプター<\/h1>/);
   // Why the model is as it is: the standards it maps and its notes, in the page's language.
   assert.match(ja, /<h2>参照している標準<\/h2>\n<ul>\n<li><a href="https:\/\/example\.org\/ledger" lang="ja">市の道路台帳<\/a>（<a href="https:\/\/models\.example\.org\/mapping\/road\/RoadPatrol\/city-ledger\.yaml">対応表<\/a>）<\/li>/);

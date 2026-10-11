@@ -7,7 +7,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 ### Added
 
 - `datamodels export <subject>/<Type> --to csv,table-schema,ai,postgis`: files made from one entity model for tools that do not read NGSI-LD. A CSV template and its Frictionless Table Schema (v2), a strict JSON Schema for the structured output of AI models (OpenAI and Claude), and a PostgreSQL / PostGIS `CREATE TABLE` with constraints, a GiST index and comments. They use the model's attribute names and IRIs. The model is the node's, or one of another node's `catalog.json` (default datamodels.jp), as for `extend`.
-- `build` writes the same files for every entity model at `/adapters/<name>/<subject>/<Type>.<ext>`, lists them under `adapters` in `catalog.json`, and adds an `/adapters/` page that model pages link. The adapters follow the interface of geolonia/datamodels (`adapters/README.md`), with a third argument for what the node knows. `@geolonia/datamodels/adapters` exports them, for datamodels.jp later.
+- `build` writes the same files for every entity model at `/adapters/<name>/<subject>/<Type>.<ext>`, lists them under `adapters` in `catalog.json`, and adds an `/adapters/` page that explains them. Each model page has a Download line with its files and a link to that page. The adapters follow the interface of geolonia/datamodels (`adapters/README.md`), with a third argument for what the node knows. `@geolonia/datamodels/adapters` exports them, for datamodels.jp later.
 
 ### Changed
 

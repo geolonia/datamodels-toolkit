@@ -60,7 +60,7 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
   };
   const models = [];
   const formerModels = [];
-  // The adapters' files, by model: one row per model on the adapters page, which the model page links (product-neutral).
+  // The adapters' files, by model: one row per model on the adapters page. The model page links each file and that row (product-neutral).
   const adapterRows = [];
   const adaptersPage = `${prefixOf(lang)}adapters/`;
   const out = subjects.map((subject) => {
@@ -102,6 +102,8 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
       };
       const files = adapters.map((a) => a.urlFor(subject, model));
       m.adapters = null;
+      // The files themselves, to download from the model page; the adapters page explains them.
+      m.downloads = adapters.map((a, i) => (files[i] ? { url: files[i], label: texts(a.label)[0] ?? { lang, text: a.name } } : null)).filter(Boolean);
       if (files.some(Boolean)) {
         m.adapters = `${adaptersPage}#${`${subject.name}-${model.type}`.toLowerCase()}`;
         adapterRows.push({ anchor: `${subject.name}-${model.type}`.toLowerCase(), name: `${subject.name}/${model.type}`, page: m.page, files: files.map((u) => (u ? { url: u, name: u.split('/').pop() } : null)) });
