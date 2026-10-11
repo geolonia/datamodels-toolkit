@@ -131,6 +131,7 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   assert.match(en, /<html lang="en">/);
   assert.match(en, /<title>RoadPatrol: Data models by Example Inc\.<\/title>/);
   assert.match(en, /<meta property="og:locale" content="en_US">/);
+  assert.match(en, /<meta property="og:locale:alternate" content="ja_JP">/);
   assert.match(en, /<a href="https:\/\/models\.example\.org\/en\/ns\/road">road<\/a>/, 'links stay in the language');
   assert.ok(en.includes('Road patrol') && !en.includes('道路パトロール'));
   // The generator, in a meta tag and the footer.
@@ -213,4 +214,19 @@ test('datamodels build writes the node, and exits with 1 on an invalid one', asy
   r = await datamodels('build', dir);
   assert.equal(r.code, 1);
   assert.match(r.stderr, /node\.yaml:\n {2}baseUrl must be/);
+});
+
+test('a language without a known territory gets no Open Graph locale', async () => {
+  const dir = await node({ yaml: NODE_YAML.replace('languages: [en]', 'languages: [en, fr]').replace('name: { en: Example Inc. }', 'name: { en: Example Inc., fr: Exemple }') });
+  const road = join(dir, 'models', 'road');
+  await writeFile(join(road, 'subject.yaml'), 'name: road\nversion: 0.1.0\nsource: minted\ntitle: { en: Roads, fr: Routes }\ndescription: { en: Road maintenance., fr: Entretien des routes. }\n');
+  const cat = join(road, 'RoadPatrol', 'catalog.yaml');
+  await writeFile(cat, (await readFile(cat, 'utf8')).replace('title: { en: Road patrol }', 'title: { en: Road patrol, fr: Patrouille }').replace('description: { en: One patrol run. }', 'description: { en: One patrol run., fr: Une patrouille. }').replace('route: { en: The route patrolled }', 'route: { en: The route patrolled, fr: Le parcours }'));
+  await buildNode(dir);
+  const fr = await readFile(join(dir, '_site', 'fr', 'index.html'), 'utf8');
+  assert.match(fr, /<html lang="fr">/);
+  assert.doesNotMatch(fr, /og:locale/);
+  const en = await readFile(join(dir, '_site', 'index.html'), 'utf8');
+  assert.match(en, /<meta property="og:locale" content="en_US">/);
+  assert.doesNotMatch(en, /og:locale:alternate/);
 });
