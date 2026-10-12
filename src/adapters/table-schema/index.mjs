@@ -141,7 +141,7 @@ export default {
   name: 'table-schema',
   label: { ja: 'Table Schema', en: 'Table Schema' },
   note: {
-    ja: 'CSV の列と規則を表す Frictionless Table Schema（v2）。表計算ソフトで作った CSV を、frictionless などで検査できます。列名は属性名と同じです。',
+    ja: 'CSV の列と規則を表す Frictionless Table Schema（v2）。表計算ソフトで作った CSV を、frictionless などで検証できます。列名は属性名と同じです。',
     en: 'A Frictionless Table Schema (v2) for the columns of a CSV file and their rules, so a CSV made in a spreadsheet can be checked with frictionless or another Table Schema tool. Column names are the attribute names.',
   },
   urlFor: adapterUrl('table-schema', 'tableschema.json'),

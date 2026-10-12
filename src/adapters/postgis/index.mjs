@@ -169,7 +169,7 @@ export default {
   name: 'postgis',
   label: { ja: 'PostgreSQL / PostGIS のテーブル', en: 'PostgreSQL / PostGIS table' },
   note: {
-    ja: 'CREATE TABLE 文。列名は属性名の snake_case で、必須・使える値・パターンを制約で検査します。位置は SRID 4326 のジオメトリ（GiST インデックス付き）、説明と IRI は COMMENT にあります。',
+    ja: 'CREATE TABLE 文。列名は属性名の snake_case で、必須・使える値・パターンを制約で検証します。位置は SRID 4326 のジオメトリ（GiST インデックス付き）、説明と IRI は COMMENT にあります。',
     en: 'A CREATE TABLE statement: columns are the attribute names in snake_case, with constraints for required attributes, allowed values and patterns; location is a geometry in SRID 4326 with a GiST index; descriptions and IRIs are in the comments.',
   },
   urlFor: (subject, model, context) => {

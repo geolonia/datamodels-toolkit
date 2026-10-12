@@ -14,7 +14,7 @@ export default {
   name: 'csv',
   label: { ja: 'CSV テンプレート', en: 'CSV template' },
   note: {
-    ja: '見出し行だけの CSV。表計算ソフトで 1 行に 1 件ずつ入力し、Table Schema で検査できます。経度と緯度は WGS 84、リストは ; 区切りです。',
+    ja: '見出し行だけの CSV。表計算ソフトで 1 行に 1 件ずつ入力し、Table Schema で検証できます。経度と緯度は WGS 84、リストは ; 区切りです。',
     en: 'A CSV file with only the header row: fill in one row per entity in a spreadsheet and check it with the Table Schema. Longitude and latitude are WGS 84; list values are separated by ;.',
   },
   urlFor: adapterUrl('csv', 'csv'),
