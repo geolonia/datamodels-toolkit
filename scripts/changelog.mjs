@@ -72,8 +72,11 @@ export function unreleased(changelog) {
 
 /** CHANGELOG.md text with the fragments as a new version. Pure: reads and writes nothing. */
 export function release(changelog, fragments, { version, date }) {
-  if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(version)) throw new Error(`"${version}" is not a version (x.y.z)`);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`"${date}" is not a date (YYYY-MM-DD)`);
+  // A release is x.y.z, without leading zeros; a pre-release is not published (publish.yml), so it has no entry.
+  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) throw new Error(`"${version}" is not a version (x.y.z)`);
+  // A day that exists: 2026-02-30 does not survive the round trip through Date.
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : null;
+  if (!day || Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== date) throw new Error(`"${date}" is not a date (YYYY-MM-DD)`);
   if (!fragments.length) throw new Error('changes/ has no change files: nothing to release');
   if (changelog.includes(`## [${version}]`)) throw new Error(`CHANGELOG.md already has ${version}`);
   const { lines, start, end, body } = unreleased(changelog);
