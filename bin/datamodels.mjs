@@ -36,8 +36,9 @@
 //   datamodels check [dir] [--offline]
 //
 // check runs the checks a node needs in CI: valid schemas and examples,
-// release snapshots, published versions unchanged online, no term of an
-// extended model redefined. Exit code 1 on a problem; unreachable nodes are
+// the NGSI-LD and JSON-LD rules of the examples, release snapshots,
+// published versions unchanged online, no term of an extended model
+// redefined. Exit code 1 on a problem; unreachable nodes are
 // only noted.
 //
 //   datamodels init [dir] [--base-url URL] [--publisher name] [--publisher-url URL] [--subject name] ...

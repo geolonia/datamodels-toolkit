@@ -6,14 +6,20 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Added
 
+- `datamodels check` has the checks of datamodels.jp's validator for schemas and examples (geolonia/datamodels#226): the `type` const, `$id` and `x-version` of each schema, the `x-ngsi.type` names, polygon rings that close, the NGSI-LD rules of `example-normalized.jsonld` (attribute types, typed dates, the same id and vocab values as `example.json`, a valid key-values form, the alias URL in its `@context`), and a JSON-LD processor that expands the normalized example, the example of a value type and the vocabulary without losing anything. It also checks that an entity schema accepts the `@context` that data may carry.
 - `convert.allDay` in a mapping file says what opening hours of 0:00 to 0:00 mean in the list: `open` writes `00:00` to `23:59` (open 24 hours, as Google's structured data guidelines read it), `closed` writes `00:00` to `00:00` (closed all day). It applies to the mappings reached through `via` too, and the outermost mapping that says it wins, so a mapping of your own decides it for the catalog's OpeningHours mapping. `datamodels mapping` writes a TODO for it when the model has opening hours.
+
+### Fixed
+
+- `datamodels check` validates an `example.json` without the `{"json": ...}` and `{"vocab": ...}` wrappers of `JsonProperty` and `VocabProperty` attributes, as the schema describes them; such an example was reported as invalid (datamodels.jp's Decision).
+- `datamodels check` reads the @contexts of the node's own subjects from the build, offline too, instead of from the site: an import of the node's own common context is checked against what is about to be published.
 
 ### Changed
 
-- `datamodels convert` reports opening hours of 0:00 to 0:00 as a problem of the row unless the mapping has `convert.allDay`: written as they are, they read as "closed all day" to tools that follow Google's convention, while Japanese lists mean "around the clock". An opening and a closing time that are the same at another hour (9:00 to 9:00) are always a problem of the row.
 - Model pages: the Download row shows a small button per file (CSV template, Table Schema, AI structured output, PostgreSQL / PostGIS), still plain HTML without JavaScript, and "About these files" links the adapters page.
 - The adapters page explains each adapter in its own section (`#csv`, `#table-schema`, `#ai`, `#postgis`): what the file is, how to use it and where to get it. The table of files by model is gone, so the page no longer grows with every model; an old link to a model's row (`/adapters/#<subject>-<type>`) opens the page at the top. Each adapter has a new `use` text (ja, en) for this.
 - `datamodels init` writes a workflow pinned to the v0.3.6 release of the Action, and a README whose `npx` commands run v0.3.6.
+- `datamodels convert` reports opening hours of 0:00 to 0:00 as a problem of the row unless the mapping has `convert.allDay`: written as they are, they read as "closed all day" to tools that follow Google's convention, while Japanese lists mean "around the clock". An opening and a closing time that are the same at another hour (9:00 to 9:00) are always a problem of the row.
 
 ## [0.3.6] - 2026-10-12
 
