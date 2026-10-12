@@ -14,6 +14,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Fixed
 
+- `datamodels build` writes the pages (index.html, 404.html, the model and subject pages) when the toolkit is installed in a project (`npm i @geolonia/datamodels`) and run from that project's folder. They were missing: the toolkit's page templates are then under `node_modules`, which Eleventy skips by default, as it skips what the project's `.gitignore` lists.
 - `datamodels check` validates an `example.json` without the `{"json": ...}` and `{"vocab": ...}` wrappers of `JsonProperty` and `VocabProperty` attributes, as the schema describes them; such an example was reported as invalid (datamodels.jp's Decision).
 - `datamodels check` reads the @contexts of the node's own subjects from the build, offline too, instead of from the site: an import of the node's own common context is checked against what is about to be published.
 
