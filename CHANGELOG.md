@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-10-12
+
+Find models across linked sites, check a node as datamodels.jp does, publish on hosts other than GitHub Pages, and say what opening hours of 0:00 to 0:00 mean.
+
 ### Added
 
 - `datamodels check` has the checks of datamodels.jp's validator for schemas and examples (geolonia/datamodels#226): the `type` const, `$id` and `x-version` of each schema, the `x-ngsi.type` names, polygon rings that close, the NGSI-LD rules of `example-normalized.jsonld` (attribute types, typed dates, the same id and vocab values as `example.json`, a valid key-values form, the alias URL in its `@context`), and a JSON-LD processor that expands the normalized example, the example of a value type and the vocabulary without losing anything. It also checks that an entity schema accepts the `@context` that data may carry.
@@ -185,7 +189,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.6...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.7...main
+[0.3.7]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.6...v0.3.7
 [0.3.6]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.3...v0.3.4
