@@ -387,18 +387,27 @@ const seconds = (t) => t.split(':').reduce((s, n, i) => s + Number(n) * [3600, 6
 // `value` is the nested result of one mapping, checked at every depth: an object with opens and
 // closes, from fields (x.opens and x.closes), a JSON value (transform: json, the CSV template's
 // form), or both merged, also in a list. Returns it with the pairs repaired or left out, copied
-// where it changes (a value may be the mapping's, the same for every row). `skip`: the paths of
-// values a via mapping built, already checked there with its own word.
-function sameHours(value, path, allDay, fixes, problems, skip) {
-  if (path && skip.has(path)) return value;
+// where it changes (a value may be the mapping's, the same for every row). The whole entity is
+// checked once, after the values of via mappings and the fields of the mapping that extend them
+// are merged. `zones`: the path of each value a via mapping built, with the word that holds for
+// it (the outer mapping's, else its own) and its `meaningful` test; inside one, `label` names the
+// fields as the via mapping does, as its other problems are named. A via value left with nothing
+// of the row is undefined, left out as build leaves it out.
+function sameHours(value, path, label, allDay, fixes, problems, zones, entered = false) {
+  const zone = !entered && zones.get(path);
+  if (zone) {
+    const checked = sameHours(value, path, '', zone.allDay, fixes, problems, zones, true);
+    return checked === value || zone.meaningful(checked) ? checked : undefined;
+  }
   if (Array.isArray(value)) {
-    const list = value.map((v, i) => sameHours(v, `${path}[${i}]`, allDay, fixes, problems, skip));
+    const list = value.map((v, i) => sameHours(v, `${path}[${i}]`, `${label}[${i}]`, allDay, fixes, problems, zones));
     return list.some((v, i) => v !== value[i]) ? list : value;
   }
   if (!isObject(value)) return value;
-  const at = (k) => (path ? `${path}.${k}` : k);
+  const at = (k) => (label ? `${label}.${k}` : k);
   let out = value;
-  const [o, c] = [time(value.opens), time(value.closes)];
+  // Only a text is a time; any other value (a number or an object in a JSON value) is left to the schema.
+  const [o, c] = [value.opens, value.closes].map((t) => (typeof t === 'string' ? time(t) : null));
   if (o && c && seconds(o) === seconds(c)) {
     const [key, closes] = [at('opens'), at('closes')];
     const span = `${value.opens}–${value.closes}`;
@@ -414,10 +423,11 @@ function sameHours(value, path, allDay, fixes, problems, skip) {
     if (seconds(o) !== 0 || !ALL_DAY.includes(allDay)) { delete out.opens; delete out.closes; }
   }
   for (const [k, v] of Object.entries(out)) {
-    const checked = sameHours(v, at(k), allDay, fixes, problems, skip);
+    const checked = sameHours(v, path ? `${path}.${k}` : k, at(k), allDay, fixes, problems, zones);
     if (checked === v) continue;
     if (out === value) out = { ...value };
-    out[k] = checked;
+    if (checked === undefined) delete out[k];
+    else out[k] = checked;
   }
   return out;
 }
@@ -438,17 +448,23 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
   // chain: the via names being built, so a cycle is reported instead of recursing forever.
   // allDay: what 0:00–0:00 means (convert.allDay); the outermost mapping that says it wins, so
   // a mapping of your own decides it also for the catalog mappings it reaches through via.
+  // Returns the nested value and the zones of sameHours, relative to it.
   const build = (map, row, fixes, problems, top, chain = [], allDay = map.convert?.allDay) => {
-    const out = {}, fromVia = new Set();
+    const out = {}, zones = new Map();
     for (const [field, rule] of Object.entries(map.fields ?? {})) {
       if (rule?.value !== undefined) { out[field] = rule.value; continue; }
       if (rule?.via) {
         const sub = mappings[rule.via];
         if (!sub) { problems.push(`${field}: no mapping ${rule.via}`); continue; }
         if (chain.includes(rule.via)) { problems.push(`${field}: via cycle ${[...chain, rule.via].join(' → ')}`); continue; }
-        const v = build(sub, row, fixes, problems, false, [...chain, rule.via], allDay ?? sub.convert?.allDay);
-        const meaningful = Object.entries(v).some(([k]) => sub.fields[k]?.value === undefined);
-        if (meaningful) { out[field] = v; fromVia.add(field); }
+        const word = allDay ?? sub.convert?.allDay;
+        const { value: v, zones: inner } = build(sub, row, fixes, problems, false, [...chain, rule.via], word);
+        const meaningful = (x) => Object.keys(x).some((k) => sub.fields[k]?.value === undefined);
+        if (meaningful(v)) {
+          out[field] = v;
+          zones.set(field, { allDay: word, meaningful });
+          for (const [p, z] of inner) zones.set(`${field}.${p}`, z);
+        }
         continue;
       }
       // --set fills what the list does not carry; a value the row has wins.
@@ -462,7 +478,7 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
       if (r.fix) fixes.push({ field, ...r.fix });
       if (r.value !== undefined) out[field] = r.value;
     }
-    return sameHours(nest(out, problems), '', allDay, fixes, problems, fromVia);
+    return { value: nest(out, problems), zones };
   };
   // The columns a value of the id comes from, followed through via and dotted field names, to see
   // the value as the list wrote it: a transform such as integer turns 1.31E+11 into 131000000000.
@@ -486,7 +502,8 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
   const rawOf = (row, k) => sourceColumns(k).map((c) => row[c]);
   const results = rows.map((row) => {
     const fixes = [], problems = [];
-    const { id: own, ...attrs } = build(mapping, row, fixes, problems, true);
+    const { value, zones } = build(mapping, row, fixes, problems, true);
+    const { id: own, ...attrs } = sameHours(value, '', '', mapping.convert?.allDay, fixes, problems, zones);
     const all = { id: own, ...attrs };
     const tpl = mapping.convert?.id;
     let id;

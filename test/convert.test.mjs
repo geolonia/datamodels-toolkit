@@ -525,3 +525,50 @@ test('convert.allDay repairs a value: of the mapping in each row without changin
   const v = convertRows([{ n: '1', o: '0:00', c: '0:00' }], { convert: { id: 'urn:ngsi-ld:T:{n}' }, fields: { n: { column: 'n' }, h: { via: 'hours' } } }, { type: 'T', mappings: { hours } })[0];
   assert.deepEqual(v.fixes.filter((f) => f.repair.startsWith('read 0:00')).map((f) => f.field), ['opens']);
 });
+
+test('opens or closes that is not a text (a number, an object, a list in a JSON value) is left to the schema; the other rows convert', () => {
+  const map = structuredClone(aed.mapping);
+  map.fields.openingHoursSpecification = { to: 'openingHoursSpecification', column: 'j', transform: 'json' };
+  const row = { 全国地方公共団体コード: '131024', 名称: '中央区役所', 緯度: '35.670599', 経度: '139.77201' };
+  const hours = [
+    { opens: { toString: null }, closes: '00:00' },
+    { opens: ['0:00'], closes: '0:00' },
+    { opens: 900, closes: 1700 },
+    { opens: null, closes: '00:00' },
+    { opens: '09:00', closes: '17:00' },
+  ];
+  const r = convertRows(hours.map((h, i) => ({ ...row, ID: String(i + 1), j: JSON.stringify(h) })), map, { type: 'AEDLocation', mappings: aed.mappings });
+  // Not read as a time, so not an opening and a closing time at 0:00: no problem of convert's, the value as it is.
+  assert.deepEqual(r.map((x) => x.problems), [[], [], [], [], []]);
+  assert.deepEqual(r.map((x) => x.entity.openingHoursSpecification), hours);
+  assert.deepEqual(r.map((x) => aed.validate(x.entity)), [false, false, false, false, true]);
+});
+
+test('0:00–0:00 that a via mapping and the mapping around it make together is checked, once', () => {
+  const ambiguous = 'opens, closes: 00:00–00:00 is ambiguous (open all day, or closed?); say in the mapping what it means for this list (convert.allDay: open or closed)';
+  const opensOnly = (allDay) => ({ ...(allDay ? { convert: { allDay } } : {}), fields: { opens: { column: 'o', transform: 'time' } } });
+  const top = (allDay) => ({ convert: { id: 'urn:ngsi-ld:T:{n}', ...(allDay ? { allDay } : {}) }, fields: { n: { column: 'n' }, h: { via: 'hours' }, 'h.closes': { column: 'c', transform: 'time' } } });
+  const run = (map, sub) => convertRows([{ n: '1', o: '0:00', c: '0:00' }], map, { type: 'T', mappings: { hours: sub } })[0];
+  const allDayFixes = (r) => r.fixes.filter((f) => f.repair.startsWith('read 0:00')).map((f) => [f.field, f.detail]);
+  // The via mapping has only opens; the mapping around it adds closes.
+  const none = run(top(), opensOnly());
+  assert.deepEqual(none.problems, [ambiguous]);
+  assert.equal(none.entity.h, undefined);
+  const open = run(top('open'), opensOnly());
+  assert.deepEqual([open.problems, open.entity.h, allDayFixes(open)], [[], { opens: '00:00', closes: '23:59' }, [['opens', '00:00–00:00 → 00:00–23:59']]]);
+  // The via mapping's own word holds for the value it built, also when the mapping around it extends it.
+  const closed = run(top(), opensOnly('closed'));
+  assert.deepEqual([closed.problems, closed.entity.h, allDayFixes(closed)], [[], { opens: '00:00', closes: '00:00' }, [['opens', '00:00–00:00 → 00:00–00:00']]]);
+  // A value left with only the via mapping's constants is left out, as before the check.
+  const withDays = { fields: { ...opensOnly().fields, dayOfWeek: { value: ['Monday'] } } };
+  assert.equal(run(top(), withDays).entity.h, undefined);
+  // A via mapping that has both: one repair, one problem, not one per mapping.
+  const both = { fields: { opens: { column: 'o', transform: 'time' }, closes: { column: 'c', transform: 'time' } } };
+  const plain = (allDay) => ({ convert: { id: 'urn:ngsi-ld:T:{n}', ...(allDay ? { allDay } : {}) }, fields: { n: { column: 'n' }, h: { via: 'hours' } } });
+  assert.deepEqual(allDayFixes(run(plain('open'), both)), [['opens', '00:00–00:00 → 00:00–23:59']]);
+  assert.deepEqual(run(plain(), both).problems, [ambiguous]);
+  // Through two via mappings: the inner value with the word of the outermost mapping that says it.
+  const outer = { fields: { inner: { via: 'inner' } } };
+  const two = convertRows([{ n: '1', o: '0:00', c: '0:00' }], plain('open'), { type: 'T', mappings: { hours: outer, inner: { convert: { allDay: 'closed' }, ...both } } })[0];
+  assert.deepEqual([two.problems, two.entity.h, allDayFixes(two)], [[], { inner: { opens: '00:00', closes: '23:59' } }, [['opens', '00:00–00:00 → 00:00–23:59']]]);
+});
