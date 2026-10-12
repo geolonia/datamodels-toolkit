@@ -374,7 +374,8 @@ Once: create the project (`npx wrangler pages project create my-models --product
 
 ```yaml
   publish:
-    if: github.event_name != 'pull_request'
+    # Only main: a manual run (workflow_dispatch) can pick another branch.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
