@@ -187,6 +187,17 @@ test('an unknown transform or a missing via mapping is found before any row is r
   for (const t of [site, gsiSite, shelter, aed]) assert.deepEqual(mappingProblems(t.mapping, t.mappings), []);
 });
 
+test('a via target that is empty or not a mapping is reported, not followed', () => {
+  const map = { fields: { a: { via: 'x/X/empty' }, b: { via: 'x/X/text' }, c: { via: 'x/X/list' }, d: { column: 'd' } } };
+  const mappings = { 'x/X/empty': null, 'x/X/text': 'fields', 'x/X/list': [{ column: 'z' }] };
+  assert.deepEqual(mappingProblems(map, mappings), [
+    'a: via x/X/empty is empty or not a mapping',
+    'b: via x/X/text is empty or not a mapping',
+    'c: via x/X/list is empty or not a mapping',
+  ]);
+  assert.deepEqual(mappedColumns(map, mappings), ['d']);
+});
+
 test('an explicit empty record in a one-column file is listed, like ",," in a wider one', () => {
   const rows = parseCsv('only\n""\nvalue\n\n""');
   assert.deepEqual(rows.map((r) => r.only), ['value']);

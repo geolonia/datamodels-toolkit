@@ -1,7 +1,8 @@
 // The checks a node runs in CI before it publishes (#12): its schemas and
 // examples are valid, every type and attribute is a term of its @context with
 // the same IRI (#26), the examples follow the NGSI-LD rules and survive a
-// JSON-LD processor (examples.mjs, geolonia/datamodels#226), its release
+// JSON-LD processor (examples.mjs, geolonia/datamodels#226), its mapping
+// files are tables that convert can apply (mapping-check.mjs), its release
 // snapshots match the sources, an exact version already online did not
 // change, and no model redefines a term of a model it extends. Other nodes
 // that cannot be reached are noted and skipped: a node that is down never
@@ -15,6 +16,7 @@ import addFormats from 'ajv-formats';
 import { buildNode } from './node.mjs';
 import { catalogUrls, attributesOf } from './urls.mjs';
 import { schemaRuleProblems, exampleProblems, contextLoader, jsonldProblems, vocabularyProblems } from './examples.mjs';
+import { mappingFileProblems, viaCycles } from './mapping-check.mjs';
 
 // A schema on another site that could not be read: noted and skipped, never a problem of this node.
 class Unavailable extends Error {}
@@ -213,6 +215,16 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
       }
       problems.push(...exampleProblems(s, m, { urls, validate, errorsText: (errors) => ajv.errorsText(errors) }));
     }
+
+    // The mapping files: a table for the page, and rules that convert can apply; via may not loop.
+    const mappings = Object.fromEntries(subjects.flatMap((s) => s.models.flatMap((m) => m.mappings.map((map) => [`${s.name}/${m.type}/${map.name}`, map]))));
+    const mappingNames = new Set(Object.keys(mappings));
+    // The node's schemas by $id, so a field of a value (address.postalCode) is checked against the value's model.
+    const schemas = new Map(subjects.flatMap((s) => s.models.filter((m) => typeof m.schema.$id === 'string').map((m) => [m.schema.$id, m.schema])));
+    for (const s of subjects) for (const m of s.models) for (const map of m.mappings) {
+      for (const p of mappingFileProblems(map, m.schema, { languages: node.languages, mappingNames, schemas })) problems.push(`${s.name}/${m.type}/mapping/${map.name}.yaml: ${p}`);
+    }
+    for (const cycle of viaCycles(mappings)) problems.push(`${cycle[0]}: via goes round in a circle: ${cycle.join(' → ')}`);
 
     // Types and attributes against the @context; contexts of other sites that it imports are read online only.
     const resolvedBySubject = new Map();

@@ -144,11 +144,6 @@ export default {
     ja: 'CSV の列と規則を表す Frictionless Table Schema（v2）。表計算ソフトで作った CSV を、frictionless などで検査できます。列名は属性名と同じです。',
     en: 'A Frictionless Table Schema (v2) for the columns of a CSV file and their rules, so a CSV made in a spreadsheet can be checked with frictionless or another Table Schema tool. Column names are the attribute names.',
   },
-  // How to use the file, for the node's /adapters/ page.
-  use: {
-    ja: 'frictionless validate <CSV> --schema <このファイル> を実行すると、規則に合わないセルが行と列ごとに報告されます。',
-    en: 'Run frictionless validate <CSV> --schema <this file>: it reports each cell that breaks a rule, by row and column.',
-  },
   urlFor: adapterUrl('table-schema', 'tableschema.json'),
   content: (subject, model, context) => `${JSON.stringify(tableSchemaOf(subject, model, context), null, 2)}\n`,
 };

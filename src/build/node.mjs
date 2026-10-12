@@ -10,7 +10,7 @@
 //   licenseUrl: https://models.example.org/LICENSE   # optional
 //   nodes:                                           # optional: other nodes this node knows
 //     - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
-import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, stat, rm, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
 import { catalogUrls } from './urls.mjs';
@@ -22,6 +22,8 @@ import { ADAPTERS, readRefs, localRefs, refsRead, schemaPrefixes } from '../adap
 
 // Every URL here is published: one with a user name or password in it would publish them too.
 const httpUrl = (s) => { if (typeof s !== 'string') return false; try { const u = new URL(s); return ['http:', 'https:'].includes(u.protocol) && !!u.hostname && !u.username && !u.password; } catch { return false; } };
+// A language tag, as node.yaml lists them: en, ja, pt-BR.
+const LANGUAGE_TAG = /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/;
 const texts = (o) => !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length > 0 && Object.values(o).every((v) => typeof v === 'string' && v.trim());
 
 /** The problems of the settings of a node, as node.yaml holds them (also used by init before it writes). */
@@ -31,7 +33,7 @@ export function settingsProblems(node) {
   const { baseUrl, iris = 'hash', languages = ['en'], publisher, license, licenseUrl, nodes } = node;
   if (!httpUrl(baseUrl) || new URL(baseUrl).search || new URL(baseUrl).hash) problems.push('baseUrl must be an http(s) URL without credentials, query or fragment');
   if (!['hash', 'slash'].includes(iris)) problems.push('iris must be hash or slash');
-  if (!Array.isArray(languages) || !languages.length || !languages.every((l) => typeof l === 'string' && /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/.test(l))) problems.push('languages must be a list of language tags, for example [en] or [ja, en]');
+  if (!Array.isArray(languages) || !languages.length || !languages.every((l) => typeof l === 'string' && LANGUAGE_TAG.test(l))) problems.push('languages must be a list of language tags, for example [en] or [ja, en]');
   if (!texts(publisher?.name) || !httpUrl(publisher?.url)) problems.push('publisher needs a name in at least one language and an http(s) url');
   if (typeof license !== 'string' || !license.trim()) problems.push('license is required (an SPDX identifier such as CC0-1.0)');
   if (licenseUrl !== undefined && !httpUrl(licenseUrl)) problems.push('licenseUrl must be an http(s) URL');
@@ -88,11 +90,35 @@ export async function nodeAdapters(subjects, { urls, languages, fetch, timeout, 
   const context = { urls, languages, refs };
   const notes = problems.map((p) => `no adapter files for the models that use it: ${p}`);
   const adapters = ADAPTERS.map((a) => ({
-    name: a.name, label: a.label, note: a.note, use: a.use,
+    name: a.name, label: a.label, note: a.note,
     urlFor: (subject, model) => (refsRead(model, refs) ? a.urlFor(subject, model, context) : null),
     content: (subject, model) => a.content(subject, model, context),
   }));
   return { adapters, notes };
+}
+
+// Every page the toolkit writes says so: <meta name="generator" content="datamodels-toolkit <version>">.
+const TOOLKIT_PAGE = /<meta name="generator" content="datamodels-toolkit[ "]/;
+
+/**
+ * Builds before 0.3.7 wrote an adapters page (/adapters/, /<lang>/adapters/);
+ * datamodels.jp explains the files now. The output folder is not emptied, so a
+ * page left from such a build would still be published: remove it, at the root
+ * and in every folder named like a language (also one node.yaml no longer
+ * lists). Only a page the toolkit wrote: any other file stays, such as a page
+ * of the publisher's own or the adapters' files next to it.
+ */
+async function removeOldAdaptersPages(out) {
+  const dirs = (await readdir(out, { withFileTypes: true })).filter((d) => d.isDirectory() && LANGUAGE_TAG.test(d.name)).map((d) => d.name);
+  await Promise.all(['', ...dirs].map(async (dir) => {
+    const file = join(out, dir, 'adapters', 'index.html');
+    // No page there is the usual case; any other read error fails the build, or a stale page could stay published.
+    const html = await readFile(file, 'utf8').catch((err) => {
+      if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return '';
+      throw err;
+    });
+    if (TOOLKIT_PAGE.test(html)) await rm(file, { force: true });
+  }));
 }
 
 /**
@@ -107,6 +133,7 @@ export async function buildNode(dir, { out = join(dir, '_site'), now, pages: wit
   const { node, urls, subjects } = await loadNode(dir);
   const head = { publisher: node.publisher, license: node.license, ...(node.licenseUrl ? { licenseUrl: node.licenseUrl } : {}), ...(node.nodes ? { nodes: node.nodes } : {}) };
   await mkdir(out, { recursive: true });
+  await removeOldAdaptersPages(out);
   const { adapters, notes } = await nodeAdapters(subjects, { urls, languages: node.languages, fetch, timeout, offline, nodes: node.nodes });
   const result = await publishCatalog(subjects, { urls, outDir: out, languages: node.languages, head, adapters, ...(now ? { now } : {}) });
   const name = node.publisher.name.en ?? node.languages.map((l) => node.publisher.name[l]).find(Boolean) ?? Object.values(node.publisher.name)[0];

@@ -4,8 +4,7 @@
 // and passes them in `context.refs`.
 //
 // An adapter is the interface of geolonia/datamodels (adapters/README.md):
-//   { name, label: { ja, en }, note: { ja, en }, use: { ja, en }, guide?, urlFor(subject, model, context), content(subject, model, context) }
-// (`use`, how to use the file, is for the node's /adapters/ page.)
+//   { name, label: { ja, en }, note: { ja, en }, guide?, urlFor(subject, model, context), content(subject, model, context) }
 // `subject` and `model` are as loadSubjects() returns them. `context` is
 // { urls, languages, refs }: the node's URL builders (catalogUrls), its
 // languages in order, and { [schema URL]: { schema, texts } } for every
