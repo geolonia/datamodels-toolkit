@@ -211,7 +211,8 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
     };
 
     // Schemas and examples. A schema of this node is read from the build; one on another site only online.
-    const ajv = new Ajv2020({ allErrors: true, strict: false, loadSchema: async (uri) => {
+    // ownProperties: an optional attribute named like a member of Object.prototype (constructor) is absent when the data lacks it.
+    const ajv = new Ajv2020({ allErrors: true, strict: false, ownProperties: true, loadSchema: async (uri) => {
       if (uri.startsWith(`${urls.baseUrl}/`)) return JSON.parse(await readFile(join(out, uri.slice(urls.baseUrl.length + 1)), 'utf8'));
       if (offline) throw new Unavailable(`${uri} is on another site, not read with --offline`);
       try { return await getJson(uri); } catch (e) { throw new Unavailable(`${uri} could not be read (${e.cause?.code ?? e.message})`); }

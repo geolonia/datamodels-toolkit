@@ -6,7 +6,7 @@ import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkNode } from '../src/build/index.mjs';
-import { unclosedRings, schemaRuleProblems } from '../src/build/examples.mjs';
+import { unclosedRings, schemaRuleProblems, keyPaths } from '../src/build/examples.mjs';
 import { catalogUrls } from '../src/build/urls.mjs';
 import { toKeyValues, unwrapKeyValues } from '../src/ngsi.mjs';
 
@@ -52,7 +52,8 @@ async function node(change = (f) => f) {
   await writeFile(join(dir, 'models', 'road', 'context.jsonld'), JSON.stringify(files.context));
   await writeFile(join(m, 'schema.json'), JSON.stringify(files.schema));
   await writeFile(join(m, 'catalog.yaml'), files.catalog);
-  if (files.kv) await writeFile(join(m, 'examples', 'example.json'), JSON.stringify(files.kv));
+  // kvText: example.json as written, for a file that is not an object.
+  if (files.kv || files.kvText) await writeFile(join(m, 'examples', 'example.json'), files.kvText ?? JSON.stringify(files.kv));
   if (files.norm) await writeFile(join(m, 'examples', 'example-normalized.jsonld'), JSON.stringify(files.norm));
   return dir;
 }
@@ -193,4 +194,58 @@ test('the rules of schema.json that the schema cannot state', () => {
   ]);
   // A value type has no type attribute.
   assert.deepEqual(schemaRuleProblems(subject, model({ $id, properties: {} }, 'value'), urls), []);
+});
+
+test('review fixes: the instances of a multi-valued attribute are compared after JSON-LD too', async () => {
+  const p = await problemsOf((f) => ({
+    ...f,
+    context: { '@context': [f.context['@context'], { night: null }] },
+    schema: { ...f.schema, properties: { ...f.schema.properties, route: { type: 'array', items: { type: 'string' }, 'x-iri': `${BASE}/ns/road#route`, 'x-ngsi': { type: 'Property', multi: true } } } },
+    kv: { ...f.kv, route: ['R1'] },
+    norm: { ...f.norm, route: [{ type: 'Property', value: 'R1', datasetId: 'urn:ngsi-ld:dataset:route:1', night: true }] },
+  }));
+  assert.deepEqual(p, [`${N}: "route.night" is lost when JSON-LD expands and compacts it (is it in the @context?)`]);
+});
+
+test('review fixes: the @context of the test wins over one that example.json already has', async () => {
+  const p = await problemsOf((f) => ({
+    ...f,
+    schema: { ...f.schema, properties: { ...f.schema.properties, '@context': { type: 'string' } } },
+    kv: { '@context': ALIAS, ...f.kv },
+  }));
+  assert.equal(p.length, 1, p.join('\n'));
+  assert.match(p[0], /^road\/RoadPatrol\/schema\.json: rejects example\.json with "@context": \["https:\/\/models\.example\.org\/context\/road\/v0\.1\.0\.jsonld",/);
+});
+
+test('review fixes: an example that is not a JSON object is a problem, not coerced', async () => {
+  for (const [kvText, got] of [['null', 'null'], ['7', 'a number'], ['["urn:x"]', 'an array']]) {
+    assert.deepEqual(await problemsOf((f) => ({ ...f, kv: null, kvText, norm: null })), [`${K}: must be a JSON object, got ${got}`], kvText);
+  }
+  assert.throws(() => unwrapKeyValues(null, { properties: {} }), /must be a JSON object, got null/);
+  assert.throws(() => unwrapKeyValues([1, 2], { properties: {} }), /must be a JSON object, got an array/);
+  assert.throws(() => toKeyValues(7), /must be a JSON object, got a number/);
+  // A value type with no required fields would accept {} or {"0": ...} after a coercion.
+  const dir = await node((f) => ({ ...f, kv: null, norm: null }));
+  const m = join(dir, 'models', 'road', 'Sign');
+  await mkdir(join(m, 'examples'), { recursive: true });
+  await writeFile(join(m, 'schema.json'), JSON.stringify({ $id: `${BASE}/schema/road/Sign/v0.1.0.json`, 'x-kind': 'value', type: 'object', properties: {} }));
+  await writeFile(join(m, 'catalog.yaml'), 'title: { en: Sign }\ndescription: { en: A sign. }\n');
+  await writeFile(join(m, 'examples', 'example.json'), '[1, 2]');
+  assert.deepEqual((await checkNode(dir, { offline: true })).problems, ['road/Sign/examples/example.json: must be a JSON object, got an array']);
+});
+
+test('review fixes: names that Object.prototype has are attributes like any other', async () => {
+  // Optional attributes named constructor and toString, in neither example.
+  const p = await problemsOf((f) => ({
+    ...f,
+    context: { '@context': { ...f.context['@context'], constructor: 'road:constructor', toString: 'road:toString' } },
+    schema: { ...f.schema, properties: { ...f.schema.properties, constructor: { type: 'string', 'x-iri': `${BASE}/ns/road#constructor`, 'x-ngsi': { type: 'VocabProperty' } }, toString: { type: 'string', 'x-iri': `${BASE}/ns/road#toString`, 'x-ngsi': { type: 'Property' } } } },
+    catalog: `title: { en: Road patrol }\ndescription: { en: A run. }\n${ATTRIBUTES}  constructor: { en: Who built it }\n  toString: { en: As text }\n`,
+  }));
+  assert.deepEqual(p, []);
+  assert.deepEqual(unwrapKeyValues({ id: 'x' }, { properties: { constructor: { 'x-ngsi': { type: 'VocabProperty' } } } }), { id: 'x' });
+});
+
+test('keyPaths follows arrays under their path', () => {
+  assert.deepEqual(keyPaths({ a: [{ b: 1 }, { c: { d: 2 } }], '@context': 'x', e: [1, 2] }), ['a', 'a.b', 'a.c', 'a.c.d', 'e']);
 });

@@ -47,8 +47,13 @@ export function unclosedRings(value, path = '$') {
   return out;
 }
 
-/** Every key at any depth of an object tree, as "a.b.c" paths; JSON-LD keywords left out. */
-function keyPaths(obj, prefix = '') {
+/**
+ * Every key at any depth of an object tree, as "a.b.c" paths; JSON-LD keywords
+ * left out. The objects in an array (the instances of a multi-valued
+ * attribute) are followed under the array's path.
+ */
+export function keyPaths(obj, prefix = '') {
+  if (Array.isArray(obj)) return [...new Set(obj.flatMap((v) => keyPaths(v, prefix)))];
   if (!isObject(obj)) return [];
   return Object.entries(obj).filter(([k]) => !k.startsWith('@')).flatMap(([k, v]) => {
     const path = prefix ? `${prefix}.${k}` : k;
@@ -91,7 +96,7 @@ export function exampleProblems(subject, model, { urls, validate, errorsText }) 
     else if (plain && model.kind === 'entity') {
       // Data in key-values form may carry its @context, as one URL or a list (NGSI-LD, section 5.2.4).
       for (const context of [su.contextAlias, [su.contextExact, CORE_CONTEXT_URL]]) {
-        if (!validate({ '@context': context, ...plain })) problems.push(`${subject.name}/${model.type}/schema.json: rejects example.json with "@context": ${JSON.stringify(context)} (${errorsText(validate.errors)}); an entity schema accepts @context as a string or a list of strings`);
+        if (!validate({ ...plain, '@context': context })) problems.push(`${subject.name}/${model.type}/schema.json: rejects example.json with "@context": ${JSON.stringify(context)} (${errorsText(validate.errors)}); an entity schema accepts @context as a string or a list of strings`);
       }
     }
     for (const p of unclosedRings(kv)) problems.push(`${at('example.json')}: ${p}: the polygon ring does not close (its first and last positions must be the same, RFC 7946)`);
@@ -104,20 +109,20 @@ export function exampleProblems(subject, model, { urls, validate, errorsText }) 
   if (!isObject(norm)) return [...problems, `${f}: must be one entity, a JSON object`];
   if (isObject(kv) && norm.id !== kv.id) problems.push(`${f}: id must be example.json's id ${kv.id}`);
   for (const [name, prop] of attrs) {
-    if (!(name in norm)) continue;
+    if (!Object.hasOwn(norm, name)) continue;
     const ngsi = prop?.['x-ngsi'] ?? {};
     const declared = ngsi.type ?? 'Property';
     const instances = [norm[name]].flat();
     if (Array.isArray(norm[name]) && !ngsi.multi) problems.push(`${f}: attribute "${name}" has several instances, but schema.json does not declare x-ngsi.multi`);
     for (const inst of instances) {
       // An instance that is not an attribute object is reported with the key-values form below.
-      if (isObject(inst) && 'type' in inst && inst.type !== declared) problems.push(`${f}: attribute "${name}" is a ${inst?.type}, but schema.json makes it a ${declared}${ngsi.type ? '' : ' (no x-ngsi.type)'}`);
+      if (isObject(inst) && Object.hasOwn(inst, 'type') && inst.type !== declared) problems.push(`${f}: attribute "${name}" is a ${inst?.type}, but schema.json makes it a ${declared}${ngsi.type ? '' : ' (no x-ngsi.type)'}`);
     }
     // A date or date-time value carries its NGSI-LD type, and the type fits the value.
     const formats = declared === 'Property' ? dateFormats(prop) : [];
     for (const inst of formats.length ? instances : []) {
       const v = inst?.value;
-      const value = isObject(v) && '@value' in v ? v['@value'] : v;
+      const value = isObject(v) && Object.hasOwn(v, '@value') ? v['@value'] : v;
       const want = typedDate(value, formats);
       if (typeof value === 'string' && v?.['@type'] !== want['@type']) problems.push(`${f}: attribute "${name}": the value must be { "@type": "${want['@type']}", "@value": ${JSON.stringify(value)} }`);
     }
@@ -127,7 +132,7 @@ export function exampleProblems(subject, model, { urls, validate, errorsText }) 
   try { projected = toKeyValues(norm, { multi }); } catch (e) { return [...problems, `${f}: ${e.message}`]; }
   // Both examples describe the same entity, with the same vocabulary.
   if (isObject(kv)) for (const [name, prop] of attrs) {
-    if (prop?.['x-ngsi']?.type !== 'VocabProperty' || !(name in kv) || !(name in norm)) continue;
+    if (prop?.['x-ngsi']?.type !== 'VocabProperty' || !Object.hasOwn(kv, name) || !Object.hasOwn(norm, name)) continue;
     const vocabs = (x) => JSON.stringify([x].flat().map((i) => i?.vocab));
     if (vocabs(kv[name]) !== vocabs(norm[name])) problems.push(`${at('example.json')}: attribute "${name}": vocab ${vocabs(kv[name])} differs from example-normalized.jsonld's ${vocabs(norm[name])}`);
   }
@@ -193,7 +198,8 @@ export async function jsonldProblems(subject, model, { urls, loader, iriOf }) {
 
   if (model.kind === 'value') {
     const kv = model.examples['example.json'];
-    if (kv === undefined) return { problems, notes };
+    // An example that is not an object is already a problem of exampleProblems().
+    if (!isObject(kv)) return { problems, notes };
     // Inside an entity: as its location when the values are geometries, else as a Property (NGSI-LD core terms both).
     const geo = model.schema['x-ngsi']?.type === 'GeoProperty';
     const probe = { '@context': [su.contextExact, CORE_CONTEXT_URL], id: 'urn:ngsi-ld:Probe:1', type: 'Probe', [geo ? 'location' : 'description']: { type: geo ? 'GeoProperty' : 'Property', value: kv } };
@@ -213,10 +219,10 @@ export async function jsonldProblems(subject, model, { urls, loader, iriOf }) {
     const expanded = await jsonld.expand(norm, { documentLoader });
     const node = expanded[0] ?? {};
     for (const [name, prop] of attributesOf(model)) {
-      if (!(name in norm)) continue;
+      if (!Object.hasOwn(norm, name)) continue;
       const iri = iriOf(name);
       if (!iri) continue;
-      if (!(iri in node)) { problems.push(`${f}: attribute "${name}" does not expand to ${iri}`); continue; }
+      if (!Object.hasOwn(node, iri)) { problems.push(`${f}: attribute "${name}" does not expand to ${iri}`); continue; }
       // A VocabProperty value is an IRI: a word no context defines ends up in the NGSI-LD default context, which means nothing.
       if (prop?.['x-ngsi']?.type !== 'VocabProperty') continue;
       for (const inst of node[iri]) for (const v of inst[HAS_VOCAB] ?? []) {
