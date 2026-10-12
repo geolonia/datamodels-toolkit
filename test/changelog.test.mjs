@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { cp, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -16,7 +16,6 @@ const run = promisify(execFile);
 
 test('every file in changes/ is a valid change file', async () => {
   const fragments = await readFragments(join(ROOT, 'changes'));
-  for (const f of fragments) assert.match(f.file, /^[a-z0-9][a-z0-9._-]*\.md$/, `${f.file}: use lower-case letters, digits, dots and dashes`);
 });
 
 test('the [Unreleased] section of CHANGELOG.md is empty: entries go into changes/', async () => {
@@ -134,4 +133,15 @@ test('npm run changelog: writes CHANGELOG.md and deletes the change files, but n
   const written = await readFile(join(dir, 'CHANGELOG.md'), 'utf8');
   assert.match(written, /## \[0\.3\.11\] - 2026-10-13\n\n### Added\n\n- B\.\n\n### Fixed\n\n- Fix A\.\n\n## \[0\.3\.10\]/);
   assert.deepEqual(await readdir(join(dir, 'changes')), ['README.md']);
+});
+
+test('readFragments: a file that is not a change file is an error, not left out', async () => {
+  for (const [name, isDir] of [['Fix-A.md', false], ['fix-a.txt', false], ['feature', true]]) {
+    const dir = await mkdtemp(join(tmpdir(), 'changes-'));
+    await writeFile(join(dir, 'README.md'), '# Change files\n');
+    await writeFile(join(dir, 'ok.md'), '---\nsection: Fixed\n---\n- A.\n');
+    if (isDir) { await mkdir(join(dir, name)); await writeFile(join(dir, name, 'x.md'), '---\nsection: Fixed\n---\n- B.\n'); }
+    else await writeFile(join(dir, name), '---\nsection: Fixed\n---\n- B.\n');
+    await assert.rejects(readFragments(dir), new RegExp(`not a change file: ${name}`), name);
+  }
 });

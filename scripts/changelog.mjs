@@ -45,9 +45,20 @@ export function parseFragment(text) {
   return { section: meta.section, body };
 }
 
-/** The change files in dir: [{ file, section, body }], in name order. README.md is not one. */
+/** A change file's name: lower-case letters, digits, dots, dashes and underscores, ending in .md. */
+const NAME = /^[a-z0-9][a-z0-9._-]*\.md$/;
+
+/**
+ * The change files in dir: [{ file, section, body }], in name order. README.md is
+ * not one. Anything else that is not a change file (another extension, upper case,
+ * a folder from a branch name with a slash) is an error, so no entry is left out
+ * of a release without notice.
+ */
 export async function readFragments(dir) {
-  const names = (await readdir(dir)).filter((n) => n.endsWith('.md') && n !== 'README.md').sort();
+  const entries = (await readdir(dir, { withFileTypes: true })).filter((e) => e.name !== 'README.md');
+  const odd = entries.filter((e) => !e.isFile() || !NAME.test(e.name)).map((e) => e.name + (e.isFile() ? '' : '/'));
+  if (odd.length) throw new Error(`${dir}: not a change file: ${odd.join(', ')} (name it like fix-init-prompts.md, lower case, no folders)`);
+  const names = entries.map((e) => e.name).sort();
   const out = [];
   for (const file of names) {
     try {
