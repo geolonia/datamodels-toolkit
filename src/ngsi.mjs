@@ -14,10 +14,14 @@ export const NGSI_TYPES = ['Property', 'Relationship', 'GeoProperty', 'JsonPrope
  */
 export const WRAPPED = { JsonProperty: 'json', VocabProperty: 'vocab' };
 
+const isObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+/** What a JSON value is, for a message: null, an array, a number, ... */
+const kindOf = (v) => (v === null ? 'null' : Array.isArray(v) ? 'an array' : `a ${typeof v}`);
+
 /** The content of a {"json": ...} / {"vocab": ...} wrapper; throws when it is not exactly that. */
 function unwrapOne(k, type, v) {
   const member = WRAPPED[type];
-  if (!v || typeof v !== 'object' || Array.isArray(v) || Object.keys(v).length !== 1 || !(member in v)) {
+  if (!v || typeof v !== 'object' || Array.isArray(v) || Object.keys(v).length !== 1 || !Object.hasOwn(v, member)) {
     throw new Error(`attribute ${k}: a ${type} is {"${member}": ...} in key-values form`);
   }
   return v[member];
@@ -29,11 +33,12 @@ function unwrapOne(k, type, v) {
  * Property). Throws when an attribute of one of these types is not wrapped.
  */
 export function unwrapKeyValues(keyValues, schema) {
+  if (!isObject(keyValues)) throw new Error(`must be a JSON object, got ${kindOf(keyValues)}`);
   const out = { ...keyValues };
   for (const [k, prop] of Object.entries(schema.properties ?? {})) {
     const type = prop?.['x-ngsi']?.type;
     const member = Object.hasOwn(WRAPPED, type ?? '') ? WRAPPED[type] : undefined;
-    if (!member || !(k in out)) continue;
+    if (!member || !Object.hasOwn(out, k)) continue;
     const unwrap = (v) => unwrapOne(k, type, v);
     out[k] = prop['x-ngsi'].multi && Array.isArray(out[k]) ? out[k].map(unwrap) : unwrap(out[k]);
   }
@@ -49,6 +54,7 @@ export function unwrapKeyValues(keyValues, schema) {
  * datasetId; at most one (the default instance) may omit it.
  */
 export function toKeyValues(normalized, { multi = new Set() } = {}) {
+  if (!isObject(normalized)) throw new Error(`must be a JSON object, got ${kindOf(normalized)}`);
   const out = {};
   for (const [k, v] of Object.entries(normalized)) {
     if (k === '@context') continue;
@@ -68,16 +74,16 @@ export function toKeyValues(normalized, { multi = new Set() } = {}) {
       if (defaults > 1) throw new Error(`attribute ${k}: only one instance of a multi-valued attribute may omit datasetId`);
       continue;
     }
-    if (!v || typeof v !== 'object' || !('type' in v)) throw new Error(`attribute ${k}: not a normalized attribute object`);
+    if (!v || typeof v !== 'object' || !Object.hasOwn(v, 'type')) throw new Error(`attribute ${k}: not a normalized attribute object`);
     if (v.type === 'Relationship') { if (typeof v.object !== 'string') throw new Error(`attribute ${k}: Relationship needs a string object`); out[k] = v.object; }
     else if (v.type === 'GeoProperty') { if (!v.value || typeof v.value !== 'object' || typeof v.value.type !== 'string') throw new Error(`attribute ${k}: GeoProperty needs a GeoJSON value`); out[k] = v.value; }
     else if (Object.hasOwn(WRAPPED, v.type)) {
       const member = WRAPPED[v.type];
-      if (!(member in v)) throw new Error(`attribute ${k}: ${v.type} needs a ${member} member`);
+      if (!Object.hasOwn(v, member)) throw new Error(`attribute ${k}: ${v.type} needs a ${member} member`);
       out[k] = { [member]: v[member] };
     } else if (v.type === 'Property') {
-      if (!('value' in v)) throw new Error(`attribute ${k}: Property needs a value`);
-      out[k] = (v.value && typeof v.value === 'object' && '@type' in v.value && '@value' in v.value) ? v.value['@value'] : v.value;
+      if (!Object.hasOwn(v, 'value')) throw new Error(`attribute ${k}: Property needs a value`);
+      out[k] = (v.value && typeof v.value === 'object' && Object.hasOwn(v.value, '@type') && Object.hasOwn(v.value, '@value')) ? v.value['@value'] : v.value;
     } else throw new Error(`attribute ${k}: unknown attribute type "${v.type}"`);
   }
   return out;
