@@ -11,7 +11,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 - `datamodels nodes [--index URL] [--depth N] [--json]`: the nodes reachable from an index, with their name, address, licence, number of models and the node that links to them.
 - Both read other sites only over https and from a public address, each index once (a cycle ends), at most 50. A linked node that cannot be read is a note on standard error, not a failure.
 - The agent skill tells agents to look for an existing model with `datamodels search` before proposing one.
-- `datamodels build` writes `_headers` and, with slash IRIs, `_redirects` into the site: the content types (`application/ld+json`, `application/schema+json`, `text/csv`, `application/sql`, ...), CORS and IRI redirects that Cloudflare Pages, Cloudflare Workers static assets and Netlify read. GitHub Pages ignores both (#51).
+- `datamodels build` writes `_headers` and, with slash IRIs, `_redirects` into the site: the content types (`application/ld+json`, `application/schema+json`, `text/csv`, `application/sql`, ...), CORS and IRI redirects that Cloudflare Pages, Cloudflare Workers static assets and Netlify read. GitHub Pages ignores both (#51). Cloudflare reads at most 2,000 redirects; `build` prints a note when a node has more.
 - The Action has a `site` output, the folder with the built files, so a workflow can publish the node on another host with `deploy: 'false'`. The README shows how for Cloudflare Pages and Netlify, and what any other host must do (#51).
 
 ### Fixed

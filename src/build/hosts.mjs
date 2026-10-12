@@ -46,6 +46,16 @@ export function headersFile() {
   ].join('\n');
 }
 
+// Cloudflare (Pages and Workers static assets) accepts at most 2,000 static
+// redirects in `_redirects` (all of ours are static); Netlify has no such limit.
+export const CLOUDFLARE_REDIRECTS = 2000;
+
+/** A note for build when Cloudflare would ignore some of the redirects, or null. */
+export function redirectsNote(count) {
+  if (count <= CLOUDFLARE_REDIRECTS) return null;
+  return `_redirects has ${count} IRI redirects; Cloudflare Pages and Workers accept at most ${CLOUDFLARE_REDIRECTS}. On Cloudflare, add the rest as Bulk Redirects, or use hash IRIs.`;
+}
+
 /**
  * The `_redirects` file for the [from, to] paths of buildNode() (slash IRIs:
  * each IRI to the page that documents it), or null when there are none (hash

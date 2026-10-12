@@ -18,7 +18,7 @@ import { loadSubjects } from './load.mjs';
 import { publishCatalog } from './publish.mjs';
 import { llmsTxt } from './llms.mjs';
 import { writePages } from './pages.mjs';
-import { headersFile, redirectsFile } from './hosts.mjs';
+import { headersFile, redirectsFile, redirectsNote } from './hosts.mjs';
 import { ADAPTERS, readRefs, localRefs, refsRead, schemaPrefixes } from '../adapters/index.mjs';
 
 // Every URL here is published: one with a user name or password in it would publish them too.
@@ -119,5 +119,7 @@ export async function buildNode(dir, { out = join(dir, '_site'), now, pages: wit
   // No redirects (hash IRIs): remove the file an earlier build with slash IRIs left.
   if (redirectRules) await writeFile(join(out, '_redirects'), redirectRules);
   else await rm(join(out, '_redirects'), { force: true });
+  const tooMany = redirectsNote(result.redirects.length);
+  if (tooMany) notes.push(tooMany);
   return { node, subjects, ...result, pages, notes };
 }

@@ -353,7 +353,7 @@ jobs:
         uses: geolonia/datamodels-toolkit@7409f6c53c36a78c7154637f920105a674097efc # v0.3.6
 ```
 
-In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). Outputs: `page_url`, and `site`, the folder with the built files, for a step that publishes them elsewhere ([Other hosts](#other-hosts); new after v0.3.5). A node upgrades by changing the pinned version; Dependabot can propose it. `datamodels init` writes this workflow.
+In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). Outputs: `page_url`, and `site`, the folder with the built files, for a step that publishes them elsewhere ([Other hosts](#other-hosts); new in v0.3.7). A node upgrades by changing the pinned version; Dependabot can propose it. `datamodels init` writes this workflow.
 
 ## Other hosts
 
@@ -364,7 +364,7 @@ In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `di
 - answer an address with no page with `404.html`, status 404;
 - with slash IRIs, redirect each IRI to its page.
 
-`build` writes these rules into the site as `_headers` and `_redirects` (only with slash IRIs). Cloudflare Pages, Cloudflare Workers static assets and Netlify read both files from the folder they publish, and serve `404.html` by themselves (Workers with `"not_found_handling": "404-page"`). GitHub Pages ignores both files. On another host, such as a web server or object storage behind a CDN, set the same rules in its configuration; the two files list them. `npx wrangler pages dev _site` serves the folder locally as Cloudflare would.
+`build` writes these rules into the site as `_headers` and `_redirects` (only with slash IRIs). Cloudflare reads at most 2,000 redirects; `build` prints a note when a node has more (one per type and per attribute minted in its namespace). Cloudflare Pages, Cloudflare Workers static assets and Netlify read both files from the folder they publish, and serve `404.html` by themselves (Workers with `"not_found_handling": "404-page"`). GitHub Pages ignores both files. On another host, such as a web server or object storage behind a CDN, set the same rules in its configuration; the two files list them. `npx wrangler pages dev _site` serves the folder locally as Cloudflare would.
 
 In the workflow, the Action only builds (`deploy: 'false'`), and the next step publishes its `site` output. The repository needs a secret with a token for the host; the workflow passes nothing else secret.
 
@@ -386,7 +386,7 @@ Once: create the project (`npx wrangler pages project create my-models --product
         with:
           persist-credentials: false
       - id: node
-        uses: geolonia/datamodels-toolkit@fe0b17d9a13d2e7df59d9bc0950f9e6c94abe95e # v0.3.5
+        uses: geolonia/datamodels-toolkit@v0.3.7 # pin the commit of v0.3.7 or later: earlier releases have no site output
         with:
           deploy: 'false'
       - uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
