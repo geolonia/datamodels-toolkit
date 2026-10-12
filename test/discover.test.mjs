@@ -56,13 +56,38 @@ test('the index of an extended model is followed like a listed node', async () =
 test('a cycle: every index is read once, however deep', async () => {
   const seen = [];
   const files = {
-    [A]: { nodes: [link(B), link(A)], models: [] },
-    // The same index written another way (dot segments) is the same index.
-    [B]: { nodes: [link(A), link('https://a.example.org/x/../catalog.json')], models: [] },
+    [A]: { nodes: [link(B), link(A), link(`${B}#models`)], models: [] },
+    // The same index written another way (dot segments, a #fragment, which is
+    // not sent with a request) is the same index.
+    [B]: { nodes: [link(A), link('https://a.example.org/x/../catalog.json'), link(`${A}#top`), link(`${B}#self`)], models: [] },
   };
-  const r = await discoverNodes(A, { depth: 5, fetch: stub(files, seen) });
-  assert.deepEqual(names(r), ['a.example.org', 'b.example.org']);
-  assert.deepEqual(seen, [A, B]);
+  for (const start of [A, `${A}#top`]) {
+    seen.length = 0;
+    const r = await discoverNodes(start, { depth: 5, fetch: stub(files, seen) });
+    assert.deepEqual(names(r), ['a.example.org', 'b.example.org']);
+    assert.deepEqual(r.nodes.map((n) => n.index), [A, B]);
+    assert.deepEqual(seen, [A, B]);
+  }
+});
+
+test('a listed node keeps the address it declares, also when its index is elsewhere', async () => {
+  const CDN = 'https://cdn.example.org/catalog.json';
+  const files = {
+    [A]: { nodes: [{ url: 'https://models.example.org/', index: CDN }, { url: 'not a URL', index: B }, { url: 'http://c.example.org/', index: C }], models: [] },
+    [CDN]: { models: [model('Widget')] },
+    [B]: { models: [] },
+    [C]: { models: [] },
+  };
+  const r = await discoverNodes(A, { fetch: stub(files) });
+  // Without a publisher a node is named by the host of its address; an address
+  // that is not an https URL is left out, and the index's folder is used instead.
+  assert.deepEqual(r.nodes.map(({ name, url, index }) => ({ name, url, index })), [
+    { name: 'a.example.org', url: 'https://a.example.org/', index: A },
+    { name: 'models.example.org', url: 'https://models.example.org/', index: CDN },
+    { name: 'b.example.org', url: 'https://b.example.org/', index: B },
+    { name: 'c.example.org', url: 'https://c.example.org/models/', index: C },
+  ]);
+  assert.deepEqual(searchModels('widget', r.nodes).results.map((x) => [x.site, x.nodeUrl]), [['models.example.org', 'https://models.example.org/']]);
 });
 
 test('a linked node that cannot be read is a note; the others are still read', async () => {

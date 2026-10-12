@@ -27,11 +27,32 @@ export function indexUrl(given) {
   return new URL('catalog.json', u).href;
 }
 
-/** The indexes a catalog links to: its `nodes`, and the `extends` of its models. */
+/**
+ * An index as it is read: absolute, normalized, without a #fragment (a fragment
+ * is not sent with a request, so catalog.json#a and catalog.json are one index).
+ */
+function indexKey(url, base) {
+  const u = new URL(url, base);
+  u.hash = '';
+  return normalUrl(u.href);
+}
+
+/**
+ * The indexes a catalog links to: its `nodes`, and the `extends` of its models,
+ * as { index, url }. A listed node keeps the address it declares (`url`, which
+ * may differ from where its index is, such as a CDN); for the others `url` is null.
+ */
 function linksOf(catalog, base) {
   const out = [];
-  const add = (url) => { if (typeof url !== 'string') return; try { out.push(new URL(url, base).href); } catch { /* not a URL: nothing to follow */ } };
-  for (const n of Array.isArray(catalog.nodes) ? catalog.nodes : []) add(n?.index);
+  const add = (index, url = null) => {
+    if (typeof index !== 'string') return;
+    let key;
+    try { key = indexKey(index, base); } catch { return; /* not a URL: nothing to follow */ }
+    let address = null;
+    try { const u = typeof url === 'string' ? new URL(url) : null; if (u?.protocol === 'https:') address = u.href; } catch { /* not a URL: derived from the index */ }
+    out.push({ index: key, url: address });
+  };
+  for (const n of Array.isArray(catalog.nodes) ? catalog.nodes : []) add(n?.index, n?.url);
   for (const m of catalog.models) for (const e of Array.isArray(m?.extends) ? m.extends : []) add(e?.index);
   return out;
 }
@@ -52,10 +73,10 @@ function nameOf(catalog, url) {
  */
 export async function discoverNodes(index = DEFAULT_INDEX, { depth = 1, fetch: fetchUrl = globalThis.fetch, timeout = 15000 } = {}) {
   const get = getter(fetchUrl, timeout);
-  const start = normalUrl(indexUrl(index));
+  const start = indexKey(indexUrl(index));
   const seen = new Set([start]);
   const nodes = [], notes = [];
-  let level = [{ index: start, linkedFrom: null }];
+  let level = [{ index: start, url: null, linkedFrom: null }];
   for (let d = 0; level.length; d++) {
     const read = await Promise.all(level.map((n) => get(n.index).then((catalog) => ({ ...n, catalog }), (e) => ({ ...n, error: e.message }))));
     const next = [];
@@ -63,15 +84,14 @@ export async function discoverNodes(index = DEFAULT_INDEX, { depth = 1, fetch: f
       const problem = r.error ?? (Array.isArray(r.catalog?.models) ? null : `${r.index}: not a catalog.json (no models list)`);
       if (problem && d === 0) throw new Error(problem);
       if (problem) { notes.push(`${problem}; linked from ${r.linkedFrom}, skipped`); continue; }
-      const url = new URL('.', r.index).href;
+      const url = r.url ?? new URL('.', r.index).href;
       nodes.push({ name: nameOf(r.catalog, url), url, index: r.index, license: typeof r.catalog.license === 'string' ? r.catalog.license : null, depth: d, linkedFrom: r.linkedFrom, catalog: r.catalog });
       if (d >= depth) continue;
       for (const link of linksOf(r.catalog, r.index)) {
-        const href = normalUrl(link);
-        if (seen.has(href)) continue;
-        seen.add(href);
-        if (seen.size > MAX_NODES) { notes.push(`${href}: not read, more than ${MAX_NODES} indexes`); continue; }
-        next.push({ index: href, linkedFrom: r.index });
+        if (seen.has(link.index)) continue;
+        seen.add(link.index);
+        if (seen.size > MAX_NODES) { notes.push(`${link.index}: not read, more than ${MAX_NODES} indexes`); continue; }
+        next.push({ ...link, linkedFrom: r.index });
       }
     }
     level = next;
