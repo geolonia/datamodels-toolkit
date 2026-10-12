@@ -81,7 +81,7 @@ import { buildNode, readNode } from '../src/build/node.mjs';
 import { checkNode } from '../src/build/check.mjs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { initSettings, writeNode, publishToGitHub } from '../src/init.mjs';
+import { initSettings, writeNode, publishToGitHub, askInit, parseLanguages } from '../src/init.mjs';
 import { addModel } from '../src/add.mjs';
 import { releaseSubject } from '../src/release.mjs';
 import { upgradeNode, bumpSubject } from '../src/version.mjs';
@@ -529,11 +529,12 @@ async function init(dir, options) {
   let answers = {
     baseUrl: options.baseUrl, iris: options.iris, publisherName: options.publisher, publisherUrl: options.publisherUrl,
     license: options.license, subject: options.subject, github: options.github,
-    languages: options.languages?.split(',').map((l) => l.trim()).filter(Boolean),
+    languages: options.languages === undefined ? undefined : parseLanguages(options.languages),
   };
   // Questions only in a terminal: CI and scripts never wait for an answer.
   const interactive = !options.yes && process.stdin.isTTY && process.stdout.isTTY;
-  if (interactive) answers = await ask(answers);
+  if (interactive) answers = await askInit(answers);
+  if (!answers) throw new Exit(1, 'init cancelled');
   const missing = [['baseUrl', '--base-url'], ['publisherName', '--publisher'], ['publisherUrl', '--publisher-url'], ['subject', '--subject']].filter(([k]) => !answers[k]).map(([, o]) => o);
   if (missing.length) usage(`missing ${missing.join(', ')}`, USAGES.init);
   const settings = initSettings(Object.fromEntries(Object.entries(answers).filter(([, v]) => v !== undefined)));
@@ -551,32 +552,6 @@ async function init(dir, options) {
   }
   console.error(`${dir}: a data model node. Next: add a model under models/${settings.subject}/, then datamodels check and datamodels build.`);
   return 0;
-}
-
-// The questions of init, with @clack/prompts; an answer given as an option is not asked again.
-async function ask(given) {
-  const p = await import('@clack/prompts');
-  const answer = async (value, question) => {
-    if (value !== undefined) return value;
-    const v = await question();
-    if (p.isCancel(v)) { p.cancel('Nothing written.'); throw new Exit(1, 'init cancelled'); }
-    return v;
-  };
-  const url = (v) => (/^https?:\/\/[^/\s]+/.test(v ?? '') ? undefined : 'An http(s) URL');
-  p.intro('datamodels init: a data model node');
-  const a = { ...given };
-  a.baseUrl = await answer(a.baseUrl, () => p.text({ message: 'Base URL of the node (part of every IRI; keep it once published)', placeholder: 'https://models.example.org', validate: url }));
-  a.iris = await answer(a.iris, () => p.select({ message: 'IRI form', options: [{ value: 'hash', label: 'hash: /ns/<subject>#<Term>', hint: 'any static host, GitHub Pages' }, { value: 'slash', label: 'slash: /ns/<subject>/<Term>', hint: 'needs w3id.org or a server that redirects' }] }));
-  a.languages = await answer(a.languages, async () => String(await p.text({ message: 'Languages, comma-separated', initialValue: 'en' })).split(',').map((l) => l.trim()).filter(Boolean));
-  a.publisherName = await answer(a.publisherName, () => p.text({ message: 'Publisher (who runs the node)', placeholder: 'Example Inc.' }));
-  a.publisherUrl = await answer(a.publisherUrl, () => p.text({ message: "Publisher's web site", placeholder: 'https://example.org/', validate: url }));
-  a.license = await answer(a.license, () => p.text({ message: 'Licence of the models (SPDX)', initialValue: 'CC0-1.0' }));
-  a.subject = await answer(a.subject, () => p.text({ message: 'First subject (a group of models), for example road', validate: (v) => (/^[a-z][a-z0-9-]*$/.test(v ?? '') ? undefined : 'Lower case letters, digits and hyphens') }));
-  if (a.github === undefined && await answer(undefined, () => p.confirm({ message: 'Create a public GitHub repository with gh and turn on GitHub Pages?', initialValue: false }))) {
-    a.github = await answer(undefined, () => p.text({ message: 'Repository (owner/name)', placeholder: 'example/models' }));
-  }
-  p.outro('Writing the files.');
-  return a;
 }
 
 try { process.exitCode = await main(process.argv.slice(2)); } catch (e) {

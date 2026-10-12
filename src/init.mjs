@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, readdir, writeFile, stat } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import YAML from 'yaml';
-import { settingsProblems } from './build/node.mjs';
+import { settingsProblems, httpUrl, LANGUAGE_TAG } from './build/node.mjs';
 
 // The version of this repository's GitHub Action a new node's workflow uses:
 // the commit SHA of a release tag, with the tag as a comment, so Dependabot
@@ -42,6 +42,80 @@ export function initSettings({ baseUrl, iris = 'hash', languages = ['en'], publi
   // Checked here too, so a wrong --github stops init before it writes anything.
   if (github !== undefined && !REPO_NAME.test(github)) problems.push(`--github needs owner/name, got ${JSON.stringify(github)}`);
   return { node, subject, problems };
+}
+
+// The answer init takes when a question with a default is answered with Enter alone.
+const DEFAULTS = { languages: 'en', license: 'CC0-1.0' };
+
+/** Comma-separated language tags, as typed or given with --languages. */
+export const parseLanguages = (text) => String(text ?? '').split(',').map((l) => l.trim()).filter(Boolean);
+
+/**
+ * What is wrong with a typed answer to one question of init, or undefined:
+ * the rules of initSettings, checked while the question is still open. An
+ * empty answer to a question with a default stands for that default.
+ */
+export function answerProblem(key, text) {
+  const v = String(text ?? '').trim();
+  if (!v && key in DEFAULTS) return undefined;
+  switch (key) {
+    case 'baseUrl': return httpUrl(v) && !new URL(v).search && !new URL(v).hash ? undefined : 'An http(s) URL without a query or fragment, for example https://models.example.org';
+    case 'languages': { const tags = parseLanguages(v); return tags.length && tags.every((t) => LANGUAGE_TAG.test(t)) ? undefined : 'Language tags separated by commas, for example ja,en'; }
+    case 'publisherName': return v ? undefined : 'A name, for example Example Inc.';
+    case 'publisherUrl': return httpUrl(v) ? undefined : 'An http(s) URL, for example https://example.org/';
+    case 'subject': return SUBJECT_NAME.test(v) ? undefined : 'Lower case letters, digits and hyphens, for example road';
+    case 'github': return REPO_NAME.test(v) ? undefined : 'owner/name, for example example/models';
+    default: return undefined;
+  }
+}
+
+/** A typed answer as init uses it: trimmed, the default when empty, languages as a list. */
+export function answerValue(key, text) {
+  const v = String(text ?? '').trim() || (DEFAULTS[key] ?? '');
+  return key === 'languages' ? parseLanguages(v) : v;
+}
+
+// The text questions. None starts with a value typed in: what the user types
+// replaces the grey placeholder, and Enter alone takes the default, if any.
+const QUESTIONS = {
+  baseUrl: { message: 'Base URL of the node (part of every IRI; keep it once published)', placeholder: 'https://models.example.org' },
+  languages: { message: 'Languages, comma-separated, the main one first (Enter for en)', placeholder: 'en', defaultValue: DEFAULTS.languages },
+  publisherName: { message: 'Publisher (who runs the node)', placeholder: 'Example Inc.' },
+  publisherUrl: { message: "Publisher's web site", placeholder: 'https://example.org/' },
+  license: { message: 'Licence of the models, an SPDX id (Enter for CC0-1.0)', placeholder: 'CC0-1.0', defaultValue: DEFAULTS.license },
+  subject: { message: 'First subject (a group of models)', placeholder: 'road' },
+  github: { message: 'Repository (owner/name)', placeholder: 'example/models' },
+};
+const CANCELLED = Symbol('cancelled');
+
+/**
+ * The questions of init, with @clack/prompts; an answer given as an option is
+ * not asked again. Each answer is checked when it is given, so a wrong one can
+ * be corrected at once. `io` ({ input, output }) is for tests. Returns the
+ * answers, or null when the user cancels.
+ */
+export async function askInit(given, io = {}) {
+  const p = await import('@clack/prompts');
+  const asked = async (prompt) => { const v = await prompt; if (p.isCancel(v)) throw CANCELLED; return v; };
+  const text = async (key) => answerValue(key, await asked(p.text({ ...QUESTIONS[key], validate: (v) => answerProblem(key, v), ...io })));
+  const a = { ...given };
+  try {
+    p.intro('datamodels init: a data model node', io);
+    a.baseUrl ??= await text('baseUrl');
+    a.iris ??= await asked(p.select({ message: 'IRI form', options: [{ value: 'hash', label: 'hash: /ns/<subject>#<Term>', hint: 'any static host, GitHub Pages' }, { value: 'slash', label: 'slash: /ns/<subject>/<Term>', hint: 'needs w3id.org or a server that redirects' }], ...io }));
+    a.languages ??= await text('languages');
+    a.publisherName ??= await text('publisherName');
+    a.publisherUrl ??= await text('publisherUrl');
+    a.license ??= await text('license');
+    a.subject ??= await text('subject');
+    if (a.github === undefined && await asked(p.confirm({ message: 'Create a public GitHub repository with gh and turn on GitHub Pages?', initialValue: false, ...io }))) a.github = await text('github');
+  } catch (e) {
+    if (e !== CANCELLED) throw e;
+    p.cancel('Nothing written.', io);
+    return null;
+  }
+  p.outro('Writing the files.', io);
+  return a;
 }
 
 /** The files of a new node: [{ path, content }], paths relative to the node. licenseFile: a licence file the node already has. */

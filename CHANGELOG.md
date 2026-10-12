@@ -8,6 +8,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 - `datamodels init` writes a workflow pinned to the v0.3.7 release of the Action, and a README whose `npx` commands run v0.3.7.
 
+### Fixed
+
+- `datamodels init` questions no longer start with a value typed in: what you type replaces the shown default (`en`, `CC0-1.0`), and Enter alone keeps it. Each answer is checked as soon as you give it, so a wrong one can be corrected at once instead of stopping init at the end.
+
 ## [0.3.7] - 2026-10-12
 
 Find models across linked sites, check a node as datamodels.jp does, publish on hosts other than GitHub Pages, and say what opening hours of 0:00 to 0:00 mean.

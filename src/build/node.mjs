@@ -23,9 +23,9 @@ import { headersFile, redirectsFile, redirectsNote } from './hosts.mjs';
 import { ADAPTERS, readRefs, localRefs, refsRead, schemaPrefixes } from '../adapters/index.mjs';
 
 // Every URL here is published: one with a user name or password in it would publish them too.
-const httpUrl = (s) => { if (typeof s !== 'string') return false; try { const u = new URL(s); return ['http:', 'https:'].includes(u.protocol) && !!u.hostname && !u.username && !u.password; } catch { return false; } };
+export const httpUrl = (s) => { if (typeof s !== 'string') return false; try { const u = new URL(s); return ['http:', 'https:'].includes(u.protocol) && !!u.hostname && !u.username && !u.password; } catch { return false; } };
 // A language tag, as node.yaml lists them: en, ja, pt-BR.
-const LANGUAGE_TAG = /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/;
+export const LANGUAGE_TAG = /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/;
 const texts = (o) => !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length > 0 && Object.values(o).every((v) => typeof v === 'string' && v.trim());
 
 /** The problems of the settings of a node, as node.yaml holds them (also used by init before it writes). */

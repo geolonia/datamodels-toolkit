@@ -8,7 +8,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { checkNode } from '../src/build/index.mjs';
-import { initSettings, writeNode, publishToGitHub } from '../src/init.mjs';
+import { PassThrough, Writable } from 'node:stream';
+import { initSettings, writeNode, publishToGitHub, askInit, answerProblem, answerValue } from '../src/init.mjs';
 
 const run = promisify(execFile);
 const BIN = join(import.meta.dirname, '..', 'bin', 'datamodels.mjs');
@@ -102,6 +103,108 @@ test('init writes nothing when an answer is wrong, and asks for missing ones onl
   r = await datamodels('init', dir, '--publisher', 'Example');
   assert.equal(r.code, 2);
   assert.match(r.stderr, /^missing --base-url, --publisher-url, --subject\nusage: datamodels init /);
+});
+
+test('each init answer is checked by the rules of the final check', () => {
+  const ok = {
+    baseUrl: ['https://models.example.org', 'http://models.example.org/', ' https://example.github.io/models '],
+    languages: ['', '  ', 'en', 'ja,en', ' ja , en ', 'pt-BR'],
+    publisherName: ['Example Inc.'],
+    publisherUrl: ['https://example.org/'],
+    license: ['', 'CC0-1.0', 'CC-BY-4.0', 'ODbL-1.0'],
+    subject: ['road', 'road-2'],
+    github: ['example/models'],
+  };
+  const wrong = {
+    baseUrl: ['', 'models.example.org', 'ftp://models.example.org', 'https://models.example.org/?a=1', 'https://models.example.org/#x', 'https://user:pw@models.example.org'],
+    // enja,en: what the old prompt gave when ja,en was typed after the pre-typed en.
+    languages: ['enja,en', 'ja en', ',,', 'EN', 'japanese'],
+    publisherName: ['', '   '],
+    publisherUrl: ['', 'example.org'],
+    subject: ['', 'Road', 'road/x'],
+    github: ['', 'models', 'example/models/x'],
+  };
+  for (const [key, values] of Object.entries(ok)) for (const v of values) assert.equal(answerProblem(key, v), undefined, `${key}: ${JSON.stringify(v)}`);
+  for (const [key, values] of Object.entries(wrong)) for (const v of values) assert.equal(typeof answerProblem(key, v), 'string', `${key}: ${JSON.stringify(v)}`);
+  // An empty answer is the default; the rest is trimmed.
+  assert.deepEqual(answerValue('languages', ''), ['en']);
+  assert.deepEqual(answerValue('languages', ' ja , en '), ['ja', 'en']);
+  assert.equal(answerValue('license', ''), 'CC0-1.0');
+  assert.equal(answerValue('license', ' ODbL-1.0 '), 'ODbL-1.0');
+  assert.equal(answerValue('baseUrl', ' https://models.example.org '), 'https://models.example.org');
+  // Every answer the questions accept passes the final check.
+  for (const [key, values] of Object.entries(ok)) for (const v of values) {
+    const answers = { baseUrl: 'https://models.example.org', languages: ['en'], publisherName: 'Example', publisherUrl: 'https://example.org/', subject: 'road', [key]: answerValue(key, v) };
+    assert.deepEqual(initSettings(answers).problems, [], `${key}: ${JSON.stringify(v)}`);
+  }
+});
+
+/**
+ * Answers the questions of init as a user at a terminal would: each step waits
+ * for its text on the screen, then types its keys. Returns the answers and the screen.
+ */
+async function answerInit(steps, given = {}) {
+  const input = new PassThrough();
+  let screen = '', seen = 0;
+  const output = new Writable({ write(chunk, _, done) { screen += chunk; done(); } });
+  const result = askInit(given, { input, output });
+  result.catch(() => {});
+  for (const [text, keys] of steps) {
+    const until = Date.now() + 5000;
+    while (!screen.slice(seen).includes(text)) {
+      if (Date.now() > until) throw new Error(`no ${JSON.stringify(text)} on the screen:\n${screen.slice(seen)}`);
+      await new Promise((r) => setTimeout(r, 2));
+    }
+    seen = screen.length;
+    input.write(keys);
+  }
+  return { answers: await result, screen };
+}
+
+const ENTER = '\r', CLEAR = '\x15';
+
+test('init questions: what is typed replaces the default, Enter alone keeps it', async () => {
+  let { answers } = await answerInit([
+    ['Base URL', `https://models.example.org/${ENTER}`],
+    ['IRI form', ENTER],
+    ['Languages', `ja,en${ENTER}`],
+    ['Publisher (who', `Example${ENTER}`],
+    ["Publisher's web site", `https://example.org/${ENTER}`],
+    ['Licence', ENTER],
+    ['First subject', `road${ENTER}`],
+    ['Create a public GitHub', ENTER],
+  ]);
+  assert.deepEqual(answers, { baseUrl: 'https://models.example.org/', iris: 'hash', languages: ['ja', 'en'], publisherName: 'Example', publisherUrl: 'https://example.org/', license: 'CC0-1.0', subject: 'road' });
+  // Answers given as options are not asked again.
+  ({ answers } = await answerInit([['Languages', ENTER], ['Licence', `CC-BY-4.0${ENTER}`]], { baseUrl: 'https://models.example.org', iris: 'slash', publisherName: 'Example', publisherUrl: 'https://example.org/', subject: 'road', github: 'example/models' }));
+  assert.deepEqual([answers.languages, answers.license, answers.iris], [['en'], 'CC-BY-4.0', 'slash']);
+});
+
+test('init questions: a wrong answer is refused at once and can be typed again', async () => {
+  const { answers, screen } = await answerInit([
+    ['Base URL', `models.example.org${ENTER}`],
+    ['An http(s) URL without a query', `${CLEAR}https://models.example.org${ENTER}`],
+    ['IRI form', ENTER],
+    ['Languages', `ja en${ENTER}`],
+    ['Language tags separated by commas', `${CLEAR}ja,en${ENTER}`],
+    ['Publisher (who', ENTER],
+    ['A name, for example', `Example${ENTER}`],
+    ["Publisher's web site", `https://example.org/${ENTER}`],
+    ['Licence', ENTER],
+    ['First subject', `Road${ENTER}`],
+    ['Lower case letters', `${CLEAR}road${ENTER}`],
+    ['Create a public GitHub', `y${ENTER}`],
+    ['Repository (owner/name)', `models${ENTER}`],
+    ['owner/name, for example', `${CLEAR}example/models${ENTER}`],
+  ]);
+  assert.deepEqual(answers, { baseUrl: 'https://models.example.org', iris: 'hash', languages: ['ja', 'en'], publisherName: 'Example', publisherUrl: 'https://example.org/', license: 'CC0-1.0', subject: 'road', github: 'example/models' });
+  assert.match(screen, /Writing the files\./);
+});
+
+test('init questions: cancelling returns no answers', async () => {
+  const { answers, screen } = await answerInit([['Base URL', '\x03']]);
+  assert.equal(answers, null);
+  assert.match(screen, /Nothing written\./);
 });
 
 /** A stand-in for running git and gh: records each command, answers from `answers`, fails on `fail`. */
