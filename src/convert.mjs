@@ -181,12 +181,13 @@ const columnsRead = (transform) => COLUMNS[transform ?? 'text'] ?? (transform ==
 export const exponentForm = (v) => /^[+-]?\d+(\.\d+)?[eE][+-]?\d+$/.test(String(v ?? '').trim());
 
 // Every mapping a conversion uses: the mapping itself and those it reaches through via.
+// A via target that is not a mapping (an empty file, a list) is not followed; mappingProblems reports it.
 function reachable(mapping, mappings) {
   const out = [['', mapping]];
   const seen = new Set();
   for (let i = 0; i < out.length; i++) {
     for (const rule of Object.values(out[i][1].fields ?? {})) {
-      if (typeof rule?.via !== 'string' || seen.has(rule.via) || !Object.hasOwn(mappings, rule.via)) continue;
+      if (typeof rule?.via !== 'string' || seen.has(rule.via) || !Object.hasOwn(mappings, rule.via) || !isObject(mappings[rule.via])) continue;
       seen.add(rule.via); out.push([rule.via, mappings[rule.via]]);
     }
   }
@@ -225,6 +226,7 @@ export function mappingProblems(mapping, mappings = {}) {
       }
       // An empty via (via: or via: "") names no mapping; convert would skip the field without a word.
       if (rule.via !== undefined && (typeof rule.via !== 'string' || !rule.via.trim() || !Object.hasOwn(mappings, rule.via))) out.push(`${where}: no mapping ${typeof rule.via === 'string' && rule.via ? rule.via : JSON.stringify(rule.via)}`);
+      else if (rule.via !== undefined && !isObject(mappings[rule.via])) out.push(`${where}: via ${rule.via} is empty or not a mapping`);
     }
   }
   return out;
