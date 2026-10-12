@@ -9,7 +9,7 @@ Command-line tools for the [datamodels.jp](https://datamodels.jp) catalog.
 Node.js 24 or later. Until the package is on npm, run a release from GitHub:
 
 ```bash
-npx github:geolonia/datamodels-toolkit#v0.3.5 convert <subject>/<Type> <mapping> <file.csv>
+npx github:geolonia/datamodels-toolkit#v0.3.6 convert <subject>/<Type> <mapping> <file.csv>
 ```
 
 ## convert
@@ -223,7 +223,7 @@ The pages are plain HTML in a monospace font, with no JavaScript, so they read w
 - One page per subject. With hash IRIs it is the namespace document (`/ns/<subject>`, written as `ns/<subject>.html`), with an anchor for every type and attribute, so every IRI opens on it.
 - One page per model (`/models/<subject>/<Type>/`), with an anchor per attribute, the standards it maps (`mapping/*.yaml`, with links to the tables) and its notes (`notes.yaml`: the sources, the decisions and their reasons), so readers can judge how well-founded it is.
 - For a model that a released version had and the current one does not (renamed or removed): a page at its old address that says which versions had it, links its last schema and @context, names the current model with the same type IRI when there is one, and lists the current models. The subject page keeps an anchor for every term that earlier versions minted, so their hash IRIs still open on it. Both come from the release snapshots (`datamodels release`, `bump`).
-- `/adapters/`: what each adapter writes and its file for every model. A model page has a Download line with its files and a link to its row there, without naming a product.
+- `/adapters/`: one section per adapter (`#csv`, `#table-schema`, `#ai`, `#postgis`): what its file is, how to use it and where to get it. It does not list the files by model, so it does not grow with the node. A model page has a Download row with a button per file and a link to this page, without naming a product.
 - `404.html`: what GitHub Pages and most static hosts show for an address with no page (for example the page of a model that a new version renamed). One page at the root, in the node's first language with the other languages' texts, linking to the index, `catalog.json` and every model.
 
 One set of pages per language of the node: the first language at the base URL (where the IRIs open), each other one under `/<lang>/` (for example `/en/`), with a link to switch in the header. Each page shows the node's texts in its language, falling back to the first language that has one; the fixed texts are in Japanese and English (English for other languages). When English is not the first language, `catalog.json` lists the English pages as `pageUrlEn`, as datamodels.jp does. The pages follow the device's light or dark setting.
@@ -304,7 +304,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: geolonia/datamodels-toolkit@fe0b17d9a13d2e7df59d9bc0950f9e6c94abe95e # v0.3.5
+      - uses: geolonia/datamodels-toolkit@7409f6c53c36a78c7154637f920105a674097efc # v0.3.6
         with:
           deploy: 'false'
 
@@ -326,7 +326,7 @@ jobs:
         with:
           persist-credentials: false
       - id: node
-        uses: geolonia/datamodels-toolkit@fe0b17d9a13d2e7df59d9bc0950f9e6c94abe95e # v0.3.5
+        uses: geolonia/datamodels-toolkit@7409f6c53c36a78c7154637f920105a674097efc # v0.3.6
 ```
 
 In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). A node upgrades by changing the pinned version; Dependabot can propose it. `datamodels init` writes this workflow.

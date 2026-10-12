@@ -60,8 +60,10 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
   };
   const models = [];
   const formerModels = [];
-  // The adapters' files, by model: one row per model on the adapters page. The model page links each file and that row (product-neutral).
-  const adapterRows = [];
+  // Whether any model has adapter files: then the node has an adapters page, which explains each
+  // adapter (it does not list the files by model, so it does not grow with the node). The model
+  // page has a button per file and links that page (product-neutral).
+  let hasAdapterFiles = false;
   const adaptersPage = `${prefixOf(lang)}adapters/`;
   const out = subjects.map((subject) => {
     const su = urls.subjectUrls(subject);
@@ -105,8 +107,8 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
       // The files themselves, to download from the model page; the adapters page explains them.
       m.downloads = adapters.map((a, i) => (files[i] ? { url: files[i], label: texts(a.label)[0] ?? { lang, text: a.name } } : null)).filter(Boolean);
       if (files.some(Boolean)) {
-        m.adapters = `${adaptersPage}#${`${subject.name}-${model.type}`.toLowerCase()}`;
-        adapterRows.push({ anchor: `${subject.name}-${model.type}`.toLowerCase(), name: `${subject.name}/${model.type}`, page: m.page, files: files.map((u) => (u ? { url: u, name: u.split('/').pop() } : null)) });
+        m.adapters = adaptersPage;
+        hasAdapterFiles = true;
       }
       models.push(m);
       return m;
@@ -131,8 +133,8 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
       models: subjectModels, termGroups, termExample: termGroups[0]?.terms[0]?.iri ?? '',
     };
   });
-  const adapterList = adapters.map((a) => ({ name: a.name, label: texts(a.label)[0] ?? { lang, text: a.name }, note: texts(a.note)[0] ?? null }));
-  return { site, t, subjects: out, models, formerModels, adapters: adapterList, adapterRows };
+  const adapterList = adapters.map((a) => ({ name: a.name, label: texts(a.label)[0] ?? { lang, text: a.name }, note: texts(a.note)[0] ?? null, use: texts(a.use)[0] ?? null }));
+  return { site, t, subjects: out, models, formerModels, adapters: adapterList, hasAdapterFiles };
 }
 
 /** Write the pages into `out`, one set per language. Returns the paths written, relative to `out`. */
