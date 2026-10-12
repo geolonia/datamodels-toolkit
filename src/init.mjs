@@ -13,8 +13,8 @@ import { settingsProblems, httpUrl, LANGUAGE_TAG } from './build/node.mjs';
 // the commit SHA of a release tag, with the tag as a comment, so Dependabot
 // can propose newer releases. A release updates both (it cannot point to
 // itself: the tag is made after the release commit).
-export const ACTION_REF = '437909f7ddf1de1aee43a07ca34d54a706dcdb1e';
-export const ACTION_VERSION = 'v0.3.7';
+export const ACTION_REF = 'bea3f9317d19043bac3ddbfd29702c8ac4f0287a';
+export const ACTION_VERSION = 'v0.3.8';
 const CHECKOUT = 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1';
 const GITIGNORE = ['_site/', 'node_modules/'];
 const SUBJECT_NAME = /^[a-z][a-z0-9-]*$/;
