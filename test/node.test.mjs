@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -175,6 +175,10 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   // Only the page: the adapters' files and their entries in catalog.json stay.
   assert.equal(await read('adapters/csv/road/RoadPatrol.csv'), 'id,route\n');
   assert.deepEqual(Object.keys(built.models[0].adapters), ['csv', 'table-schema', 'ai', 'postgis']);
+  // A page that cannot be read is an error, not "no page": a stale page could otherwise stay published.
+  await mkdir(join(dir, '_site', 'de', 'adapters', 'index.html'), { recursive: true });
+  await assert.rejects(buildNode(dir), { code: 'EISDIR' });
+  await rm(join(dir, '_site', 'de'), { recursive: true });
   const missing = await read('404.html');
   assert.match(missing, /<html lang="ja">/);
   assert.match(missing, /<h1 lang="ja">ページが見つかりません<\/h1>/);

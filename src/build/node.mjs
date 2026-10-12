@@ -112,7 +112,11 @@ async function removeOldAdaptersPages(out) {
   const dirs = (await readdir(out, { withFileTypes: true })).filter((d) => d.isDirectory() && LANGUAGE_TAG.test(d.name)).map((d) => d.name);
   await Promise.all(['', ...dirs].map(async (dir) => {
     const file = join(out, dir, 'adapters', 'index.html');
-    const html = await readFile(file, 'utf8').catch(() => '');
+    // No page there is the usual case; any other read error fails the build, or a stale page could stay published.
+    const html = await readFile(file, 'utf8').catch((err) => {
+      if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return '';
+      throw err;
+    });
     if (TOOLKIT_PAGE.test(html)) await rm(file, { force: true });
   }));
 }
