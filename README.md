@@ -4,6 +4,8 @@ Command-line tools and a GitHub Action for the [datamodels.jp](https://datamodel
 
 **Documentation: [datamodels.jp/en/toolkit](https://datamodels.jp/en/toolkit/)** ([日本語](https://datamodels.jp/toolkit/)), with every command and option in the [command reference](https://datamodels.jp/en/toolkit/reference).
 
+**To publish data models of your own** as a website, use the [GitHub Action](#github-action).
+
 ## Install
 
 Node.js 24 or later. Run a release of [`@geolonia/datamodels`](https://www.npmjs.com/package/@geolonia/datamodels) with `npx`:
@@ -35,7 +37,33 @@ npx @geolonia/datamodels@0.3.10 init my-models
 
 ## GitHub Action
 
-This repository is also a GitHub Action, listed on the [GitHub Marketplace](https://github.com/marketplace/actions/data-model-node-datamodels-jp): it checks a node on pull requests, and on `main` builds it and deploys it to GitHub Pages. `datamodels init` writes this workflow:
+**What it is for.** A data model describes one kind of data, for example an evacuation site or a road closure: which attributes it has, what each one means, and in which format. When your city, company or project defines data models of its own, other people and their programs need to find them at web addresses that never change, in formats that tools can read (JSON Schema and a JSON-LD `@context`), with a page that people can read.
+
+This Action does that for you. You keep your models in a GitHub repository, and every change goes online as a website on GitHub Pages: no server, and every change checked before it is published.
+
+- **On every pull request** it checks the models: the schemas, the examples, and that each term means what the schema says. A version that is already published must stay exactly the same. A mistake shows up as a failed check, before anything goes online.
+- **On every push to `main`** it builds the website and publishes it on GitHub Pages: a page for each model, the JSON Schemas, the `@context` files, the vocabulary, and files for spreadsheets, AI and PostgreSQL.
+
+You need it only to publish data models of your own. To use existing models, start at [datamodels.jp](https://datamodels.jp/en/).
+
+**Start in three steps** ([Starting a site](https://datamodels.jp/en/toolkit/start), step by step):
+
+1. Run `npx @geolonia/datamodels@0.3.10 init my-models`. It asks a few questions (the web address, who publishes, the first subject) and writes the repository: the settings (`node.yaml`), a folder for your models (`models/`) and the workflow with this Action.
+2. Put the folder on GitHub, and in the repository settings set Pages to deploy from GitHub Actions. With the [GitHub CLI](https://cli.github.com/), `init --github my-org/my-models` does both.
+3. Add your models ([Your site's models](https://datamodels.jp/en/toolkit/models)). Each push to `main` updates the site.
+
+Sites that run on it: [models.geolonia.com](https://models.geolonia.com/) ([repository](https://github.com/geolonia/models)) and [models.gtt-project.org](https://models.gtt-project.org/) ([repository](https://github.com/gtt-project/models)).
+
+**The workflow.** `init` writes it, so you do not need to write it yourself. Its main step:
+
+```yaml
+- uses: geolonia/datamodels-toolkit@0891a457179b20d3937d46ad7dc14d88dfad25e5 # v0.3.10
+  with:
+    deploy: 'false'   # on pull requests: check and build, publish nothing
+```
+
+<details>
+<summary>The whole workflow that <code>init</code> writes</summary>
 
 ```yaml
 # .github/workflows/publish.yml
@@ -83,7 +111,9 @@ jobs:
         uses: geolonia/datamodels-toolkit@0891a457179b20d3937d46ad7dc14d88dfad25e5 # v0.3.10
 ```
 
-In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). Outputs: `page_url`, and `site`, the folder with the built files, for a step that publishes them on [another host](https://datamodels.jp/en/toolkit/hosts). `datamodels upgrade` moves the pin to a newer release, and Dependabot can propose it ([Checking and building](https://datamodels.jp/en/toolkit/check#action)).
+</details>
+
+Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). Outputs: `page_url`, and `site`, the folder with the built files, for a step that publishes them on [another host](https://datamodels.jp/en/toolkit/hosts). `datamodels upgrade` moves the pin to a newer release, and Dependabot can propose it ([Checking and building](https://datamodels.jp/en/toolkit/check#action)).
 
 ## Build library
 
