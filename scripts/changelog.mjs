@@ -16,7 +16,9 @@
 // the compare links at the bottom, and deletes the change files. The summary
 // line of the release is written by hand under the new heading.
 import { readdir, readFile, writeFile, unlink } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import YAML from 'yaml';
 
@@ -116,8 +118,8 @@ async function main(argv) {
   console.log(`Write the summary line of the release under "## [${version}]".`);
 }
 
-// import.meta.main: Node 24.2 or later.
-if (import.meta.main) {
+// Run as a script, not imported by the tests (import.meta.main needs Node 24.2).
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   main(process.argv.slice(2)).catch((e) => {
     console.error(`changelog: ${e.message}`);
     process.exitCode = 1;

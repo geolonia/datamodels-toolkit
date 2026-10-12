@@ -2,7 +2,7 @@
 
 All notable changes to `@geolonia/datamodels`. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version numbers follow [Semantic Versioning](https://semver.org/). Before 1.0.0, a minor version may change the command line.
 
-Entries for the next release wait in [`changes/`](changes/), one file per change; the release folds them in here ([`changes/README.md`](changes/README.md)). Do not add them under Unreleased.
+Entries for the next release wait in [`changes/`](https://github.com/geolonia/datamodels-toolkit/tree/main/changes), one file per change; the release folds them in here ([`changes/README.md`](https://github.com/geolonia/datamodels-toolkit/blob/main/changes/README.md)). Do not add them under Unreleased.
 
 ## [Unreleased]
 
