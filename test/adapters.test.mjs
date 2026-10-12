@@ -9,7 +9,7 @@ import { mkdtemp, writeFile, readFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { catalogUrls, loadSubjects, buildNode } from '../src/build/index.mjs';
+import { catalogUrls, loadSubjects, buildNode, nodeAdapters } from '../src/build/index.mjs';
 import { ADAPTERS, localRefs, readRefs } from '../src/adapters/index.mjs';
 import { columnsOf, shortTitle, snake } from '../src/adapters/model.mjs';
 import { fieldsOf, tableSchemaOf, xsdPattern } from '../src/adapters/table-schema/index.mjs';
@@ -220,8 +220,7 @@ test('build: the schemas of other nodes are read online; a model whose schemas c
   const offline = await buildNode(dir, { out: join(dir, 'offline'), fetch: async () => { throw new Error('offline'); } });
   assert.match(offline.notes[0], /no adapter files for the models that use it: https:\/\/datamodels\.jp\/schema\/common\/JapaneseAddress\/v1\.0\.0\.json could not be read/);
   assert.equal(offline.catalog.models[0].adapters, undefined);
-  assert.ok(!offline.pages.includes('adapters/index.html'), 'no adapters page without files');
-  assert.doesNotMatch(await readFile(join(dir, 'offline', 'models', 'road', 'RoadPatrol', 'index.html'), 'utf8'), /<dt>Adapters<\/dt>/);
+  assert.doesNotMatch(await readFile(join(dir, 'offline', 'models', 'road', 'RoadPatrol', 'index.html'), 'utf8'), /<dt>Download<\/dt>|About these files/, 'no Download row without files');
 });
 
 // Opt-in: DATAMODELS_TEST_POSTGIS=<container> with a running postgis/postgis image whose init has finished.
@@ -419,8 +418,18 @@ test('AI: the keywords next to anyOf hold in every branch', () => {
   assert.equal(strict({ type: 'string', anyOf: [{ type: 'string', format: 'date' }] }, 'd').anyOf[0].format, 'date');
 });
 
-test('every adapter says what its file is and how to use it, in Japanese and English, for the adapters page', () => {
-  for (const a of ADAPTERS) for (const field of ['label', 'note', 'use']) {
+test('every adapter has its label and says what its file is, in Japanese and English', () => {
+  for (const a of ADAPTERS) for (const field of ['label', 'note']) {
     assert.ok(a[field]?.ja && a[field]?.en, `${a.name}: ${field}`);
+  }
+});
+
+test('nodeAdapters (public): each bound adapter keeps its name, label and note', async () => {
+  const { adapters } = await nodeAdapters([], { urls: catalogUrls('https://models.example.org'), languages: ['en'], offline: true });
+  assert.deepEqual(adapters.map((a) => a.name), ADAPTERS.map((a) => a.name));
+  for (const [i, a] of adapters.entries()) {
+    assert.deepEqual([a.label, a.note], [ADAPTERS[i].label, ADAPTERS[i].note], a.name);
+    assert.equal(typeof a.urlFor, 'function');
+    assert.equal(typeof a.content, 'function');
   }
 });

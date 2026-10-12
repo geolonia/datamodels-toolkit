@@ -58,7 +58,12 @@ export async function loadSubjects(modelsDir, { urls, languages = ['ja', 'en'], 
       // Correspondence tables to external standards (mapping/<name>.yaml).
       const mappings = [];
       const mdirMapping = join(mdir, 'mapping');
-      if (await isDir(mdirMapping)) for (const f of (await readdir(mdirMapping)).sort()) if (f.endsWith('.yaml')) mappings.push({ name: f.replace(/\.yaml$/, ''), ...(await readYaml(join(mdirMapping, f))) });
+      if (await isDir(mdirMapping)) for (const f of (await readdir(mdirMapping)).sort()) if (f.endsWith('.yaml')) {
+        // The file name is the name (via and the published URL use it); fileKeys lets check reject a name: written in the file.
+        const data = (await readYaml(join(mdirMapping, f))) ?? {};
+        const fileKeys = data && typeof data === 'object' && !Array.isArray(data) ? Object.keys(data) : [];
+        mappings.push({ ...data, name: f.replace(/\.yaml$/, ''), fileKeys });
+      }
       // Known extensions by other organisations (extensions/<name>.yaml).
       const extensions = [];
       const mdirExt = join(mdir, 'extensions');

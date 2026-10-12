@@ -181,12 +181,13 @@ const columnsRead = (transform) => COLUMNS[transform ?? 'text'] ?? (transform ==
 export const exponentForm = (v) => /^[+-]?\d+(\.\d+)?[eE][+-]?\d+$/.test(String(v ?? '').trim());
 
 // Every mapping a conversion uses: the mapping itself and those it reaches through via.
+// A via target that is not a mapping (an empty file, a list) is not followed; mappingProblems reports it.
 function reachable(mapping, mappings) {
   const out = [['', mapping]];
   const seen = new Set();
   for (let i = 0; i < out.length; i++) {
     for (const rule of Object.values(out[i][1].fields ?? {})) {
-      if (!rule?.via || seen.has(rule.via) || !mappings[rule.via]) continue;
+      if (typeof rule?.via !== 'string' || seen.has(rule.via) || !Object.hasOwn(mappings, rule.via) || !isObject(mappings[rule.via])) continue;
       seen.add(rule.via); out.push([rule.via, mappings[rule.via]]);
     }
   }
@@ -216,13 +217,16 @@ export function mappingProblems(mapping, mappings = {}) {
       const [min, max] = TRANSFORMS.includes(rule.transform ?? 'text') ? columnsRead(rule.transform) : [];
       const span = max === Infinity ? `at least ${min} columns` : min === max ? `exactly ${min} column` : `${min} to ${max} columns`;
       if (min && rule.column !== undefined && (cols.length < min || cols.length > max)) out.push(`${where}: ${rule.transform ? `transform ${rule.transform}` : 'a rule without a transform'} reads ${span}, got ${cols.length}`);
-      if (rule.transform === 'flags' && (!rule.values || typeof rule.values !== 'object' || Array.isArray(rule.values))) out.push(`${where}: transform flags needs values, as column: value`);
+      // flags without values would read no column at all.
+      if (rule.transform === 'flags' && (!isObject(rule.values) || !Object.keys(rule.values).length)) out.push(`${where}: transform flags needs values, as column: value`);
       if (rule.values !== undefined && rule.transform !== 'flags') {
         if (!isObject(rule.values) || !Object.keys(rule.values).length) out.push(`${where}: values must give each text of the column its value, such as { 病院: hospital }`);
         else if (TRANSFORMS.includes(rule.transform ?? 'text') && !WITH_VALUES.includes(rule.transform ?? 'text')) out.push(`${where}: transform ${rule.transform} takes no values (values work without a transform, with split and with yesno)`);
         else if (rule.transform === 'yesno' && Object.values(rule.values).some((v) => typeof v !== 'boolean')) out.push(`${where}: the values of transform yesno must be true or false`);
       }
-      if (rule.via && !mappings[rule.via]) out.push(`${where}: no mapping ${rule.via}`);
+      // An empty via (via: or via: "") names no mapping; convert would skip the field without a word.
+      if (rule.via !== undefined && (typeof rule.via !== 'string' || !rule.via.trim() || !Object.hasOwn(mappings, rule.via))) out.push(`${where}: no mapping ${typeof rule.via === 'string' && rule.via ? rule.via : JSON.stringify(rule.via)}`);
+      else if (rule.via !== undefined && !isObject(mappings[rule.via])) out.push(`${where}: via ${rule.via} is empty or not a mapping`);
     }
   }
   return out;

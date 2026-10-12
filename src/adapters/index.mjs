@@ -7,7 +7,7 @@
 // argument, `context` (src/adapters/model.mjs): an adapter only adds files, its
 // output is rebuilt with the node and is not covered by the promise that
 // published files never change, and model pages stay product-neutral (they
-// link the node's /adapters/ page).
+// link datamodels.jp's explanation of the files).
 import { refsOf } from './model.mjs';
 import { publicFetch } from './net.mjs';
 import csv from './csv/index.mjs';

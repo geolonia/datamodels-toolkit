@@ -80,7 +80,7 @@ export function catalogEntry(subject, model, { urls, languages = ['ja', 'en'], a
     exampleUrls: Object.keys(model.examples).sort().map((f) => `${mu.examples}${f}`),
     ...(model.mappings?.length ? { mappingUrls: model.mappings.map((m) => `${mu.mapping}${m.name}.yaml`) } : {}),
     // The same files with the standard each one maps, so a tool need not fetch them to show it.
-    ...(model.mappings?.length ? { mappings: model.mappings.map((m) => ({ url: `${mu.mapping}${m.name}.yaml`, standard: { ja: m.standard?.name?.ja ?? m.name, en: m.standard?.name?.en ?? m.name } })) } : {}),
+    ...(model.mappings?.length ? { mappings: model.mappings.map((m) => ({ url: `${mu.mapping}${m.name}.yaml`, standard: Object.fromEntries(languages.map((l) => [l, m.standard?.name?.[l] ?? m.name])) })) } : {}),
     attributes: attributeEntries(model, { urls, languages }),
     // Attributes other organisations added under their own IRIs, as their owners reported them (not reviewed).
     ...(model.extensions?.length ? { extensions: model.extensions.map((ext) => extensionEntry(ext, { languages })) } : {}),

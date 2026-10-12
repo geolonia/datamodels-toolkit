@@ -37,7 +37,7 @@ It reads `catalog.json`, the model's schema and the mapping file from the site, 
 - A field with `column` (one column or a list), an optional `transform`, a constant `value`, or `via` is converted.
 - The `convert.id` template names the entities: `{attribute}` is that attribute's value in the row (`{address.localGovernmentCode}` for a field of a value). A template that is only one value, such as `"{id}"`, takes the value as it is; inside a longer id a value is URL-encoded. A field `id` with a `column` gives the entity id as it is, when there is no template.
 - Fields with only `to` are documentation.
-- A field name with a dot fills a field of a value: `address.postalCode: { column: 郵便番号 }` (only in mapping files of your own; the catalog's mapping files use `via`).
+- A field name with a dot fills a field of a value: `address.postalCode: { column: 郵便番号 }`. The catalog's mapping files mostly use `via` instead, so that several models share the rules for an address.
 
 | `transform` | Columns | What it makes |
 |---|---|---|
@@ -225,7 +225,7 @@ datamodels build             # the node in the current directory, into _site/
 datamodels build my-node --out public
 ```
 
-A node is a folder with `node.yaml` and `models/`. `models/` is laid out as in [geolonia/datamodels](https://github.com/geolonia/datamodels/tree/main/models): one folder per subject with `subject.yaml` and `context.jsonld`, and one folder per model with `schema.json`, `catalog.yaml` and `examples/`. A node needs only one language and has no mapping files or ADOPTERS files ([what a node publishes](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
+A node is a folder with `node.yaml` and `models/`. `models/` is laid out as in [geolonia/datamodels](https://github.com/geolonia/datamodels/tree/main/models): one folder per subject with `subject.yaml` and `context.jsonld`, and one folder per model with `schema.json`, `catalog.yaml` and `examples/`. A node needs only one language and has no ADOPTERS files; mapping files (`mapping/*.yaml`) are optional ([what a node publishes](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
 
 ```yaml
 # node.yaml
@@ -236,9 +236,10 @@ publisher: { name: { en: Example Inc. }, url: https://example.org/ }
 license: CC0-1.0    # required; licenseUrl is optional
 nodes:              # optional: nodes you know; a context may import theirs
   - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
+prerelease: true    # optional: published versions may still be corrected (see check --base)
 ```
 
-It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples, `llms.txt`, the pages and the adapters' files: for every entity model the files of [export](#export) at `/adapters/<name>/<subject>/<Type>.<ext>` (`csv`, `table-schema`, `ai`, `postgis`), listed under `adapters` in the model's entry in `catalog.json`, as on datamodels.jp. Schemas that a model refers to on another node (such as datamodels.jp's JapaneseAddress) are read online, only from the `schema/` folder of a node listed under `nodes` in `node.yaml` (`extend` adds it); when one is elsewhere or cannot be read, that model gets no adapter files and `build` says so (`check --offline` reads none). Adapter files are rebuilt every time and are not covered by the promise that published files never change. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`).
+It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples, `llms.txt`, the pages and the adapters' files: for every entity model the files of [export](#export) at `/adapters/<name>/<subject>/<Type>.<ext>` (`csv`, `table-schema`, `ai`, `postgis`), listed under `adapters` in the model's entry in `catalog.json`, as on datamodels.jp. Schemas that a model refers to on another node (such as datamodels.jp's JapaneseAddress) are read online, only from the `schema/` folder of a node listed under `nodes` in `node.yaml` (`extend` adds it); when one is elsewhere or cannot be read, that model gets no adapter files and `build` says so (`check --offline` reads none). Adapter files are rebuilt every time and are not covered by the promise that published files never change. A model page has a Download row with a button per file, without naming a product, and an "About these files" link to the one explanation of the files on datamodels.jp ([ja](https://datamodels.jp/adapters/#downloads), [en](https://datamodels.jp/en/adapters/#downloads) and any other language); the node has no page of its own for that. `build` does not empty the output folder, but it removes an `adapters/index.html` (and `<lang>/adapters/index.html`) that an older version wrote, so it is no longer published. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`).
 
 The pages are plain HTML in a monospace font, with no JavaScript, so they read well with `curl` too ([Eleventy](https://www.11ty.dev/) writes them):
 
@@ -246,7 +247,6 @@ The pages are plain HTML in a monospace font, with no JavaScript, so they read w
 - One page per subject. With hash IRIs it is the namespace document (`/ns/<subject>`, written as `ns/<subject>.html`), with an anchor for every type and attribute, so every IRI opens on it.
 - One page per model (`/models/<subject>/<Type>/`), with an anchor per attribute, the standards it maps (`mapping/*.yaml`, with links to the tables) and its notes (`notes.yaml`: the sources, the decisions and their reasons), so readers can judge how well-founded it is.
 - For a model that a released version had and the current one does not (renamed or removed): a page at its old address that says which versions had it, links its last schema and @context, names the current model with the same type IRI when there is one, and lists the current models. The subject page keeps an anchor for every term that earlier versions minted, so their hash IRIs still open on it. Both come from the release snapshots (`datamodels release`, `bump`).
-- `/adapters/`: one section per adapter (`#csv`, `#table-schema`, `#ai`, `#postgis`): what its file is, how to use it and where to get it. It does not list the files by model, so it does not grow with the node. A model page has a Download row with a button per file and a link to this page, without naming a product.
 - `404.html`: what GitHub Pages and most static hosts show for an address with no page (for example the page of a model that a new version renamed). One page at the root, in the node's first language with the other languages' texts, linking to the index, `catalog.json` and every model.
 
 It also writes `_headers` and, with slash IRIs, `_redirects`: the content types, CORS and IRI redirects for hosts other than GitHub Pages ([Other hosts](#other-hosts)).
@@ -260,6 +260,7 @@ Every page links to `catalog.json` (`<link rel="alternate" type="application/jso
 ```bash
 datamodels check             # the node in the current directory
 datamodels check --offline   # without the network
+datamodels check --base origin/main --all-released   # in a pull request, as datamodels.jp does
 ```
 
 The checks a node runs in CI before it publishes:
@@ -270,11 +271,24 @@ The checks a node runs in CI before it publishes:
 - `example-normalized.jsonld`, when a model has one, follows the schema: each attribute has the `x-ngsi.type` of the schema (`Property` without one) and several instances only with `x-ngsi.multi`, a date or date-time value carries `"@type": "Date"` or `"DateTime"`, its `id` and `vocab` values are those of `example.json`, its key-values form is valid, and its `@context` is a list with the alias URL of the subject's major version (`v<major>.jsonld`, for example `v1.jsonld`).
 - A JSON-LD processor expands `example-normalized.jsonld`: each attribute to its IRI and the type to the model's type IRI, a `vocab` value to a defined IRI (not the NGSI-LD default context), and nothing is lost when it is compacted again. The example of a value type is tried as the value of an attribute. The vocabulary must expand too. The node's own @contexts come from the build, offline too; the NGSI-LD core context v1.8 comes with the toolkit; any other is read online, and only noted when it cannot be read.
 - Every entity type and attribute is a term of the subject's `@context` (or an NGSI-LD core term such as `location`), and expands to the IRI in the schema (`x-iri`). Otherwise JSON-LD drops the attribute, or gives it another meaning. A term from a context imported by URL is checked online; offline it is only noted.
+- Each mapping file (`mapping/*.yaml`) is a correspondence table: a `standard` with a `name` (and optionally `url`, `license`, `note`), and for each field of the model a row with `to`, the item of the standard (`null` when it has none), and an optional `note`. Its texts are in the node's languages, and a key that is not a language tag is a text that YAML cut at a comma (quote it). A row may also carry the conversion rules of [convert](#convert), checked as convert applies them: the transform names, the columns each transform reads, `values`, one of `column`, `value` and `via`, a `convert.id` template, a field name with a dot (each part a member of the value before it). `via` names another mapping file of the node (`<subject>/<Type>/<name>`), and the files that `via` connects do not form a circle. A row for a position in an array (`coordinates[2]`) only documents it. Unknown keys are reported, so a typo does not go unseen.
 - Release snapshots in `models/<subject>/releases/vX.Y.Z/`, where the node keeps them, hold exactly what the sources produce.
 - An exact version (`v0.1.0`) that is already online is served unchanged. One that is not online yet is new.
 - A model does not redefine a term of a model it `extends`: the same name keeps the same IRI.
 
 The exit code is 1 on a problem. Another node that cannot be reached, or does not answer within 20 seconds, is only noted: a node that is down never fails someone else's check. `--offline` skips the published files, the extended models and schemas on other sites.
+
+### A published version never changes
+
+The release snapshots (`models/<subject>/releases/vX.Y.Z/`, written by [release](#release) and [bump](#bump)) hold the bytes of every published version, so they are the record of what was published; there is no separate list of hashes. Three checks guard them:
+
+- `build` (and `check`) stop when the sources of the released current version differ from its snapshot.
+- Online, `check` compares each exact version with the file the site serves.
+- `--base <git ref>` compares the snapshots with a git ref, usually the branch a pull request goes into (`origin/main`; fetch it first): a snapshot file that changed or is gone is a problem. It works offline and also sees a version that was removed, which the site cannot show. A new snapshot is fine.
+
+`--all-released` also requires a snapshot of each subject's current version, for a catalog that releases a version before it publishes it, as datamodels.jp does. Without it, `check` only notes a published version that has no snapshot.
+
+Before an official launch, `prerelease: true` in `node.yaml` lets published versions be corrected in place: delete the subject's snapshot, change the sources, and run `datamodels release <subject> --offline`. A version that should not have been published can be removed as a whole: delete its folder under `releases/`. While the flag is true both in the base branch and in the change, `check --base` notes the corrections and removals instead of failing, in the snapshots and online. A release folder without its `context.jsonld` stops the build: a version is removed with its folder, not file by file. Without `--base`, `check` cannot see the base branch, so a changed published file stays a problem. The base branch decides: once it has the flag, a change may not remove it or set it from `false` back to `true`, so after the launch (`prerelease: false`) published versions are fixed for good.
 
 ## release
 
