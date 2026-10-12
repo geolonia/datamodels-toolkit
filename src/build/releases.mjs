@@ -86,6 +86,8 @@ export async function listReleases(subject, { urls }) {
     const dir = join(base, name);
     const v = urls.versionUrls(subject.name, version);
     const files = [{ url: v.context, path: join(dir, 'context.jsonld') }];
+    // A version is removed as a whole (its folder), never one file of it; an older snapshot may lack vocab.jsonld.
+    try { await stat(files[0].path); } catch (e) { if (e.code !== 'ENOENT') throw e; throw new Error(`${subject.name} v${version}: ${files[0].path} is missing. A release folder needs its context.jsonld: restore it, or remove the whole folder ${dir} to remove the version (during the pre-release only)`); }
     try { await stat(join(dir, 'vocab.jsonld')); files.push({ url: v.vocab, path: join(dir, 'vocab.jsonld') }); } catch {}
     const schemaDir = join(dir, 'schema');
     if (await isDir(schemaDir)) for (const f of (await readdir(schemaDir)).sort()) files.push({ url: v.schema(f.replace(/\.json$/, '')), path: join(schemaDir, f) });

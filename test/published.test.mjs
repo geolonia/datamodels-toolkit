@@ -84,6 +84,20 @@ test('pre-release: corrections in place are notes while the base branch and the 
   assert.match((await checkNode(dir, { offline: true, base: 'main' })).problems[0], /changed since main\. A published version never changes/);
 });
 
+test('pre-release: a whole version may be removed (a note); a release folder without its context.jsonld stops the build', async () => {
+  const dir = await node('prerelease: true\n');
+  await commit(dir);
+  const v010 = join(dir, 'models', 'road', 'releases', 'v0.1.0');
+  await rm(join(v010, 'context.jsonld'));
+  assert.deepEqual((await checkNode(dir, { offline: true, base: 'main' })).problems, [
+    `road v0.1.0: ${join(v010, 'context.jsonld')} is missing. A release folder needs its context.jsonld: restore it, or remove the whole folder ${v010} to remove the version (during the pre-release only)`,
+  ]);
+  await rm(v010, { recursive: true });
+  const r = await checkNode(dir, { offline: true, base: 'main' });
+  assert.deepEqual(r.problems, []);
+  assert.ok(r.notes.includes(`${OLD}: removed since main, corrected in place during the pre-release (prerelease: true in node.yaml)`), r.notes.join('\n'));
+});
+
 test('pre-release: the flag cannot be removed, nor turned back on, once the base branch has it', async () => {
   const launched = await node('prerelease: false\n');
   await commit(launched);
