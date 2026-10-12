@@ -187,7 +187,8 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
     const { node, subjects, exactPaths } = built;
 
     // Published versions: the release snapshots against the base branch, and one for every current version.
-    let correctable = node.prerelease === true;
+    // Corrections in place need the flag in the base branch too: without --base a newly added flag would count at once.
+    let correctable = false;
     if (base) {
       const r = await compareWithBase(dir, base, { prerelease: node.prerelease });
       problems.push(...r.problems);
@@ -276,6 +277,7 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
 
     // An exact version that is already online must be served unchanged; one that is not online yet is new.
     const online = new Set();
+    let changed = false;
     // A released current version is both a snapshot and the sources: one path, compared once.
     for (const path of new Set(exactPaths)) {
       const url = `${urls.baseUrl}${path}`;
@@ -290,8 +292,9 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
       online.add(url);
       if (body.equals(await readFile(join(out, path.slice(1))))) continue;
       if (correctable) notes.push(`${url}: differs from the published file, corrected in place during the pre-release (prerelease: true in node.yaml)`);
-      else problems.push(`${url}: a published version changed. A published file never changes; give the subject a new version instead.`);
+      else { problems.push(`${url}: a published version changed. A published file never changes; give the subject a new version instead.`); changed = true; }
     }
+    if (changed && node.prerelease === true && !base) notes.push('prerelease: true in node.yaml allows corrections in place only with --base, which checks that the base branch has the flag too');
 
     // A published version without a snapshot leaves the site with the next version (#27).
     for (const s of subjects) {

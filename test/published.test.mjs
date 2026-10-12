@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -62,7 +62,7 @@ test('--base in a node in a folder of the repository, and a base that cannot be 
   const dir = await node();
   await commit(dir);
   const repo = await mkdtemp(join(tmpdir(), 'datamodels-repo-'));
-  await run('cp', ['-R', dir, join(repo, 'node')]);
+  await cp(dir, join(repo, 'node'), { recursive: true });
   await rm(join(repo, 'node', '.git'), { recursive: true, force: true });
   await commit(repo);
   await writeFile(join(repo, 'node', OLD), '{}\n');
@@ -112,7 +112,7 @@ test('--all-released: the current version of every subject needs its snapshot', 
   assert.deepEqual((await checkNode(dir, { offline: true, allReleased: true })).problems, []);
 });
 
-test('online: a released current version is compared once, and during the pre-release a change is a note', async () => {
+test('online: a released current version is compared once, and during the pre-release a change is a note with --base', async () => {
   const dir = await node();
   await releaseSubject(dir, 'road', { offline: true });
   const site = await mkdtemp(join(tmpdir(), 'datamodels-site-'));
@@ -120,9 +120,14 @@ test('online: a released current version is compared once, and during the pre-re
   const online = Object.fromEntries(await Promise.all([...new Set(exactPaths)].map(async (p) => [`${BASE}${p}`, await readFile(join(site, p.slice(1)))])));
   online[`${BASE}/context/road/v0.2.0.jsonld`] = '{}';
   const fetch = async (url) => (url in online ? new Response(online[url]) : new Response('', { status: 404 }));
-  assert.deepEqual((await checkNode(dir, { fetch })).problems, [`${BASE}/context/road/v0.2.0.jsonld: a published version changed. A published file never changes; give the subject a new version instead.`]);
+  const changed = `${BASE}/context/road/v0.2.0.jsonld: a published version changed. A published file never changes; give the subject a new version instead.`;
+  assert.deepEqual(await checkNode(dir, { fetch }), { problems: [changed], notes: [] });
+  // The flag alone, without --base, does not allow a correction: it may have just been added.
   await setNode(dir, 'license: CC0-1.0\n', 'license: CC0-1.0\nprerelease: true\n');
-  const r = await checkNode(dir, { fetch });
+  assert.deepEqual(await checkNode(dir, { fetch }), { problems: [changed], notes: ['prerelease: true in node.yaml allows corrections in place only with --base, which checks that the base branch has the flag too'] });
+  // With the flag in the base branch and in the change, the correction is a note.
+  await commit(dir);
+  const r = await checkNode(dir, { fetch, base: 'main' });
   assert.deepEqual(r, { problems: [], notes: [`${BASE}/context/road/v0.2.0.jsonld: differs from the published file, corrected in place during the pre-release (prerelease: true in node.yaml)`] });
 });
 
