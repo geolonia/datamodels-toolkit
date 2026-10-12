@@ -41,7 +41,7 @@ npx @geolonia/datamodels@0.3.10 init my-models
 
 This Action does that for you. You keep your models in a GitHub repository, and every change goes online as a website on GitHub Pages: no server, and every change checked before it is published.
 
-- **On every pull request** it checks the models: the schemas, the examples, and that each term means what the schema says. The published versions of the schemas, `@context` files and vocabulary must stay exactly the same; examples and pages can still be corrected. A mistake shows up as a failed check, before anything goes online.
+- **On every pull request** it checks the models: the schemas, the examples, and that each term means what the schema says. The published versions of the schemas, `@context` files and vocabulary must stay exactly the same; examples and pages can still be corrected. (Not yet caught: deleting a whole published release folder, #93.) A mistake shows up as a failed check, before anything goes online.
 - **On every push to `main`** it builds the website and publishes it on GitHub Pages: a page for each model, the JSON Schemas, the `@context` files, the vocabulary, and files for spreadsheets, AI and PostgreSQL.
 
 You need it only to publish data models of your own. To use existing models, start at [datamodels.jp](https://datamodels.jp/en/).
@@ -49,7 +49,7 @@ You need it only to publish data models of your own. To use existing models, sta
 **Start in three steps** ([Starting a site](https://datamodels.jp/en/toolkit/start), step by step):
 
 1. Run `npx @geolonia/datamodels@0.3.10 init my-models`. It asks a few questions (the web address, who publishes, the first subject) and writes the repository: the settings (`node.yaml`), a folder for your models (`models/`) and the workflow with this Action.
-2. Put the folder on GitHub, and in the repository settings set Pages to deploy from GitHub Actions. With the [GitHub CLI](https://cli.github.com/), `init --github my-org/my-models` does both.
+2. Put the folder on GitHub, and in the repository settings set Pages to deploy from GitHub Actions. With the [GitHub CLI](https://cli.github.com/), add `--github my-org/my-models` to the command of step 1, and `init` does both.
 3. Add your models ([Your site's models](https://datamodels.jp/en/toolkit/models)). Each push to `main` updates the site.
 
 Sites that run on it: [models.geolonia.com](https://models.geolonia.com/) ([repository](https://github.com/geolonia/models)) and [models.gtt-project.org](https://models.gtt-project.org/) ([repository](https://github.com/gtt-project/models)).
