@@ -480,10 +480,11 @@ A release reaches npmjs.org through the workflow `.github/workflows/publish.yml`
 
 1. A release pull request raises `version` in `package.json` (and `package-lock.json`) and moves the Unreleased part of `CHANGELOG.md` under the new version.
 2. After it is merged, tag the merge commit `vX.Y.Z` and publish a GitHub release for the tag.
-3. The workflow checks that the tag is `v` followed by the version in `package.json`, runs the tests, and publishes `@geolonia/datamodels`. A pre-release on GitHub publishes nothing.
-4. Then pin `init` (`ACTION_REF`, `ACTION_VERSION` in `src/init.mjs`) and the README's `npx` lines to the new release.
+3. The workflow checks that the tag is `v` followed by the version in `package.json`, runs the tests, and stages `@geolonia/datamodels` on npmjs.org (`npm stage publish`). A pre-release on GitHub stages nothing.
+4. A maintainer of the package approves the staged release, with 2FA: on npmjs.com, in the package's Staged Packages tab, or with `npm stage list @geolonia/datamodels` and `npm stage approve <stage-id>` (npm 11.15.0 or later; [staged publishing](https://docs.npmjs.com/staged-publishing)). Only then is the version public. The workflow cannot approve: approval needs 2FA, and the workflow's OIDC token cannot give it.
+5. Then pin `init` (`ACTION_REF`, `ACTION_VERSION` in `src/init.mjs`) and the README's `npx` lines to the new release.
 
-The workflow uses npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm accepts GitHub's OIDC token, so there is no npm token in the repository, and npm adds provenance (the commit and the workflow that built the package). The trusted publisher in the package's settings on npmjs.com names this repository and the file `publish.yml`; after renaming the file, change that setting too.
+The workflow uses npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm accepts GitHub's OIDC token, so there is no npm token in the repository, and npm adds provenance (the commit and the workflow that built the package). The trusted publisher in the package's settings on npmjs.com names this repository and the file `publish.yml`, and allows staging only, not `npm publish`; after renaming the file, change that setting too.
 
 ## Issues and contributions
 

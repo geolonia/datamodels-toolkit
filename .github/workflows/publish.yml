@@ -1,14 +1,21 @@
 name: Publish
 
-# Publishes @geolonia/datamodels to npmjs.org when a GitHub release is
+# Stages @geolonia/datamodels on npmjs.org when a GitHub release is
 # published. It runs only for a release whose tag is `v` + the version in
-# package.json, and only after the tests pass. A pre-release publishes nothing.
+# package.json, and only after the tests pass. A pre-release stages nothing.
 #
-# Trusted publishing: npm accepts GitHub's OIDC token from this workflow, so no
-# npm token is stored in the repository, and npm adds provenance (the commit and
-# the workflow that built the package). The trusted publisher in the package's
-# settings on npmjs.com names this file, publish.yml: renaming it stops
-# publishing until the setting is changed too.
+# Staged publishing (https://docs.npmjs.com/staged-publishing): the workflow
+# only stages the release (`npm stage publish`). It is public after a
+# maintainer approves it with 2FA, on npmjs.com (the package's Staged Packages
+# tab) or with `npm stage approve <stage-id>`. Approval cannot use this
+# workflow's OIDC token.
+#
+# Trusted publishing (https://docs.npmjs.com/trusted-publishers): npm accepts
+# GitHub's OIDC token from this workflow, so no npm token is stored in the
+# repository, and npm adds provenance (the commit and the workflow that built
+# the package). The trusted publisher in the package's settings on npmjs.com
+# names this file, publish.yml, and allows staging only (not `npm publish`):
+# renaming the file stops staging until the setting is changed too.
 on:
   release:
     types: [published]
@@ -32,17 +39,18 @@ jobs:
         with:
           persist-credentials: false
 
-      # No registry-url: it writes an .npmrc that expects NODE_AUTH_TOKEN,
-      # and npm would then not use the OIDC token. No npm cache either: a
-      # cache written by another run is not trusted in a publishing job.
+      # No registry-url: npmjs.org is npm's default, and the .npmrc it writes
+      # expects NODE_AUTH_TOKEN, which this job does not have (it uses OIDC).
+      # No npm cache either: a cache written by another run is not trusted in
+      # a publishing job.
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
           package-manager-cache: false
 
-      # Trusted publishing needs npm 11.5.1 or later. An exact version, not
-      # whatever npm the Node release brings.
+      # `npm stage` needs npm 11.15.0 or later (trusted publishing 11.5.1).
+      # An exact version, not whatever npm the Node release brings.
       - name: Set up npm
         run: npm install --global --ignore-scripts npm@11.20.0 # zizmor: ignore[adhoc-packages] exact version
 
@@ -64,5 +72,6 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Publish
-        run: npm publish --access public --provenance
+      # Staged, not public yet: a maintainer approves it on npmjs.com.
+      - name: Stage on npm
+        run: npm stage publish --access public --provenance

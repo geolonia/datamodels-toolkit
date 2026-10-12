@@ -6,7 +6,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Added
 
-- `@geolonia/datamodels` is on npmjs.org (#74), from 0.3.8. A published GitHub release now publishes the package by itself, through a workflow with npm's trusted publishing: no npm token is stored, and npm adds provenance.
+- `@geolonia/datamodels` is on npmjs.org (#74), from 0.3.8. A published GitHub release now stages the package on npmjs.org, through a workflow with npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers): no npm token is stored, and npm adds provenance. A maintainer then approves the staged release with 2FA ([staged publishing](https://docs.npmjs.com/staged-publishing)); only then is it public.
 
 ### Changed
 
