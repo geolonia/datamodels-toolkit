@@ -6,6 +6,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Changed
 
+- `datamodels init` writes a workflow pinned to the v0.3.9 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.3.9`. The README uses 0.3.9 too.
 - For a listing on the GitHub Marketplace, the Action is called "Data model node (datamodels.jp)", its description says what it publishes, and its badge is blue. Workflows refer to it by repository, so they need no change.
 
 ## [0.3.9] - 2026-10-12
