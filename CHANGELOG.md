@@ -6,7 +6,7 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Changed
 
-- Japanese texts of the pages and the adapters use datamodels.jp's term list (geolonia/datamodels#251): 分野 for subject, 検証 for checking data against a schema.
+- Japanese texts of the pages, the adapters and the instructions `datamodels mapping` writes use datamodels.jp's term list (geolonia/datamodels#251): 分野 for subject, 検証 for checking data against a schema.
 - `datamodels init` writes a workflow pinned to the v0.3.8 release of the Action, and a README whose `npx` commands run v0.3.8.
 
 ## [0.3.8] - 2026-10-12
