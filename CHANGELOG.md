@@ -7,16 +7,36 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 ### Added
 
 - `datamodels check` has the checks of datamodels.jp's validator for schemas and examples (geolonia/datamodels#226): the `type` const, `$id` and `x-version` of each schema, the `x-ngsi.type` names, polygon rings that close, the NGSI-LD rules of `example-normalized.jsonld` (attribute types, typed dates, the same id and vocab values as `example.json`, a valid key-values form, the alias URL in its `@context`), and a JSON-LD processor that expands the normalized example, the example of a value type and the vocabulary without losing anything. It also checks that an entity schema accepts the `@context` that data may carry.
-- `datamodels check` checks the mapping files of a node, as datamodels.jp's validator did (geolonia/datamodels#226): a correspondence table with a `standard` and its `name`, a `to` in every row, texts in the node's languages (a text that YAML cut at a comma is reported), known keys only, fields of the model, and `via` to another mapping file of the node without circles. The conversion rules are checked as `convert` applies them, so a catalog mapping may hold every rule that a mapping file of your own may: `values` on a rule of one column, the transforms `boolean`, `yesno`, `weekdays`, `time`, `geometry` and `json`, and field names with a dot.
+- `datamodels search <words…> [--index URL] [--depth N] [--limit N] [--json]`: find models by words in their type, title, attributes and description, in datamodels.jp (or another index) and the nodes it links to through `nodes` and `extends`, up to `--depth` links away (default 1). Japanese is matched by pairs of characters, as datamodels.jp matches model proposals. Each result names its node and page; `--json` adds the type IRI, schema, `@context` and index (geolonia/datamodels#222).
+- `datamodels nodes [--index URL] [--depth N] [--json]`: the nodes reachable from an index, with their name, address, licence, number of models and the node that links to them.
+- Both read other sites only over https and from a public address, each index once (a cycle ends), at most 50. A linked node that cannot be read is a note on standard error, not a failure.
+- The agent skill tells agents to look for an existing model with `datamodels search` before proposing one.
+- `datamodels check` checks the mapping files of a node, as datamodels.jp's validator did (geolonia/datamodels#226): a correspondence table with a `standard` and its `name`, a `to` in every row, texts in the node's languages (a text that YAML cut at a comma is reported), known keys only, fields of the model, and `via` to another mapping file of the node without circles. The conversion rules are checked as `convert` applies them, so a catalog mapping may hold every rule that a mapping file of your own may: `values` on a rule of one column, the transforms `boolean`, `yesno`, `weekdays`, `time`, `geometry` and `json`, and field names with a dot. Each part of a field name with a dot must be a member of the value before it, followed into the node's other models; a member of a value is not a field of the model on its own. A `name:` in the file, a `standard.url` with a user name or password, an empty `via` and `flags` without values are reported.
 - `datamodels check --base <git ref>`: the release snapshots must be as they are at the ref, usually the branch a pull request goes into, so a published version is never changed or removed, offline too (geolonia/datamodels#226). It replaces datamodels.jp's list of hashes (`published-manifest.json`), which recorded the same files as the snapshots.
 - `datamodels check --all-released`: every subject's current version needs its release snapshot, for a catalog that releases before it publishes.
 - `prerelease: true` in `node.yaml`: before an official launch, published versions may be corrected in place; `check` notes the corrections instead of failing while the base branch and the change both have the flag, and refuses a change that removes the flag or sets it back to true.
 
 ### Fixed
 
+- `datamodels build` writes the pages (index.html, 404.html, the model and subject pages) when the toolkit is installed in a project (`npm i @geolonia/datamodels`) and run from that project's folder. They were missing: the toolkit's page templates are then under `node_modules`, which Eleventy skips by default, as it skips what the project's `.gitignore` lists.
+- `catalog.json` gives the standard of each mapping file in the node's languages, not always in `ja` and `en`. `datamodels convert` refuses a rule with an empty `via` (`via:` or `via: ""`), which it skipped without a word, a `via` to a file that is empty or not a mapping, and `transform: flags` with empty `values`.
 - `datamodels check` compares a released current version with the site once, not twice.
 - `datamodels check` validates an `example.json` without the `{"json": ...}` and `{"vocab": ...}` wrappers of `JsonProperty` and `VocabProperty` attributes, as the schema describes them; such an example was reported as invalid (datamodels.jp's Decision).
 - `datamodels check` reads the @contexts of the node's own subjects from the build, offline too, instead of from the site: an import of the node's own common context is checked against what is about to be published.
+
+### Changed
+
+- Model pages: the Download row shows a small button per file (CSV template, Table Schema, AI structured output, PostgreSQL / PostGIS), still plain HTML without JavaScript, and "About these files" links the adapters page.
+- The adapters page explains each adapter in its own section (`#csv`, `#table-schema`, `#ai`, `#postgis`): what the file is, how to use it and where to get it. The table of files by model is gone, so the page no longer grows with every model; an old link to a model's row (`/adapters/#<subject>-<type>`) opens the page at the top. Each adapter has a new `use` text (ja, en) for this.
+- `datamodels init` writes a workflow pinned to the v0.3.6 release of the Action, and a README whose `npx` commands run v0.3.6.
+
+## [0.3.6] - 2026-10-12
+
+More of the facility lists convert: yes/no columns, value lists, weekdays and times.
+
+### Added
+
+- Transforms for the facility lists (#54): `yesno` (有/無, あり/なし, ○/× and similar to true and false), `weekdays` (`月～金`, `月火水木金`, `土日祝`, `平日`, `12345` to the days of OpeningHours; a range wraps) and `time` (`9:00` and `9時` to `09:00`; `24:00` kept for a closing time, `0:00` kept as `00:00`). `values` on a one-column rule turns each text of the column into the model's value (`病院: hospital`), also with `split` and `yesno`. A text these do not know is a problem of the row, never a guess. `datamodels mapping` suggests `yesno` for a boolean column of 有 and 無, gives the fields of the opening hours a row each with `weekdays` and `time`, and keeps the `values` of a catalog rule.
 
 ### Changed
 
@@ -33,7 +53,6 @@ Your own lists: convert any CSV with a mapping file of your own, start one with 
 - `datamodels convert --check [--rows N]`: converts the first rows (default 20), writes nothing, and reports the problems of the mapping, the columns the file lacks, the required attributes no row gets and the invalid rows with their first schema errors; the last line is a summary such as `18 of 20 rows valid`. Exit code 0 when every checked row is valid.
 - `datamodels convert <subject>/<Type> csv-template <file.csv>`: a CSV made from the model's CSV template converts without a mapping file.
 - Transforms `boolean` (true or false), `geometry` (longitude and latitude into a Point, or a GeoJSON column) and `json`. A field `id` gives the entity id as it is; a `convert.id` template that is only one value is not URL-encoded.
-- Transforms for the facility lists (#54): `yesno` (有/無, あり/なし, ○/× and similar to true and false), `weekdays` (`月～金`, `月火水木金`, `土日祝`, `平日`, `12345` to the days of OpeningHours; a range wraps) and `time` (`9:00` and `9時` to `09:00`; `24:00` kept for a closing time, `0:00` kept as `00:00`). `values` on a one-column rule turns each text of the column into the model's value (`病院: hospital`), also with `split` and `yesno`. A text these do not know is a problem of the row, never a guess. `datamodels mapping` suggests `yesno` for a boolean column of 有 and 無, gives the fields of the opening hours a row each with `weekdays` and `time`, and keeps the `values` of a catalog rule.
 - The agent skill has a "Convert your data" section: the steps with `mapping` and `--check`, and the rules (never invent values, leave unmatched columns out, ask about ambiguous columns).
 
 ### Changed
@@ -161,7 +180,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.5...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.6...main
+[0.3.6]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.2...v0.3.3

@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import { mappingFileProblems, viaCycles, textsIn } from '../src/build/mapping-check.mjs';
-import { checkNode, loadSubjects, catalogUrls } from '../src/build/index.mjs';
+import { checkNode, buildNode, loadSubjects, catalogUrls } from '../src/build/index.mjs';
 
 const subjects = await loadSubjects(join(import.meta.dirname, 'fixtures', 'catalog', 'models'), { urls: catalogUrls('https://datamodels.jp') });
 const model = (sub, type) => subjects.find((s) => s.name === sub).models.find((m) => m.type === type);
@@ -66,6 +66,12 @@ test('conversion rules: what convert applies, with via naming a mapping file of 
   assert.deepEqual(rule({ via: 'common/Geometry/jichitai-opendata-location' }, 'location'), []);
   assert.deepEqual(rule({ via: 'common/Geometry/nothing' }), ['progress: via must name a mapping file of this node as subject/Type/name, got common/Geometry/nothing']);
   assert.deepEqual(rule({ via: './my-list.yaml' }), ['progress: via must name a mapping file of this node as subject/Type/name, got ./my-list.yaml']);
+  // An empty via names no mapping, and a name is looked up among the files, not inherited from Object.
+  assert.deepEqual(rule({ via: null }), ['progress: via must name a mapping file of this node as subject/Type/name, got null']);
+  assert.deepEqual(rule({ via: '' }), ['progress: via must name a mapping file of this node as subject/Type/name, got ""']);
+  assert.deepEqual(rule({ via: 'toString' }), ['progress: via must name a mapping file of this node as subject/Type/name, got toString']);
+  // flags without values reads no column.
+  assert.deepEqual(rule({ transform: 'flags', values: {} }), ['progress: transform flags needs values, as column: value']);
   assert.deepEqual(rule({ column: 'a', value: 'b' }), ['progress: use one of column, value and via']);
   // A field of a value, as convert nests it (address.postalCode); its first part is an attribute.
   assert.deepEqual(rule({ column: '郵便番号' }, 'location.type'), []);
@@ -73,6 +79,26 @@ test('conversion rules: what convert applies, with via naming a mapping file of 
   assert.deepEqual(problems({ ...ok, convert: { id: 'urn:ngsi-ld:Task:1' } }), ['convert.id must be a template such as "urn:ngsi-ld:Type:{attribute}"']);
   assert.deepEqual(problems({ ...ok, convert: { id: 'urn:ngsi-ld:Task:{source.id}' } }), []);
   assert.deepEqual(problems({ ...ok, convert: { id: 'urn:ngsi-ld:Task:{externalId}', ids: 'x' } }), ['unknown key "convert.ids" (allowed: id)']);
+});
+
+test('a field of a value is a path through the schemas: only the model\'s own members are fields', () => {
+  const schema = { properties: { address: { type: 'object', properties: { postalCode: { type: 'string' } } }, progress: { type: 'number' }, extra: { type: 'object' } } };
+  const field = (name) => problems({ ...ok, fields: { [name]: { to: 'x', column: 'a' } } }, schema);
+  assert.deepEqual(field('address.postalCode'), []);
+  // A member of a value is not a field of the model: convert would write it at the top.
+  assert.deepEqual(field('postalCode'), ['postalCode: not a field of this model']);
+  assert.deepEqual(field('address.postalCod'), ['address.postalCod: address has no field postalCod']);
+  assert.deepEqual(field('progress.missing'), ['progress.missing: progress has no field missing']);
+  assert.deepEqual(field('address.postalCode.more'), ['address.postalCode.more: address.postalCode has no field more']);
+  // An object without listed members may have any.
+  assert.deepEqual(field('extra.anything'), []);
+  // Through a reference to another model of the node; one that is not known is not checked.
+  const schemas = new Map([[geometry.$id, geometry]]);
+  const viaRef = (name, options) => problems({ ...ok, fields: { [name]: { to: 'x', column: 'a' } } }, task, { ...JA_EN, ...options });
+  assert.deepEqual(viaRef('location.coordinates', { schemas }), []);
+  assert.deepEqual(viaRef('location.cordinates', { schemas }), ['location.cordinates: location has no field cordinates']);
+  assert.deepEqual(viaRef('location.type.x', { schemas }), ['location.type.x: location.type has no field x']);
+  assert.deepEqual(viaRef('location.cordinates'), []);
 });
 
 test('a value type maps its own members, with array positions as documentation', () => {
@@ -85,6 +111,9 @@ test('a value type maps its own members, with array positions as documentation',
 test('the standard needs a name; url, licence, note and structure are checked when present', () => {
   assert.deepEqual(problems({ ...ok, standard: { name: { ja: '標準' } } }), [`standard.name ${TEXTS}`]);
   assert.deepEqual(problems({ ...ok, standard: { ...ok.standard, url: 'example.org' } }), ['standard.url must be an http(s) URL with a host, got "example.org"']);
+  // The page links the URL, so it may not carry a user name or password.
+  const secret = ['user', 'pw'].join(':');
+  assert.deepEqual(problems({ ...ok, standard: { ...ok.standard, url: `https://${secret}@example.org/std` } }), [`standard.url must be an http(s) URL with a host, got "https://${secret}@example.org/std"`]);
   assert.deepEqual(problems({ ...ok, standard: { ...ok.standard, note: { en: 'only English' } } }), [`standard.note ${TEXTS}`]);
   const licence = (license) => problems({ ...ok, standard: { ...ok.standard, license } });
   const licenceProblem = ['standard.license must be a non-empty string, or a text in ja and en and nothing but texts by language (quote a text that contains a comma)'];
@@ -126,4 +155,26 @@ test('datamodels check reports the problems of a mapping file with its path, and
   await writeFile(join(m, 'mapping', 'list.yaml'), (await readFile(join(m, 'mapping', 'list.yaml'), 'utf8')).replace('values: { a: b }', 'values: { 有: true }'));
   await writeFile(join(m, 'mapping', 'b.yaml'), 'standard: { name: { en: B } }\nfields:\n  route: { to: y }\n');
   assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
+  // The file name is the mapping's name: a name in the file is reported, also when it repeats the file name.
+  for (const name of ['other', 'b']) {
+    await writeFile(join(m, 'mapping', 'b.yaml'), `name: ${name}\nstandard: { name: { en: B } }\nfields:\n  route: { to: y }\n`);
+    assert.deepEqual((await checkNode(dir, { offline: true })).problems, ['road/RoadPatrol/mapping/b.yaml: unknown key "name" (allowed: standard, fields, structure, convert)'], name);
+  }
+});
+
+test('a node in another language: the standard names are checked and published in its languages', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'datamodels-mapping-fr-'));
+  const base = 'https://models.example.org';
+  await writeFile(join(dir, 'node.yaml'), `baseUrl: ${base}\nlanguages: [fr]\npublisher: { name: { fr: Exemple }, url: https://example.org/ }\nlicense: CC0-1.0\n`);
+  const m = join(dir, 'models', 'road', 'RoadPatrol');
+  await mkdir(join(m, 'mapping'), { recursive: true });
+  await writeFile(join(dir, 'models', 'road', 'subject.yaml'), 'name: road\nversion: 0.1.0\nsource: minted\ntitle: { fr: Routes }\ndescription: { fr: Les routes. }\n');
+  await writeFile(join(dir, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': { road: `${base}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' } }));
+  await writeFile(join(m, 'schema.json'), JSON.stringify({ $id: `${base}/schema/road/RoadPatrol/v0.1.0.json`, type: 'object', properties: { id: { type: 'string' }, type: { const: 'RoadPatrol' }, route: { type: 'string', 'x-iri': `${base}/ns/road#route` } } }));
+  await writeFile(join(m, 'catalog.yaml'), 'title: { fr: Patrouille }\ndescription: { fr: Une tournée. }\nattributes:\n  route: { fr: La route }\n');
+  await writeFile(join(m, 'mapping', 'registre.yaml'), 'standard: { name: { fr: Le registre des routes } }\nfields:\n  route: { to: itinéraire }\n');
+  assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
+  await buildNode(dir);
+  const catalog = JSON.parse(await readFile(join(dir, '_site', 'catalog.json'), 'utf8'));
+  assert.deepEqual(catalog.models[0].mappings, [{ url: `${base}/mapping/road/RoadPatrol/registre.yaml`, standard: { fr: 'Le registre des routes' } }]);
 });
