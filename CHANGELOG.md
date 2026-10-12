@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.10 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.3.10`. The README uses 0.3.10 too.
+
 ## [0.3.10] - 2026-10-12
 
 The Action is ready for the GitHub Marketplace, and a new node starts on v0.3.9.
