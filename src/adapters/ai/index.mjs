@@ -184,6 +184,11 @@ export default {
     ja: 'LLM の構造化出力（strict な JSON Schema）。文書からエンティティを取り出すときに、モデルの形のまま答えさせます。OpenAI の json_schema と、Claude の tool の input_schema に使えます。',
     en: 'A strict JSON Schema for the structured output of a large language model, to extract entities from documents in the shape of the model: the json_schema of OpenAI\'s Structured Outputs, or the input_schema of a Claude tool.',
   },
+  // How to use the file, for the node's /adapters/ page.
+  use: {
+    ja: '文書（PDF やメール）を読ませるリクエストにこのスキーマを付けると、答えがモデルの形のエンティティになり、そのままモデルの JSON Schema で検査できます。形の決まっていない属性があるモデルにはありません。',
+    en: 'Send it with a request that asks the model to read a document (a PDF, an email): the answer is an entity in the shape of the model, ready to check with the model\'s JSON Schema. A model with an attribute of no fixed shape has none.',
+  },
   urlFor: (subject, model, context) => (adapterUrl('ai', 'ai.json')(subject, model, context) && supported(subject, model, context) ? adapterUrl('ai', 'ai.json')(subject, model, context) : null),
   content: (subject, model, context) => `${JSON.stringify(structuredOutputOf(subject, model, context), null, 2)}\n`,
 };

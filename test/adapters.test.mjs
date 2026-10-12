@@ -418,3 +418,9 @@ test('AI: the keywords next to anyOf hold in every branch', () => {
   // The same value repeated is fine.
   assert.equal(strict({ type: 'string', anyOf: [{ type: 'string', format: 'date' }] }, 'd').anyOf[0].format, 'date');
 });
+
+test('every adapter says what its file is and how to use it, in Japanese and English, for the adapters page', () => {
+  for (const a of ADAPTERS) for (const field of ['label', 'note', 'use']) {
+    assert.ok(a[field]?.ja && a[field]?.en, `${a.name}: ${field}`);
+  }
+});

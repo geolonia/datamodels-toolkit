@@ -6,6 +6,8 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Changed
 
+- Model pages: the Download row shows a small button per file (CSV template, Table Schema, AI structured output, PostgreSQL / PostGIS), still plain HTML without JavaScript, and "About these files" links the adapters page.
+- The adapters page explains each adapter in its own section (`#csv`, `#table-schema`, `#ai`, `#postgis`): what the file is, how to use it and where to get it. The table of files by model is gone, so the page no longer grows with every model; an old link to a model's row (`/adapters/#<subject>-<type>`) opens the page at the top. Each adapter has a new `use` text (ja, en) for this.
 - `datamodels init` writes a workflow pinned to the v0.3.6 release of the Action, and a README whose `npx` commands run v0.3.6.
 
 ## [0.3.6] - 2026-10-12
