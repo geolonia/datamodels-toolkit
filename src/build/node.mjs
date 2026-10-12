@@ -10,6 +10,7 @@
 //   licenseUrl: https://models.example.org/LICENSE   # optional
 //   nodes:                                           # optional: other nodes this node knows
 //     - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
+//   prerelease: true                                 # optional: published versions may still be corrected (check --base)
 import { readFile, writeFile, mkdir, stat, rm, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
@@ -30,13 +31,14 @@ const texts = (o) => !!o && typeof o === 'object' && !Array.isArray(o) && Object
 export function settingsProblems(node) {
   if (!node || typeof node !== 'object' || Array.isArray(node)) return ['must be a mapping of settings'];
   const problems = [];
-  const { baseUrl, iris = 'hash', languages = ['en'], publisher, license, licenseUrl, nodes } = node;
+  const { baseUrl, iris = 'hash', languages = ['en'], publisher, license, licenseUrl, nodes, prerelease } = node;
   if (!httpUrl(baseUrl) || new URL(baseUrl).search || new URL(baseUrl).hash) problems.push('baseUrl must be an http(s) URL without credentials, query or fragment');
   if (!['hash', 'slash'].includes(iris)) problems.push('iris must be hash or slash');
   if (!Array.isArray(languages) || !languages.length || !languages.every((l) => typeof l === 'string' && LANGUAGE_TAG.test(l))) problems.push('languages must be a list of language tags, for example [en] or [ja, en]');
   if (!texts(publisher?.name) || !httpUrl(publisher?.url)) problems.push('publisher needs a name in at least one language and an http(s) url');
   if (typeof license !== 'string' || !license.trim()) problems.push('license is required (an SPDX identifier such as CC0-1.0)');
   if (licenseUrl !== undefined && !httpUrl(licenseUrl)) problems.push('licenseUrl must be an http(s) URL');
+  if (prerelease !== undefined && typeof prerelease !== 'boolean') problems.push('prerelease must be true or false');
   if (nodes !== undefined && (!Array.isArray(nodes) || !nodes.every((n) => httpUrl(n?.url) && httpUrl(n?.index)))) problems.push('nodes must be a list of { url, index }, both http(s) URLs');
   return problems;
 }
@@ -49,8 +51,8 @@ export async function readNode(dir) {
   if (!node || typeof node !== 'object' || Array.isArray(node)) throw new Error(`${file}: must be a mapping of settings`);
   const problems = settingsProblems(node);
   if (problems.length) throw new Error(`${file}:\n${problems.map((p) => `  ${p}`).join('\n')}`);
-  const { baseUrl, iris = 'hash', languages = ['en'], publisher, license, licenseUrl, nodes } = node;
-  return { baseUrl: baseUrl.replace(/\/+$/, ''), iris, languages, publisher, license, ...(licenseUrl ? { licenseUrl } : {}), ...(nodes?.length ? { nodes } : {}) };
+  const { baseUrl, iris = 'hash', languages = ['en'], publisher, license, licenseUrl, nodes, prerelease } = node;
+  return { baseUrl: baseUrl.replace(/\/+$/, ''), iris, languages, publisher, license, ...(licenseUrl ? { licenseUrl } : {}), ...(nodes?.length ? { nodes } : {}), ...(prerelease !== undefined ? { prerelease } : {}) };
 }
 
 /** The node in `dir`: its settings, URLs and subjects with their models, checked. Returns { node, urls, subjects }. */

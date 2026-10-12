@@ -17,6 +17,7 @@ import { buildNode } from './node.mjs';
 import { catalogUrls, attributesOf } from './urls.mjs';
 import { schemaRuleProblems, exampleProblems, contextLoader, jsonldProblems, vocabularyProblems } from './examples.mjs';
 import { mappingFileProblems, viaCycles } from './mapping-check.mjs';
+import { compareWithBase } from './published.mjs';
 
 // A schema on another site that could not be read: noted and skipped, never a problem of this node.
 class Unavailable extends Error {}
@@ -168,9 +169,12 @@ export function termProblems(subject, urls, resolved) {
 /**
  * Check the node in `dir`. Options: `offline` skips what needs the network
  * (the published files, the models it extends, schemas on other sites);
- * `fetch` for tests; `timeout` per request in ms. Returns { problems, notes }: any problem fails the check.
+ * `base` a git ref to compare the release snapshots with (published.mjs);
+ * `allReleased` requires a release snapshot of every subject's current
+ * version; `fetch` for tests; `timeout` per request in ms. Returns
+ * { problems, notes }: any problem fails the check.
  */
-export async function checkNode(dir, { offline = false, fetch: fetchUrl = globalThis.fetch, timeout = 20000 } = {}) {
+export async function checkNode(dir, { offline = false, base, allReleased = false, fetch: fetchUrl = globalThis.fetch, timeout = 20000 } = {}) {
   // A node that hangs is treated like one that is down: noted, not waited for.
   const fetch = (url) => fetchUrl(url, { signal: AbortSignal.timeout(timeout) });
   const problems = [];
@@ -181,6 +185,18 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
     let built;
     try { built = await buildNode(dir, { out, pages: false, offline, fetch: fetchUrl, timeout }); } catch (e) { return { problems: [e.message], notes }; }
     const { node, subjects, exactPaths } = built;
+
+    // Published versions: the release snapshots against the base branch, and one for every current version.
+    // Corrections in place need the flag in the base branch too: without --base a newly added flag would count at once.
+    let correctable = false;
+    if (base) {
+      const r = await compareWithBase(dir, base, { prerelease: node.prerelease });
+      problems.push(...r.problems);
+      notes.push(...r.notes);
+      correctable = r.prerelease;
+    }
+    const released = async (s) => stat(join(s.dir, 'releases', `v${s.version}`)).then(() => true, () => false);
+    if (allReleased) for (const s of subjects) if (!(await released(s))) problems.push(`${s.name} v${s.version} has no release snapshot: run datamodels release ${s.name} (check --all-released)`);
     const urls = catalogUrls(node.baseUrl, { iris: node.iris });
     const getJson = async (url) => {
       const res = await fetch(url);
@@ -261,7 +277,9 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
 
     // An exact version that is already online must be served unchanged; one that is not online yet is new.
     const online = new Set();
-    for (const path of exactPaths) {
+    let changed = false;
+    // A released current version is both a snapshot and the sources: one path, compared once.
+    for (const path of new Set(exactPaths)) {
       const url = `${urls.baseUrl}${path}`;
       let body;
       try {
@@ -272,13 +290,16 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
         body = Buffer.from(await res.arrayBuffer());
       } catch (e) { notes.push(`${url}: not reachable (${e.cause?.code ?? e.message}), not compared`); continue; }
       online.add(url);
-      if (!body.equals(await readFile(join(out, path.slice(1))))) problems.push(`${url}: a published version changed. A published file never changes; give the subject a new version instead.`);
+      if (body.equals(await readFile(join(out, path.slice(1))))) continue;
+      if (correctable) notes.push(`${url}: differs from the published file, corrected in place during the pre-release (prerelease: true in node.yaml)`);
+      else { problems.push(`${url}: a published version changed. A published file never changes; give the subject a new version instead.`); changed = true; }
     }
+    if (changed && node.prerelease === true && !base) notes.push('prerelease: true in node.yaml allows corrections in place only with --base, which checks that the base branch has the flag too');
 
     // A published version without a snapshot leaves the site with the next version (#27).
     for (const s of subjects) {
       const published = online.has(urls.versionUrls(s.name, s.version).context);
-      if (published && !(await stat(join(s.dir, 'releases', `v${s.version}`)).then(() => true, () => false))) {
+      if (published && !allReleased && !(await released(s))) {
         notes.push(`${s.name} v${s.version} is published but not released: run datamodels release ${s.name} before you change it, or its files leave the site with the next version`);
       }
     }

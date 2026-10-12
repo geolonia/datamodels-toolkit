@@ -33,12 +33,12 @@
 // default the current directory) into --out (default dir/_site). The exit
 // code is 1 when the node is invalid, 2 for a usage error.
 //
-//   datamodels check [dir] [--offline]
+//   datamodels check [dir] [--offline] [--base origin/main] [--all-released]
 //
 // check runs the checks a node needs in CI: valid schemas and examples,
 // the NGSI-LD and JSON-LD rules of the examples, release snapshots,
-// published versions unchanged online, no term of an extended model
-// redefined. Exit code 1 on a problem; unreachable nodes are
+// published versions unchanged online and (--base) in git, no term of an
+// extended model redefined. Exit code 1 on a problem; unreachable nodes are
 // only noted.
 //
 //   datamodels init [dir] [--base-url URL] [--publisher name] [--publisher-url URL] [--subject name] ...
@@ -96,7 +96,7 @@ const USAGES = {
   convert: `usage: datamodels convert <subject>/<Type> <mapping|file.yaml|${TEMPLATE}> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--check [--rows N]] [--site URL|dir]`,
   mapping: `usage: datamodels mapping <subject>/<Type> <file.csv> [--out file.yaml] [--site URL|dir]`,
   build: `usage: datamodels build [dir] [--out dir]`,
-  check: `usage: datamodels check [dir] [--offline]`,
+  check: `usage: datamodels check [dir] [--offline] [--base <git ref>] [--all-released]`,
   add: `usage: datamodels add <subject>/<Type> [dir] [--value]`,
   release: `usage: datamodels release <subject> [dir] [--offline]`,
   bump: `usage: datamodels bump <subject> <patch|minor|major> [dir] [--offline]`,
@@ -161,6 +161,8 @@ function program({ onConvert, onMapping, onBuild, onCheck, onInit, onAdd, onRele
     .usage(USAGES.check.replace('usage: datamodels check ', ''))
     .argument('[dir]', 'the node: node.yaml and models/', '.')
     .option('--offline', 'skip what needs the network: published files, extended models, schemas on other sites')
+    .option('--base <git ref>', 'compare the release snapshots with a git ref, such as origin/main: a published version is never changed or removed', value('--base'))
+    .option('--all-released', 'require a release snapshot of the current version of every subject')
     .action(onCheck);
   cli.command('init')
     .description('start a data model node: node.yaml, the first subject, a README and the GitHub Pages workflow')
@@ -394,8 +396,8 @@ async function build(dir, { out }) {
   return 0;
 }
 
-async function check(dir, { offline }) {
-  const { problems, notes } = await checkNode(dir, { offline });
+async function check(dir, { offline, base, allReleased }) {
+  const { problems, notes } = await checkNode(dir, { offline, base, allReleased });
   for (const n of notes) console.error(`  note: ${n}`);
   for (const p of problems) console.error(p);
   console.error(`${dir}: ${problems.length ? `${problems.length} problem(s)` : 'ok'}`);

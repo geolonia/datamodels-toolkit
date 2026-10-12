@@ -253,6 +253,7 @@ publisher: { name: { en: Example Inc. }, url: https://example.org/ }
 license: CC0-1.0    # required; licenseUrl is optional
 nodes:              # optional: nodes you know; a context may import theirs
   - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
+prerelease: true    # optional: published versions may still be corrected (see check --base)
 ```
 
 It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples, `llms.txt`, the pages and the adapters' files: for every entity model the files of [export](#export) at `/adapters/<name>/<subject>/<Type>.<ext>` (`csv`, `table-schema`, `ai`, `postgis`), listed under `adapters` in the model's entry in `catalog.json`, as on datamodels.jp. Schemas that a model refers to on another node (such as datamodels.jp's JapaneseAddress) are read online, only from the `schema/` folder of a node listed under `nodes` in `node.yaml` (`extend` adds it); when one is elsewhere or cannot be read, that model gets no adapter files and `build` says so (`check --offline` reads none). Adapter files are rebuilt every time and are not covered by the promise that published files never change. A model page has a Download row with a button per file, without naming a product, and an "About these files" link to the one explanation of the files on datamodels.jp ([ja](https://datamodels.jp/adapters/#downloads), [en](https://datamodels.jp/en/adapters/#downloads) and any other language); the node has no page of its own for that. `build` does not empty the output folder, but it removes an `adapters/index.html` (and `<lang>/adapters/index.html`) that an older version wrote, so it is no longer published. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`).
@@ -274,6 +275,7 @@ Every page links to `catalog.json` (`<link rel="alternate" type="application/jso
 ```bash
 datamodels check             # the node in the current directory
 datamodels check --offline   # without the network
+datamodels check --base origin/main --all-released   # in a pull request, as datamodels.jp does
 ```
 
 The checks a node runs in CI before it publishes:
@@ -290,6 +292,18 @@ The checks a node runs in CI before it publishes:
 - A model does not redefine a term of a model it `extends`: the same name keeps the same IRI.
 
 The exit code is 1 on a problem. Another node that cannot be reached, or does not answer within 20 seconds, is only noted: a node that is down never fails someone else's check. `--offline` skips the published files, the extended models and schemas on other sites.
+
+### A published version never changes
+
+The release snapshots (`models/<subject>/releases/vX.Y.Z/`, written by [release](#release) and [bump](#bump)) hold the bytes of every published version, so they are the record of what was published; there is no separate list of hashes. Three checks guard them:
+
+- `build` (and `check`) stop when the sources of the released current version differ from its snapshot.
+- Online, `check` compares each exact version with the file the site serves.
+- `--base <git ref>` compares the snapshots with a git ref, usually the branch a pull request goes into (`origin/main`; fetch it first): a snapshot file that changed or is gone is a problem. It works offline and also sees a version that was removed, which the site cannot show. A new snapshot is fine.
+
+`--all-released` also requires a snapshot of each subject's current version, for a catalog that releases a version before it publishes it, as datamodels.jp does. Without it, `check` only notes a published version that has no snapshot.
+
+Before an official launch, `prerelease: true` in `node.yaml` lets published versions be corrected in place: delete the subject's snapshot, change the sources, and run `datamodels release <subject> --offline`. A version that should not have been published can be removed as a whole: delete its folder under `releases/`. While the flag is true both in the base branch and in the change, `check --base` notes the corrections and removals instead of failing, in the snapshots and online. A release folder without its `context.jsonld` stops the build: a version is removed with its folder, not file by file. Without `--base`, `check` cannot see the base branch, so a changed published file stays a problem. The base branch decides: once it has the flag, a change may not remove it or set it from `false` back to `true`, so after the launch (`prerelease: false`) published versions are fixed for good.
 
 ## release
 
