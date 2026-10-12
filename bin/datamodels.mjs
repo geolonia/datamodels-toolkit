@@ -125,21 +125,21 @@ function program({ onConvert, onMapping, onBuild, onCheck, onInit, onAdd, onRele
     .exitOverride()
     .configureOutput({ outputError: () => {} })
     .configureHelp({ styleTitle: (title) => title.toLowerCase() })
-    .addHelpText('after', '\nMore on each command, with examples: https://github.com/geolonia/datamodels-toolkit#readme');
+    .addHelpText('after', '\nMore on each command, with examples: https://datamodels.jp/en/toolkit/reference');
   cli.command('convert')
     .description('turn a published list (CSV) into entities of a catalog model, validated against its JSON Schema')
     .usage(USAGES.convert.replace('usage: datamodels convert ', ''))
     .argument('<subject/Type>', 'the model, as on its page, for example disaster/EvacuationSite')
     .argument('<mapping>', `one of the model's mapping files, a mapping file of your own (./my-list.yaml), or ${TEMPLATE} for the columns of the model's CSV template`)
     .argument('<file.csv>', 'the list, UTF-8 or Shift_JIS')
-    // In the words of the README; the README has the details and examples.
+    // In the words of the documentation (datamodels.jp/en/toolkit), which has the details and examples.
     .option('--set <attribute=value>', "a value the list does not carry, such as GSI's municipality code", (v, all = []) => [...all, value('--set')(v)])
     .option('--normalized', 'NGSI-LD normalized form instead of key-values')
     .option('--out <file.json>', 'write to a file (default: standard output)', value('--out'))
     .option('--check', 'convert only the first rows, write nothing, and report what to fix in the mapping or the list')
     .option('--rows <N>', 'how many rows --check converts (default 20)', count('--rows'))
     .option('--site <URL|dir>', 'where to read the catalog, or a directory laid out like the site', value('--site'), SITE)
-    .addHelpText('after', '\nMore on each option, with examples: https://github.com/geolonia/datamodels-toolkit#readme')
+    .addHelpText('after', '\nMore on each option, with examples: https://datamodels.jp/en/toolkit/reference#convert')
     // exitOverride, the output and the help style are inherited from cli.
     .action(onConvert);
   cli.command('mapping')
@@ -201,7 +201,7 @@ function program({ onConvert, onMapping, onBuild, onCheck, onInit, onAdd, onRele
     .option('--offline', 'release without comparing with the published files')
     .action(onBump);
   cli.command('upgrade')
-    .description("move the node to a release of datamodels-toolkit: the Action's pin in the workflows and npx in the README")
+    .description("move the node to a release of datamodels-toolkit: the Action's pin in the workflows and npx in the Markdown files")
     .usage(USAGES.upgrade.replace('usage: datamodels upgrade ', ''))
     .argument('[dir]', 'the node', '.')
     .option('--to <vX.Y.Z>', 'a release (default: the latest)', value('--to'))

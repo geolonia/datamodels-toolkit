@@ -1,346 +1,41 @@
 # datamodels-toolkit
 
-Command-line tools for the [datamodels.jp](https://datamodels.jp) catalog.
+Command-line tools and a GitHub Action for the [datamodels.jp](https://datamodels.jp) catalog: publish data models of your own on a site of your own, convert CSV lists into entities of a model, and export models for tools that do not read NGSI-LD.
 
-`search` finds existing models in datamodels.jp and the nodes it links to; `convert` turns a published list (CSV) into entities of a catalog model, also a list of your own with a mapping you write with `mapping`; `export` writes files made from a model for tools that do not read NGSI-LD (a spreadsheet, an AI model, PostgreSQL); `build` writes the files of a data model node, a site of your own in the [web of data models](https://github.com/geolonia/datamodels/issues/200). More commands come only when someone needs them for a real task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
-
-**As a GitHub Action**, it publishes a node: a repository with `node.yaml` and your models in `models/` becomes a site on GitHub Pages, with each model's JSON Schema, JSON-LD `@context` and pages. Pull requests are checked first. The workflow is under [GitHub Action](#github-action), and `datamodels init` writes it for you.
+**Documentation: [datamodels.jp/en/toolkit](https://datamodels.jp/en/toolkit/)** ([日本語](https://datamodels.jp/toolkit/)), with every command and option in the [command reference](https://datamodels.jp/en/toolkit/reference).
 
 ## Install
 
 Node.js 24 or later. Run a release of [`@geolonia/datamodels`](https://www.npmjs.com/package/@geolonia/datamodels) with `npx`:
 
 ```bash
-npx @geolonia/datamodels@0.3.10 convert <subject>/<Type> <mapping> <file.csv>
+npx @geolonia/datamodels@0.3.10 --help
 ```
 
 Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.3.10`) and run `npx datamodels …` there. Releases before 0.3.8 are not on npm; they run from GitHub (`npx github:geolonia/datamodels-toolkit#v0.3.7 …`).
 
-## convert
+## Commands
 
-```bash
-datamodels convert disaster/EvacuationSite jichitai-opendata-site 092011_evacuation_space.csv --out sites.json
-datamodels convert disaster/EvacuationSite gsi-emergency-site 13101_2.csv --set localGovernmentCode=13101
-datamodels convert disaster/EvacuationSite ./my-list.yaml my-list.csv --check     # a mapping of your own, first rows only
-datamodels convert disaster/EvacuationSite csv-template sites.csv                 # the columns of the CSV template
-```
-
-This turns, for example, a municipality's 指定緊急避難場所一覧 (自治体標準オープンデータセット 03) or GSI's data into EvacuationSite entities. Each entity is validated against the model's JSON Schema.
-
-- `<subject>/<Type>`: the model, as on its page (`/models/disaster/EvacuationSite/`).
-- `<mapping>`: one of the model's mapping files. The model page lists them under "Mapping files (YAML)", and `catalog.json` lists them as `mappingUrls`. It can also be a mapping file of your own: a path, or a name that ends in `.yaml` or `.yml` ([your own list](#your-own-list)). `csv-template` converts a CSV whose header is the model's [CSV template](#the-csv-template).
-- `--set attribute=value`: a value the list does not carry, such as GSI's municipality code, which is only in the file name.
-- `--normalized`: NGSI-LD normalized form instead of key-values, with the subject's `@context` alias and the NGSI-LD core context.
-- `--out file.json`: write to a file (default: standard output).
-- `--check`: convert only the first rows, write nothing, and report what to fix ([below](#--check)).
-- `--rows N`: how many rows `--check` converts (default 20).
-- `--site URL|dir`: where to read the catalog (default `https://datamodels.jp`). A directory laid out like the site also works, for example the `dist/` that `npm run build` makes in [geolonia/datamodels](https://github.com/geolonia/datamodels), to try a mapping before it is published.
-
-It reads `catalog.json`, the model's schema and the mapping file from the site, and any mapping that one names with `via` (such as `common/JapaneseAddress/jichitai-opendata-address` for the address columns). The conversion rules in a mapping file:
-
-- A field with `column` (one column or a list), an optional `transform`, a constant `value`, or `via` is converted.
-- The `convert.id` template names the entities: `{attribute}` is that attribute's value in the row (`{address.localGovernmentCode}` for a field of a value). A template that is only one value, such as `"{id}"`, takes the value as it is; inside a longer id a value is URL-encoded. A field `id` with a `column` gives the entity id as it is, when there is no template.
-- `convert.allDay` (`open` or `closed`) says what opening hours of 0:00 to 0:00 mean in the list ([below](#opening-hours-of-000-to-000)).
-- Fields with only `to` are documentation.
-- A field name with a dot fills a field of a value: `address.postalCode: { column: 郵便番号 }`. The catalog's mapping files mostly use `via` instead, so that several models share the rules for an address.
-
-| `transform` | Columns | What it makes |
+| Command | What it does | Docs |
 |---|---|---|
-| (none) or `text` | 1 | the text as it is; empty is no value |
-| `code6` | 1 | a 6-digit local government code; repairs a lost leading zero or a missing check digit when the check digit proves it |
-| `number`, `integer` | 1 | a number; `integer` also takes `1,200` and `1200人` |
-| `numbers` | 2 or more | a list of numbers |
-| `flag` | 1 | `1` is true, `0` or empty is false |
-| `boolean` | 1 | `true`/`false` (also `TRUE`, `True`, `1`, `0`); empty is no value |
-| `yesno` | 1 | `有`, `有り`, `あり`, `○` are true; `無`, `無し`, `なし`, `×` are false (also `アリ`/`ナシ`, `はい`/`いいえ`, `〇`, `◯`, `✕`); empty is no value. `values` replaces these words: `values: { 外部利用不可: true, "": false }` |
-| `flags` | `values` | a list of the values whose column holds `1`: `values: { 洪水: flood, 地震: earthquake }` |
-| `split` | 1 | a list, split at `;` or `；` |
-| `weekdays` | 1 | the days of OpeningHours (`Monday` … `Sunday`, `PublicHolidays`) from `月～金`, `月-金`, `月火水木金`, `月・水・金`, `土日祝`, `月曜日～金曜日`, `12345` (1 is Monday, 7 Sunday), `平日` (Monday to Friday) and `毎日` (the seven days). A range wraps: `金～月` is Friday to Monday. `祝` and `祝日` are `PublicHolidays`, only when the text names them |
-| `time` | 1 | a time as `HH:MM`: `9:00`, `9時` and `9時30分` become `09:00` and `09:30`, full-width digits half-width; seconds are kept (`17:00:30`). Each change is listed as a repair. An opening and a closing time of 0:00 need `convert.allDay` ([below](#opening-hours-of-000-to-000)) |
-| `geometry` | 1 to 3 | two columns, longitude and latitude, make a GeoJSON Point; one column holds a GeoJSON geometry; with three, the third is the GeoJSON for rows without longitude and latitude |
-| `json` | 1 | the JSON in the column |
-| `municipality` | 1 | a municipality name; a value that goes on (`宇都宮市中央本町1-29`) is left out and reported |
-| `machiazaId` | 1 | the 7-digit town id of the Address Base Registry, without its hyphen |
-| `nationalShelterType` | 1 | `general` or `welfare`, from the type code in a 全国共通避難所・避難場所 ID |
-
-`values` turns the texts of one column into the model's values: `medicalInstitutionType: { column: 医療機関の種類, values: { 病院: hospital, 有床診療所: clinicWithBeds, 無床診療所: clinicWithoutBeds } }`. It works without a transform, with `split` (each item of the list) and with `yesno`. An empty cell is no value, unless `values` has an entry for `""`. A text that `values` does not have is a problem of the row; it is never taken as it is.
-
-No transform guesses. A text outside the forms above, such as `不明` for `yesno`, `月～金（祝日を除く）` or `第2土曜` for `weekdays` and `25:00` or `9時半` for `time`, is a problem of the row, named with its column and the text.
-
-Times: `time` reads the hours 0 to 24. `0:00` becomes `00:00`, the start of the day. `24:00` is kept: the schema allows it as a closing time (the end of the day) and rejects it as an opening time, so such a row is invalid. `24:30` and `25:00` are problems.
-
-It detects UTF-8 and Shift_JIS. It repairs only what it can prove, such as a local government code that lost its leading zero or lacks its check digit (the check digit decides), and lists every repair on standard error. Invalid rows are left out and listed by line. An id that more than one row gets, and an id value in exponent form such as `1.31E+11` (a spreadsheet rounded the number and its digits are lost), make those rows invalid. The exit code is 1 when a row is invalid or a file cannot be read, and 2 for a usage error.
-
-### Opening hours of 0:00 to 0:00
-
-schema.org says only that a closing time before the opening time runs into the next day. Google's guidelines for structured data, the most used convention, read `00:00` to `23:59` as open 24 hours and `00:00` to `00:00` as closed all day, while Japanese lists often write `0:00` to `0:00` for "around the clock".
-
-So when the opening and the closing time of a value (`opens` and `closes` of OpeningHours, from columns or from a JSON value such as the CSV template's, also in a list) are both 0:00, the row has a problem until the mapping says what the list means:
-
-```yaml
-convert:
-  id: "urn:ngsi-ld:AEDLocation:{localGovernmentCode}-{externalFacilityId}"
-  allDay: open      # 0:00 to 0:00 is open all day: written as 00:00 to 23:59
-# allDay: closed    # 0:00 to 0:00 is closed all day: written as 00:00 to 00:00
-```
-
-`convert.allDay` applies to the opening hours that the mapping builds and to those of every mapping it reaches through `via`. When more than one of them says it, the outermost one wins: a mapping of your own decides it for the catalog's OpeningHours mapping without a change to that file. Each row it applies to is listed as a repair. The meaning belongs to one list, so the catalog's mapping files leave it out; to convert such a list, use a mapping file of your own. The same time at another hour, such as `9:00` to `9:00`, is always a problem of the row: no convention says what it means.
-
-### Your own list
-
-A list that follows no standard in the catalog needs a mapping file of your own: which column fills which attribute. `datamodels mapping` writes a first one, and `--check` tells you what is still wrong:
+| `search`, `nodes` | Find existing models in datamodels.jp and the sites it links to | [Your site's models](https://datamodels.jp/en/toolkit/models#search) |
+| `convert`, `mapping` | Turn a CSV list into entities of a model, with a mapping file | [Converting your data](https://datamodels.jp/en/toolkit/convert) |
+| `export` | A CSV template, a Table Schema, a JSON Schema for AI output, a PostgreSQL / PostGIS table | [Exporting to other tools](https://datamodels.jp/en/toolkit/export) |
+| `init` | Start a site of your own for your models (a node) | [Starting a site](https://datamodels.jp/en/toolkit/start) |
+| `add`, `extend` | Add a model to your site, or start from a catalog model | [Your site's models](https://datamodels.jp/en/toolkit/models) |
+| `check`, `build` | Check the node and build its files and pages | [Checking and building](https://datamodels.jp/en/toolkit/check), [The node and build](https://datamodels.jp/en/toolkit/node) |
+| `bump`, `release`, `upgrade` | Change a published model in a new version; move to a newer toolkit | [Versions](https://datamodels.jp/en/toolkit/versions) |
 
 ```bash
-datamodels mapping disaster/EvacuationSite my-list.csv --out my-list.yaml     # 1. a first mapping
-#                                                                               2. fill in the TODOs
-datamodels convert disaster/EvacuationSite my-list.yaml my-list.csv --check    # 3. check the first rows; fix, repeat
-datamodels convert disaster/EvacuationSite my-list.yaml my-list.csv --out entities.json
+npx @geolonia/datamodels@0.3.10 search 避難
+npx @geolonia/datamodels@0.3.10 convert disaster/EvacuationSite jichitai-opendata-site sites.csv --out sites.json
+npx @geolonia/datamodels@0.3.10 export disaster/EvacuationSite --to csv
+npx @geolonia/datamodels@0.3.10 init my-models
 ```
-
-A mapping file of your own has the same rules as the catalog's (above), and `standard` is not needed. In `via` it may name a catalog mapping (`common/JapaneseAddress/jichitai-opendata-address`) or another file of your own, relative to its own folder (`address.yaml`; a via that ends in `.yaml` or `.yml` is a file). `convert` refuses a file of your own that still has a `# TODO:` comment or names an attribute the model does not have. An AI agent can do step 2 with you: [the agent skill](#agent-skill) has the steps and the rules.
-
-### --check
-
-`--check` converts the first rows (`--rows`, default 20) and writes nothing. On standard error it reports:
-
-- the problems of the mapping: TODOs left, attributes the model does not have;
-- the columns the mapping reads that the file does not have;
-- the required attributes that no row gets;
-- each invalid row, with its first three schema errors, duplicate ids and ids in exponent form;
-- the repairs, as `convert` lists them.
-
-The last line is a summary, such as `18 of 20 rows valid`. The exit code is 0 when every checked row is valid and the mapping has no problem, else 1.
-
-### The CSV template
-
-A CSV made from the model's CSV template (`datamodels export <subject>/<Type> --to csv`) converts without a mapping file:
-
-```bash
-datamodels convert disaster/EvacuationSite csv-template sites.csv
-```
-
-Each column fills the attribute of the same name: `id` is the entity id as it is, `address.postalCode` a field of the address, `longitude` and `latitude` a Point (or the GeoJSON in `location` for another shape), a list is split at `;`, a boolean is `true` or `false`, and a JSON column is read as JSON. Columns you leave out of the file stay empty.
-
-## mapping
-
-```bash
-datamodels mapping disaster/EvacuationSite my-list.csv --out my-list.yaml
-```
-
-Writes a first mapping file for a CSV and a catalog model, for you or an AI agent to finish. It reads the CSV (UTF-8 or Shift_JIS; the header, and the first rows to tell true/false columns from 1/0 ones) and the model and its mapping files from the catalog (`--site`, as for `convert`). No value of the list goes into the mapping. `--out` writes a new file and never overwrites one; without it, the mapping goes to standard output.
-
-- One row per attribute, and per field of a value (`address.postalCode`) and for the location, as the CSV template splits them. Required attributes come first.
-- A column fills a row when its name is the attribute's, also written otherwise (`postal_code`, `Postal Code`), or the attribute's Japanese or English name in the catalog, or a column the catalog's mapping files of the model read for it (with their transform). Longitude and latitude columns (`lng`, `経度`, …) become the location. A column that only shares part of the Japanese name is marked as a guess; two columns that fit equally well are left to you, listed as candidates.
-- A row without a column says `# TODO: which column?`. Write the column, or delete the row when the list has nothing for it.
-- `transform` follows the attribute's type: `integer`, `number`, `flag` for a boolean (`boolean` when the column holds true and false, `yesno` when it holds 有 and 無 or the other words of `yesno`), `split` for a list, `weekdays` for a list of days of the week, `time` for a time (HH:MM), `geometry` for the location, `code6` for a local government code. A rule taken from a catalog mapping keeps its `values`.
-- A value whose fields include a list, such as the opening hours, gets one row per field too (`openingHoursSpecification.dayOfWeek`, `openingHoursSpecification.opens`); the CSV template keeps it as one JSON column.
-- `convert.id` comes from a catalog mapping of the model when the columns it needs are there; otherwise it is a TODO.
-- A model with opening hours gets a TODO under `convert:`: what 0:00 to 0:00 means in the list (`allDay: open` or `allDay: closed`, [above](#opening-hours-of-000-to-000)). Delete it when the list has no such hours.
-- The CSV columns that no row reads are listed at the end, as a comment.
-- When the header has nearly all the columns of one of the catalog's mapping files, it says so: that mapping may convert the list as it is.
-
-Every part of the file has a comment of one line, in Japanese when the header is Japanese.
-
-## search
-
-```bash
-datamodels search 避難                                          # datamodels.jp and the nodes it lists
-datamodels search road closure --index https://models.example.org --depth 2
-datamodels search shelter --json                               # for scripts and AI agents
-```
-
-Finds existing models before you define one. It reads an index (`--index`: a `catalog.json`, or the address of a node; default https://datamodels.jp/catalog.json) and the indexes it links to, up to `--depth` links away (default 1, at most 5; 0 reads only the index): the nodes its `catalog.json` lists under `nodes`, and the indexes its models' `extends` name. Each index is read once, so links that lead back are not followed again, and at most 50 are read.
-
-Words count most in the type name, then the title, the attribute names, and the descriptions; a rare word counts more than a common one. English words need 3 letters or more; Japanese is matched by pairs of characters, so `避難` finds 指定避難所. Value types (such as an address) are listed too. Each line is a model: `<subject>/<Type>`, its titles, the node, and its page; `--limit` sets how many (default 10). `--json` gives each model's type IRI, version, schema, `@context` and index, which `extend` and `export` take (`--index`).
-
-Another site's index is read only over https, from a public address, as for `export`. A node that cannot be read is noted on standard error and skipped; the exit code is 1 only when the index you start at cannot be read.
-
-## nodes
-
-```bash
-datamodels nodes
-datamodels nodes --index https://models.gtt-project.org --depth 2 --json
-```
-
-Lists the nodes reachable from an index, the same way `search` finds them: name (the publisher), address, licence, number of models, and the node that links to it. It shows how the nodes of the [web of data models](https://github.com/geolonia/datamodels/issues/200) find each other ([geolonia/datamodels#222](https://github.com/geolonia/datamodels/issues/222)).
-
-## init
-
-```bash
-datamodels init my-node      # asks in a terminal
-datamodels init --base-url https://models.example.org --publisher "Example Inc." \
-  --publisher-url https://example.org/ --subject road --languages ja,en --yes
-```
-
-Starts a data model node: `node.yaml`, the first subject in `models/`, a README, `.gitignore`, the workflow that checks pull requests and publishes to GitHub Pages ([GitHub Action](#github-action)), a Dependabot configuration that proposes new releases of the Action, and `LICENSE`. In a terminal it asks for what the options do not give; in CI and scripts it never asks, and a missing answer is a usage error. Defaults: hash IRIs, English, CC0-1.0.
-
-`LICENSE` is the legal code of the licence, for CC0-1.0 and CC-BY-4.0. For another licence, init says so, and the licence text goes into `LICENSE` by hand. A licence file under another name (`LICENSE.md`, `LICENSE.txt`, `COPYING`) counts as `LICENSE`.
-
-It also works in an existing repository, for example one made by the Backstage scaffolder: it adds only the files that are missing, never overwrites one, and adds its lines to an existing `.gitignore`. It lists what it added and what it kept.
-
-`--github owner/name` (or yes to the question) puts the node on GitHub with the `gh` CLI: in a folder without a remote it makes the first commit and creates the public repository; with a remote it keeps it. Either way it sets GitHub Pages to deploy from GitHub Actions.
-
-## add
-
-```bash
-datamodels add road/RoadPatrol           # an entity type
-datamodels add road/Segment --value      # a value type, used inside attributes
-```
-
-Adds a model to a subject of the node: `schema.json` (with `id` and `type` for an entity), `catalog.yaml` with a title and description in each of the node's languages, `examples/example.json`, and the type in the subject's `@context`. The skeleton builds and passes `check` at once; then add its attributes, each with an `x-iri` and a description in `catalog.yaml`.
-
-## extend
-
-```bash
-datamodels extend task/Task road/RoadTask               # the same type, with more attributes
-datamodels extend task/Task road/PatrolTask --subclass  # a subtype with its own IRI
-datamodels extend                                        # in a terminal: pick the model from a list
-```
-
-Starts a model of this node from a model of another node, such as datamodels.jp's: what the [extension builder](https://datamodels.jp/guide/builder) does in the browser. The model is `<subject>/<Type>` as listed in the other node's `catalog.json`, or its type IRI; `--index` names that `catalog.json` (default: the first node in `node.yaml`, else datamodels.jp).
-
-It copies the other model's schema at its current version, imports its `@context` (exact version) into the subject's, takes the titles and attribute descriptions from the other catalog, adapts its example, and records the model in `extends`, so `check` keeps its names and meanings. It adds the other node to `nodes` in `node.yaml` when it is not there yet. Then add this node's attributes, as for `add`.
-
-- **Default:** the same type with more attributes. The type keeps the other model's IRI (`x-alias-of`).
-- **`--subclass`:** a type of its own in this node's namespace, with the other model as its parent (`x-subclass-of`).
-
-## export
-
-```bash
-datamodels export disaster/EvacuationSite --to csv,table-schema       # a CSV template and its Table Schema
-datamodels export disaster/EvacuationSite --to ai --out schemas       # structured output for AI
-datamodels export disaster/EvacuationSite --to postgis                # a PostgreSQL / PostGIS table
-datamodels export road/RoadPatrol my-node --to postgis                # a model of your own node
-```
-
-Writes the files of one or more adapters for one entity model into `--out` (default: the current directory), named `<Type>.<ext>`. The model is the node's in `[dir]` (default: the current directory) when it has one; otherwise it is `<subject>/<Type>` (or its type IRI) in another node's `catalog.json`: `--index`, default the first node in `node.yaml`, else datamodels.jp. Every file uses the model's attribute names and IRIs, so data converts to the NGSI-LD form and back without a mapping.
-
-| `--to` | File | What it is |
-|---|---|---|
-| `csv` | `<Type>.csv` | The header row of a CSV file: one column per attribute. Fill in one row per entity in a spreadsheet, then `datamodels convert <subject>/<Type> csv-template <file.csv>` makes the entities. |
-| `table-schema` | `<Type>.tableschema.json` | A [Frictionless Table Schema](https://datapackage.org/standard/table-schema/) (v2) for those columns, so a CSV file can be checked with `frictionless validate` or another Table Schema tool: types, required columns, allowed values, patterns, limits. |
-| `ai` | `<Type>.ai.json` | A strict JSON Schema for the structured output of a large language model, to extract entities from text: `{ name, description, strict, schema }`, the `json_schema` of OpenAI's Structured Outputs, and `schema` is the `input_schema` of a Claude tool. |
-| `postgis` | `<Type>.sql` | `CREATE TABLE` for PostgreSQL with PostGIS: one row per entity, constraints for the model's rules, the location as a geometry with a GiST index, and the descriptions and IRIs in `COMMENT ON`. |
-
-How the model becomes columns, the same in the CSV file and the table:
-
-- One column per attribute, named as the attribute (`hazardTypes`); in SQL in snake_case (`hazard_types`). `id` is the first column and the primary key; `type` is the model.
-- `location`: in the CSV file `longitude` and `latitude` (WGS 84); a model that allows other shapes than a point also has a `location` column for a GeoJSON geometry. In SQL `geometry(<type>, 4326)`, with the type the model allows (`Point`, or `Geometry` for any).
-- A value type made of plain fields, such as `address` (JapaneseAddress), becomes one column per field: `address.postalCode` in the CSV file, `address_postal_code` in SQL, each with its own rules. One column per field, not one JSON column, so a spreadsheet can fill it and SQL can check and index each field.
-- A list of plain values: one column, the values separated by `;` (a Table Schema `list`); in SQL an array (`text[]`) whose values are checked.
-- Anything else (a JSON structure, such as the answers of a Decision): JSON in one column, checked with the attribute's JSON Schema (Table Schema `jsonSchema`; `jsonb` in SQL).
-- Rules on several attributes ("at least one of externalSiteId and nationalShelterId"): a `CHECK` in SQL, a sentence in the Table Schema's and the AI schema's descriptions. Other rules (if/then) stay in the JSON Schema; the files say so.
-
-The Table Schema has its titles and descriptions in the first language of the catalog (Japanese for datamodels.jp) and the others under `x-translations`; each column's IRI is `x-iri`, and `x-typeIri`, `x-schema` and `x-context` name the model. Table Schema has no short labels in the catalog to draw on: a title is the start of the description when that is short.
-
-The AI schema keeps to what both OpenAI's and Anthropic's structured outputs accept, as their documentation says on 2026-10-11 ([OpenAI, supported schemas](https://developers.openai.com/api/docs/guides/structured-outputs#supported-schemas), [Anthropic, JSON Schema limitations](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)): every object has `additionalProperties: false` and lists every property in `required`, and an optional attribute may be `null` instead; no `$ref` (the value types are written out); `anyOf` instead of `oneOf`; formats `date-time`, `date`, `time`, `duration`, `email`, `hostname`, `ipv4`, `ipv6` and `uuid` only; patterns without lookarounds; no `minimum`, `maximum`, `minLength`, `maxLength`, `maxItems` or `uniqueItems`, and `minItems` only 0 or 1. What it leaves out goes into the description, for example "(minimum 0; maximum 9)". `id` and `type` are not in it: your application sets them, and the key-values entity is the answer plus `id`, `type` and `@context`. Descriptions are in English. A model with an attribute that has no strict form (a map with any keys, such as Decision's answers) has no AI file.
-
-Claude's strict mode takes at most 16 properties with a union (a type with `null`) per request, and most models have more optional attributes; `export` says so. Use the schema there as a tool's `input_schema` without `strict`, or remove the attributes you do not need. OpenAI's strict mode takes it as it is.
-
-`build` writes the same files for every entity model of a node; see [build](#build).
-
-## build
-
-```bash
-datamodels build             # the node in the current directory, into _site/
-datamodels build my-node --out public
-```
-
-A node is a folder with `node.yaml` and `models/`. `models/` is laid out as in [geolonia/datamodels](https://github.com/geolonia/datamodels/tree/main/models): one folder per subject with `subject.yaml` and `context.jsonld`, and one folder per model with `schema.json`, `catalog.yaml` and `examples/`. A node needs only one language and has no ADOPTERS files; mapping files (`mapping/*.yaml`) are optional ([what a node publishes](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
-
-```yaml
-# node.yaml
-baseUrl: https://models.example.org
-iris: hash          # /ns/<subject>#<Term>; slash needs w3id.org or a server that redirects
-languages: [en]
-publisher: { name: { en: Example Inc. }, url: https://example.org/ }
-license: CC0-1.0    # required; licenseUrl is optional
-nodes:              # optional: nodes you know; a context may import theirs
-  - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
-prerelease: true    # optional: published versions may still be corrected (see check --base)
-```
-
-It writes `catalog.json`, the @contexts (exact version and alias), JSON Schemas, vocabularies, examples, `llms.txt`, the pages and the adapters' files: for every entity model the files of [export](#export) at `/adapters/<name>/<subject>/<Type>.<ext>` (`csv`, `table-schema`, `ai`, `postgis`), listed under `adapters` in the model's entry in `catalog.json`, as on datamodels.jp. Schemas that a model refers to on another node (such as datamodels.jp's JapaneseAddress) are read online, only from the `schema/` folder of a node listed under `nodes` in `node.yaml` (`extend` adds it); when one is elsewhere or cannot be read, that model gets no adapter files and `build` says so (`check --offline` reads none). Adapter files are rebuilt every time and are not covered by the promise that published files never change. A model page has a Download row with a button per file, without naming a product, and an "About these files" link to the one explanation of the files on datamodels.jp ([ja](https://datamodels.jp/adapters/#downloads), [en](https://datamodels.jp/en/adapters/#downloads) and any other language); the node has no page of its own for that. `build` does not empty the output folder, but it removes an `adapters/index.html` (and `<lang>/adapters/index.html`) that an older version wrote, so it is no longer published. A model that builds on another node's model lists it in `catalog.yaml` under `extends` (`typeIri`, `version`, `index`).
-
-The pages are plain HTML in a monospace font, with no JavaScript, so they read well with `curl` too ([Eleventy](https://www.11ty.dev/) writes them):
-
-- `/`: the subjects and their models.
-- One page per subject. With hash IRIs it is the namespace document (`/ns/<subject>`, written as `ns/<subject>.html`), with an anchor for every type and attribute, so every IRI opens on it.
-- One page per model (`/models/<subject>/<Type>/`), with an anchor per attribute, the standards it maps (`mapping/*.yaml`, with links to the tables) and its notes (`notes.yaml`: the sources, the decisions and their reasons), so readers can judge how well-founded it is.
-- For a model that a released version had and the current one does not (renamed or removed): a page at its old address that says which versions had it, links its last schema and @context, names the current model with the same type IRI when there is one, and lists the current models. The subject page keeps an anchor for every term that earlier versions minted, so their hash IRIs still open on it. Both come from the release snapshots (`datamodels release`, `bump`).
-- `404.html`: what GitHub Pages and most static hosts show for an address with no page (for example the page of a model that a new version renamed). One page at the root, in the node's first language with the other languages' texts, linking to the index, `catalog.json` and every model.
-
-It also writes `_headers` and, with slash IRIs, `_redirects`: the content types, CORS and IRI redirects for hosts other than GitHub Pages ([Other hosts](#other-hosts)).
-
-One set of pages per language of the node: the first language at the base URL (where the IRIs open), each other one under `/<lang>/` (for example `/en/`), with a link to switch in the header. Each page shows the node's texts in its language, falling back to the first language that has one; the fixed texts are in Japanese and English (English for other languages). When English is not the first language, `catalog.json` lists the English pages as `pageUrlEn`, as datamodels.jp does. The pages follow the device's light or dark setting.
-
-Every page links to `catalog.json` (`<link rel="alternate" type="application/json">`) and carries a description, Open Graph tags for link previews, and `<meta name="generator">`. Every page but `404.html` also carries a canonical URL and its other languages (`hreflang`); `404.html` answers at any address, so it has neither and asks not to be indexed. The footer names the toolkit and links to the guide for publishing your own models. The exit code is 1 when the node is invalid, 2 for a usage error.
-
-## check
-
-```bash
-datamodels check             # the node in the current directory
-datamodels check --offline   # without the network
-datamodels check --base origin/main --all-released   # in a pull request, as datamodels.jp does
-```
-
-The checks a node runs in CI before it publishes:
-
-- Every schema compiles, and every `examples/example.json` is valid against its schema. A model has one example (`example.json`, and `example-normalized.jsonld` in the normalized form); another file in `examples/` is not read, published or validated, and is noted.
-- `schema.json`: the `const` of `type` is the model's folder name, `$id` is where the build publishes the schema, `x-version` (when there is one) is the subject's version, and each `x-ngsi.type` is `Property`, `Relationship`, `GeoProperty`, `JsonProperty` or `VocabProperty`.
-- `example.json` is validated without the `{"json": ...}` and `{"vocab": ...}` wrappers that a `JsonProperty` and a `VocabProperty` keep in key-values form, and also with an `@context` (the alias URL, and the exact URL with the NGSI-LD core context): data may carry one, so an entity schema accepts it. Polygon rings close (RFC 7946) in both examples.
-- `example-normalized.jsonld`, when a model has one, follows the schema: each attribute has the `x-ngsi.type` of the schema (`Property` without one) and several instances only with `x-ngsi.multi`, a date or date-time value carries `"@type": "Date"` or `"DateTime"`, its `id` and `vocab` values are those of `example.json`, its key-values form is valid, and its `@context` is a list with the alias URL of the subject's major version (`v<major>.jsonld`, for example `v1.jsonld`).
-- A JSON-LD processor expands `example-normalized.jsonld`: each attribute to its IRI and the type to the model's type IRI, a `vocab` value to a defined IRI (not the NGSI-LD default context), and nothing is lost when it is compacted again. The example of a value type is tried as the value of an attribute. The vocabulary must expand too. The node's own @contexts come from the build, offline too; the NGSI-LD core context v1.8 comes with the toolkit; any other is read online, and only noted when it cannot be read.
-- Every entity type and attribute is a term of the subject's `@context` (or an NGSI-LD core term such as `location`), and expands to the IRI in the schema (`x-iri`). Otherwise JSON-LD drops the attribute, or gives it another meaning. A term from a context imported by URL is checked online; offline it is only noted.
-- Each mapping file (`mapping/*.yaml`) is a correspondence table: a `standard` with a `name` (and optionally `url`, `license`, `note`), and for each field of the model a row with `to`, the item of the standard (`null` when it has none), and an optional `note`. Its texts are in the node's languages, and a key that is not a language tag is a text that YAML cut at a comma (quote it). A row may also carry the conversion rules of [convert](#convert), checked as convert applies them: the transform names, the columns each transform reads, `values`, one of `column`, `value` and `via`, a `convert.id` template, a field name with a dot (each part a member of the value before it). `via` names another mapping file of the node (`<subject>/<Type>/<name>`), and the files that `via` connects do not form a circle. A row for a position in an array (`coordinates[2]`) only documents it. Unknown keys are reported, so a typo does not go unseen.
-- Release snapshots in `models/<subject>/releases/vX.Y.Z/`, where the node keeps them, hold exactly what the sources produce.
-- An exact version (`v0.1.0`) that is already online is served unchanged. One that is not online yet is new.
-- A model does not redefine a term of a model it `extends`: the same name keeps the same IRI.
-
-The exit code is 1 on a problem. Another node that cannot be reached, or does not answer within 20 seconds, is only noted: a node that is down never fails someone else's check. `--offline` skips the published files, the extended models and schemas on other sites.
-
-### A published version never changes
-
-The release snapshots (`models/<subject>/releases/vX.Y.Z/`, written by [release](#release) and [bump](#bump)) hold the bytes of every published version, so they are the record of what was published; there is no separate list of hashes. Three checks guard them:
-
-- `build` (and `check`) stop when the sources of the released current version differ from its snapshot.
-- Online, `check` compares each exact version with the file the site serves.
-- `--base <git ref>` compares the snapshots with a git ref, usually the branch a pull request goes into (`origin/main`; fetch it first): a snapshot file that changed or is gone is a problem. It works offline and also sees a version that was removed, which the site cannot show. A new snapshot is fine.
-
-`--all-released` also requires a snapshot of each subject's current version, for a catalog that releases a version before it publishes it, as datamodels.jp does. Without it, `check` only notes a published version that has no snapshot.
-
-Before an official launch, `prerelease: true` in `node.yaml` lets published versions be corrected in place: delete the subject's snapshot, change the sources, and run `datamodels release <subject> --offline`. A version that should not have been published can be removed as a whole: delete its folder under `releases/`. While the flag is true both in the base branch and in the change, `check --base` notes the corrections and removals instead of failing, in the snapshots and online. A release folder without its `context.jsonld` stops the build: a version is removed with its folder, not file by file. Without `--base`, `check` cannot see the base branch, so a changed published file stays a problem. The base branch decides: once it has the flag, a change may not remove it or set it from `false` back to `true`, so after the launch (`prerelease: false`) published versions are fixed for good.
-
-## release
-
-```bash
-datamodels release road      # in the node's directory
-```
-
-Keeps the current version of a subject online. A node's site holds the current version of each subject; when `subject.yaml` gets a new version, the files of the old one leave the site, although data may still point to them. `release` writes a snapshot of the current version's @context, vocabulary and schemas into `models/<subject>/releases/vX.Y.Z/`; `build` publishes every snapshot next to the current version.
-
-Run it once a version is published, before you change its sources, and commit the snapshot. Online, it first compares the snapshot with the published files and refuses when the sources changed since, or when the site does not answer: then restore them (for example with git), release, and make the change with a new version. A snapshot that exists is kept; `build` stops when the sources of a released version change. `check` notes a published version that has no snapshot yet. `--offline` skips the comparison.
-
-## bump
-
-```bash
-datamodels bump road minor   # 0.1.0 → 0.2.0
-```
-
-Gives a subject a new version: `patch`, `minor` or `major`, as in [Semantic Versioning](https://semver.org/) (major for a change that breaks existing data). It runs `release` first, so the current version stays online and is compared with the published files, then raises `version` in `subject.yaml` and the version in the subject's own schema URLs (`$id`, and `$ref` between its models). `--offline` releases without the comparison.
-
-## upgrade
-
-```bash
-datamodels upgrade              # the latest release
-datamodels upgrade --to v0.3.0
-```
-
-Moves the node to a release of this toolkit: the Action in `.github/workflows/` is pinned to the release's commit SHA, with the tag as a comment, and `npx @geolonia/datamodels@X.Y.Z` in the Markdown files at the top of the node runs that release; `npx github:geolonia/datamodels-toolkit#vX.Y.Z`, the form before the package was on npm, becomes the npm form too. It reads the release from the GitHub API. Dependabot does the same for the workflow, a week or so later.
 
 ## GitHub Action
 
-This repository is also a GitHub Action: it runs `check` and `build` and deploys the node to GitHub Pages. A node's workflow:
+This repository is also a GitHub Action, listed on the [GitHub Marketplace](https://github.com/marketplace/actions/data-model-node-datamodels-jp): it checks a node on pull requests, and on `main` builds it and deploys it to GitHub Pages. `datamodels init` writes this workflow:
 
 ```yaml
 # .github/workflows/publish.yml
@@ -388,82 +83,24 @@ jobs:
         uses: geolonia/datamodels-toolkit@0891a457179b20d3937d46ad7dc14d88dfad25e5 # v0.3.10
 ```
 
-In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). Outputs: `page_url`, and `site`, the folder with the built files, for a step that publishes them elsewhere ([Other hosts](#other-hosts); new in v0.3.7). A node upgrades by changing the pinned version; Dependabot can propose it. `datamodels init` writes this workflow.
-
-## Other hosts
-
-`build` writes plain files, so the node can go on any static host. The host must do what GitHub Pages does by itself:
-
-- send each file with its content type: `application/ld+json` for `.jsonld` (contexts, vocabularies, examples), `application/schema+json` for the schemas, `application/json` for `catalog.json` and the other `.json` files, `text/csv`, `application/sql` and `application/yaml` for the adapters' and mapping files;
-- send `Access-Control-Allow-Origin: *`, so browsers and JSON-LD processors on other sites can read the contexts and schemas;
-- answer an address with no page with `404.html`, status 404;
-- with slash IRIs, redirect each IRI to its page.
-
-`build` writes these rules into the site as `_headers` and `_redirects` (only with slash IRIs). Cloudflare reads at most 2,000 redirects; `build` prints a note when a node has more (one per type and per attribute minted in its namespace). Cloudflare Pages, Cloudflare Workers static assets and Netlify read both files from the folder they publish, and serve `404.html` by themselves (Workers with `"not_found_handling": "404-page"`). GitHub Pages ignores both files. On another host, such as a web server or object storage behind a CDN, set the same rules in its configuration; the two files list them. `npx wrangler pages dev _site` serves the folder locally as Cloudflare would.
-
-In the workflow, the Action only builds (`deploy: 'false'`), and the next step publishes its `site` output. The repository needs a secret with a token for the host; the workflow passes nothing else secret.
-
-### Cloudflare Pages
-
-Once: create the project (`npx wrangler pages project create my-models --production-branch main`), add an API token with the permission Cloudflare Pages: Edit as the repository secret `CLOUDFLARE_API_TOKEN`, and your account ID as the repository variable `CLOUDFLARE_ACCOUNT_ID`. Your own domain goes under Custom domains in the project. The publish job:
-
-```yaml
-  publish:
-    # Only main: a manual run (workflow_dispatch) can pick another branch.
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    concurrency:
-      group: publish
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - id: node
-        uses: geolonia/datamodels-toolkit@0891a457179b20d3937d46ad7dc14d88dfad25e5 # v0.3.10
-        with:
-          deploy: 'false'
-      - uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ${{ steps.node.outputs.site }} --project-name=my-models --branch=main
-```
-
-### Netlify
-
-Once: create the site in Netlify, add a personal access token as the repository secret `NETLIFY_AUTH_TOKEN`, and the site's ID (Site configuration → Site details) as the repository variable `NETLIFY_SITE_ID`. The publish job is the one above, with this step instead of `wrangler-action`:
-
-```yaml
-      - name: Deploy to Netlify
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
-          SITE: ${{ steps.node.outputs.site }}
-        run: npx --yes netlify-cli@27.10.2 deploy --dir "$SITE" --site "$NETLIFY_SITE_ID" --prod --no-build
-```
+In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). Outputs: `page_url`, and `site`, the folder with the built files, for a step that publishes them on [another host](https://datamodels.jp/en/toolkit/hosts). `datamodels upgrade` moves the pin to a newer release, and Dependabot can propose it ([Checking and building](https://datamodels.jp/en/toolkit/check#action)).
 
 ## Build library
 
-`@geolonia/datamodels/build` builds the machine-readable files of a catalog from a models folder: every published version, the @contexts, vocabularies, JSON Schemas, examples, mapping files and `catalog.json`. It is the code datamodels.jp runs, with the base URL and the required languages as options, so a node of the [web of data models](https://github.com/geolonia/datamodels/issues/200) builds its files the same way ([what a node publishes](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
+`@geolonia/datamodels/build` builds the machine-readable files of a catalog from a models folder: every published version, the @contexts, vocabularies, JSON Schemas, examples, mapping files and `catalog.json`. It is the code datamodels.jp runs, with the base URL and the required languages as options, so a node of the [web of data models](https://github.com/geolonia/datamodels/issues/200) builds its files the same way ([The node and build](https://datamodels.jp/en/toolkit/node)).
 
 ```js
 import { catalogUrls, loadSubjects, publishCatalog } from '@geolonia/datamodels/build';
 
-const urls = catalogUrls('https://models.example.org');
+const urls = catalogUrls('https://models.example.org', { iris: 'hash' }); // slash IRIs without it
 const subjects = await loadSubjects('models', { urls, languages: ['en'], subjectFields: ['title', 'description'] });
 await publishCatalog(subjects, { urls, outDir: 'dist', languages: ['en'], head: { license: 'CC0-1.0' } });
 ```
 
+
 ## Agent skill
 
-`skills/datamodels/SKILL.md` gives an AI agent the catalog's modelling rules and this toolkit's workflow (find before you define, alias or subclass, `bump` before changing a published model, and more), and the steps to convert a list of your own with `mapping` and `convert --check`. It points the agent to https://datamodels.jp/llms.txt for the models themselves. For Claude Code, copy the folder into your project's `.claude/skills/` (or `~/.claude/skills/` for every project):
-
-```bash
-mkdir -p .claude/skills && cp -R path/to/datamodels-toolkit/skills/datamodels .claude/skills/
-```
+`skills/datamodels/SKILL.md` gives an AI agent the catalog's modelling rules and this toolkit's workflow ([Agent skill](https://datamodels.jp/en/toolkit/#agent-skill)). It is not in the npm package; copy the folder from this repository into your project's `.claude/skills/`.
 
 ## Development
 
@@ -490,7 +127,7 @@ The workflow uses npm's [trusted publishing](https://docs.npmjs.com/trusted-publ
 
 ## Issues and contributions
 
-Problems with the tool go to [this repository's issues](https://github.com/geolonia/datamodels-toolkit/issues). Questions about a model or a mapping file go to [geolonia/datamodels](https://github.com/geolonia/datamodels/issues), where the conversion rules live. Pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+Problems with the tool go to [this repository's issues](https://github.com/geolonia/datamodels-toolkit/issues). Questions about a model or a mapping file go to [geolonia/datamodels](https://github.com/geolonia/datamodels/issues). Pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). The documentation is in [geolonia/datamodels](https://github.com/geolonia/datamodels) (`site/toolkit/`, `site/en/toolkit/`): a change to a command changes its page there too. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Licence
 
