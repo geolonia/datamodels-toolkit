@@ -9,7 +9,7 @@ import { mkdtemp, writeFile, readFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { catalogUrls, loadSubjects, buildNode } from '../src/build/index.mjs';
+import { catalogUrls, loadSubjects, buildNode, nodeAdapters } from '../src/build/index.mjs';
 import { ADAPTERS, localRefs, readRefs } from '../src/adapters/index.mjs';
 import { columnsOf, shortTitle, snake } from '../src/adapters/model.mjs';
 import { fieldsOf, tableSchemaOf, xsdPattern } from '../src/adapters/table-schema/index.mjs';
@@ -421,5 +421,15 @@ test('AI: the keywords next to anyOf hold in every branch', () => {
 test('every adapter has its label and says what its file is, in Japanese and English', () => {
   for (const a of ADAPTERS) for (const field of ['label', 'note']) {
     assert.ok(a[field]?.ja && a[field]?.en, `${a.name}: ${field}`);
+  }
+});
+
+test('nodeAdapters (public): each bound adapter keeps its name, label and note', async () => {
+  const { adapters } = await nodeAdapters([], { urls: catalogUrls('https://models.example.org'), languages: ['en'], offline: true });
+  assert.deepEqual(adapters.map((a) => a.name), ADAPTERS.map((a) => a.name));
+  for (const [i, a] of adapters.entries()) {
+    assert.deepEqual([a.label, a.note], [ADAPTERS[i].label, ADAPTERS[i].note], a.name);
+    assert.equal(typeof a.urlFor, 'function');
+    assert.equal(typeof a.content, 'function');
   }
 });

@@ -153,17 +153,25 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   await writeFile(join(road, 'RoadPatrol', 'notes.yaml'), 'notes:\n  - { ja: 巡回の記録だけを扱う。, en: Only the record of a patrol. }\n');
   await mkdir(join(road, 'RoadPatrol', 'mapping'));
   await writeFile(join(road, 'RoadPatrol', 'mapping', 'city-ledger.yaml'), 'standard:\n  name: { ja: 市の道路台帳, en: The city road ledger }\n  url: https://example.org/ledger\nfields:\n  route: { to: 路線名 }\n');
-  // An adapters page left in _site by a build before 0.3.7 (build does not empty the folder) is removed.
-  for (const p of ['adapters', join('en', 'adapters')]) {
+  // An adapters page left in _site by a build before 0.3.7 (build does not empty the folder) is removed, also in the
+  // folder of a language node.yaml no longer lists (fr). Only a page the toolkit wrote: ja/adapters/ cannot be one
+  // (the first language is at the root), so it is the publisher's own and stays.
+  const oldPage = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="datamodels-toolkit 0.3.6">\n<title>Adapters</title>\n</head>\n<body><h1>Adapters</h1></body>\n</html>\n';
+  const ownPage = '<!doctype html>\n<html lang="ja">\n<head>\n<meta name="generator" content="Hugo 0.140.0">\n<title>アダプター</title>\n</head>\n<body><h1>アダプター</h1></body>\n</html>\n';
+  for (const [p, html] of [['adapters', oldPage], [join('en', 'adapters'), oldPage], [join('fr', 'adapters'), oldPage], [join('ja', 'adapters'), ownPage]]) {
     await mkdir(join(dir, '_site', p), { recursive: true });
-    await writeFile(join(dir, '_site', p, 'index.html'), '<h1>Adapters</h1>\n');
+    await writeFile(join(dir, '_site', p, 'index.html'), html);
   }
+  await writeFile(join(dir, '_site', 'fr', 'adapters', 'notes.txt'), 'kept\n');
   const { pages, catalog: built } = await buildNode(dir);
   // One 404.html, at the root: static hosts answer every missing address with it.
   assert.deepEqual(pages, ['404.html', 'en/index.html', 'en/models/road/RoadPatrol/index.html', 'en/ns/road.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
   const read = (p) => readFile(join(dir, '_site', p), 'utf8');
   await assert.rejects(read('adapters/index.html'), { code: 'ENOENT' });
   await assert.rejects(read('en/adapters/index.html'), { code: 'ENOENT' });
+  await assert.rejects(read('fr/adapters/index.html'), { code: 'ENOENT' });
+  assert.equal(await read('ja/adapters/index.html'), ownPage);
+  assert.equal(await read('fr/adapters/notes.txt'), 'kept\n');
   // Only the page: the adapters' files and their entries in catalog.json stay.
   assert.equal(await read('adapters/csv/road/RoadPatrol.csv'), 'id,route\n');
   assert.deepEqual(Object.keys(built.models[0].adapters), ['csv', 'table-schema', 'ai', 'postgis']);
