@@ -219,8 +219,10 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
     // The mapping files: a table for the page, and rules that convert can apply; via may not loop.
     const mappings = Object.fromEntries(subjects.flatMap((s) => s.models.flatMap((m) => m.mappings.map((map) => [`${s.name}/${m.type}/${map.name}`, map]))));
     const mappingNames = new Set(Object.keys(mappings));
+    // The node's schemas by $id, so a field of a value (address.postalCode) is checked against the value's model.
+    const schemas = new Map(subjects.flatMap((s) => s.models.filter((m) => typeof m.schema.$id === 'string').map((m) => [m.schema.$id, m.schema])));
     for (const s of subjects) for (const m of s.models) for (const map of m.mappings) {
-      for (const p of mappingFileProblems(map, m.schema, { languages: node.languages, mappingNames })) problems.push(`${s.name}/${m.type}/mapping/${map.name}.yaml: ${p}`);
+      for (const p of mappingFileProblems(map, m.schema, { languages: node.languages, mappingNames, schemas })) problems.push(`${s.name}/${m.type}/mapping/${map.name}.yaml: ${p}`);
     }
     for (const cycle of viaCycles(mappings)) problems.push(`${cycle[0]}: via goes round in a circle: ${cycle.join(' → ')}`);
 
