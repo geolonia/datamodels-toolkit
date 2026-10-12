@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-10-12
+
+The toolkit is on npm: `npx @geolonia/datamodels@0.3.9`. Releases are staged on npm by a workflow and approved by a maintainer.
+
 ### Added
 
 - `@geolonia/datamodels` is on npmjs.org (#74), from 0.3.8. A published GitHub release now stages the package on npmjs.org, through a workflow with npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers): no npm token is stored, and npm adds provenance. A maintainer then approves the staged release with 2FA ([staged publishing](https://docs.npmjs.com/staged-publishing)); only then is it public.
@@ -212,7 +216,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.8...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.9...main
+[0.3.9]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.7...v0.3.8
 [0.3.7]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.6...v0.3.7
 [0.3.6]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.5...v0.3.6
