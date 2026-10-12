@@ -88,7 +88,7 @@ export async function nodeAdapters(subjects, { urls, languages, fetch, timeout, 
   const context = { urls, languages, refs };
   const notes = problems.map((p) => `no adapter files for the models that use it: ${p}`);
   const adapters = ADAPTERS.map((a) => ({
-    name: a.name, label: a.label, note: a.note,
+    name: a.name, label: a.label, note: a.note, use: a.use,
     urlFor: (subject, model) => (refsRead(model, refs) ? a.urlFor(subject, model, context) : null),
     content: (subject, model) => a.content(subject, model, context),
   }));
