@@ -220,8 +220,7 @@ test('build: the schemas of other nodes are read online; a model whose schemas c
   const offline = await buildNode(dir, { out: join(dir, 'offline'), fetch: async () => { throw new Error('offline'); } });
   assert.match(offline.notes[0], /no adapter files for the models that use it: https:\/\/datamodels\.jp\/schema\/common\/JapaneseAddress\/v1\.0\.0\.json could not be read/);
   assert.equal(offline.catalog.models[0].adapters, undefined);
-  assert.ok(!offline.pages.includes('adapters/index.html'), 'no adapters page without files');
-  assert.doesNotMatch(await readFile(join(dir, 'offline', 'models', 'road', 'RoadPatrol', 'index.html'), 'utf8'), /<dt>Adapters<\/dt>/);
+  assert.doesNotMatch(await readFile(join(dir, 'offline', 'models', 'road', 'RoadPatrol', 'index.html'), 'utf8'), /<dt>Download<\/dt>|About these files/, 'no Download row without files');
 });
 
 // Opt-in: DATAMODELS_TEST_POSTGIS=<container> with a running postgis/postgis image whose init has finished.
@@ -419,8 +418,8 @@ test('AI: the keywords next to anyOf hold in every branch', () => {
   assert.equal(strict({ type: 'string', anyOf: [{ type: 'string', format: 'date' }] }, 'd').anyOf[0].format, 'date');
 });
 
-test('every adapter says what its file is and how to use it, in Japanese and English, for the adapters page', () => {
-  for (const a of ADAPTERS) for (const field of ['label', 'note', 'use']) {
+test('every adapter has its label and says what its file is, in Japanese and English', () => {
+  for (const a of ADAPTERS) for (const field of ['label', 'note']) {
     assert.ok(a[field]?.ja && a[field]?.en, `${a.name}: ${field}`);
   }
 });

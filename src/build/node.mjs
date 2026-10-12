@@ -10,7 +10,7 @@
 //   licenseUrl: https://models.example.org/LICENSE   # optional
 //   nodes:                                           # optional: other nodes this node knows
 //     - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
-import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, stat, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
 import { catalogUrls } from './urls.mjs';
@@ -75,7 +75,7 @@ export async function loadNode(dir) {
 }
 
 /**
- * The toolkit's adapters (src/adapters/) bound to a node: { name, label, note,
+ * The toolkit's adapters (src/adapters/) bound to a node: { name, label,
  * urlFor(subject, model), content(subject, model) }, the interface
  * publishCatalog() takes. The schemas the models refer to are read first, from
  * the node or online; a model whose schemas cannot be read gets no adapter
@@ -88,7 +88,7 @@ export async function nodeAdapters(subjects, { urls, languages, fetch, timeout, 
   const context = { urls, languages, refs };
   const notes = problems.map((p) => `no adapter files for the models that use it: ${p}`);
   const adapters = ADAPTERS.map((a) => ({
-    name: a.name, label: a.label, note: a.note, use: a.use,
+    name: a.name, label: a.label,
     urlFor: (subject, model) => (refsRead(model, refs) ? a.urlFor(subject, model, context) : null),
     content: (subject, model) => a.content(subject, model, context),
   }));
@@ -107,6 +107,9 @@ export async function buildNode(dir, { out = join(dir, '_site'), now, pages: wit
   const { node, urls, subjects } = await loadNode(dir);
   const head = { publisher: node.publisher, license: node.license, ...(node.licenseUrl ? { licenseUrl: node.licenseUrl } : {}), ...(node.nodes ? { nodes: node.nodes } : {}) };
   await mkdir(out, { recursive: true });
+  // Builds before 0.3.7 wrote an adapters page (/adapters/, /<lang>/adapters/); datamodels.jp explains the files now.
+  // The output folder is not emptied, so remove a page left from such a build, or it would still be published.
+  await Promise.all(['', ...node.languages].map((l) => rm(join(out, l, 'adapters', 'index.html'), { force: true })));
   const { adapters, notes } = await nodeAdapters(subjects, { urls, languages: node.languages, fetch, timeout, offline, nodes: node.nodes });
   const result = await publishCatalog(subjects, { urls, outDir: out, languages: node.languages, head, adapters, ...(now ? { now } : {}) });
   const name = node.publisher.name.en ?? node.languages.map((l) => node.publisher.name[l]).find(Boolean) ?? Object.values(node.publisher.name)[0];
