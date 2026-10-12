@@ -71,7 +71,7 @@ It detects UTF-8 and Shift_JIS. It repairs only what it can prove, such as a loc
 
 schema.org says only that a closing time before the opening time runs into the next day. Google's guidelines for structured data, the most used convention, read `00:00` to `23:59` as open 24 hours and `00:00` to `00:00` as closed all day, while Japanese lists often write `0:00` to `0:00` for "around the clock".
 
-So when the opening and the closing time of a value (`opens` and `closes` of OpeningHours) are both 0:00, the row has a problem until the mapping says what the list means:
+So when the opening and the closing time of a value (`opens` and `closes` of OpeningHours, from columns or from a JSON value such as the CSV template's, also in a list) are both 0:00, the row has a problem until the mapping says what the list means:
 
 ```yaml
 convert:

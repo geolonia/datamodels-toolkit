@@ -489,3 +489,39 @@ test('opens and closes at the same time other than 0:00 is a problem, whatever c
     assert.equal(r.entity.opens, undefined);
   }
 });
+
+test('0:00–0:00 in a JSON value (transform: json, the CSV template), in a list, and merged with fields that have a dot', () => {
+  const ambiguous = (at) => `${at}.opens, ${at}.closes: 00:00–00:00 is ambiguous (open all day, or closed?); say in the mapping what it means for this list (convert.allDay: open or closed)`;
+  const map = (fields, allDay) => ({ convert: { id: 'urn:ngsi-ld:T:{n}', ...(allDay ? { allDay } : {}) }, fields: { n: { column: 'n' }, ...fields } });
+  const json = { h: { column: 'j', transform: 'json' } };
+  const one = (fields, row, allDay) => convertRows([{ n: '1', ...row }], map(fields, allDay), { type: 'T' })[0];
+  // One object.
+  const object = { j: '{"opens":"00:00","closes":"00:00"}' };
+  assert.deepEqual(one(json, object, 'open').entity.h, { opens: '00:00', closes: '23:59' });
+  assert.deepEqual(one(json, object, 'open').fixes, [{ field: 'h.opens', repair: 'read 0:00–0:00 as open all day (convert.allDay: open)', detail: '00:00–00:00 → 00:00–23:59' }]);
+  assert.deepEqual(one(json, object).problems, [ambiguous('h')]);
+  assert.deepEqual(one(json, object).entity.h, {});
+  // A list: each item on its own, the others kept as they are.
+  const list = { j: JSON.stringify([{ dayOfWeek: ['Monday'], opens: '0:00', closes: '0:00' }, { dayOfWeek: ['Tuesday'], opens: '09:00', closes: '17:00' }, { opens: '9:00', closes: '9:00' }]) };
+  const closed = one(json, list, 'closed');
+  assert.deepEqual(closed.entity.h, [{ dayOfWeek: ['Monday'], opens: '00:00', closes: '00:00' }, { dayOfWeek: ['Tuesday'], opens: '09:00', closes: '17:00' }, {}]);
+  assert.deepEqual(closed.fixes.map((f) => [f.field, f.detail]), [['h[0].opens', '0:00–0:00 → 00:00–00:00']]);
+  assert.deepEqual(closed.problems, ['h[2].opens, h[2].closes: 9:00–9:00 opens and closes at the same time (open 24 hours from then, or not at all?); fix the list, or leave the hours of this row out']);
+  assert.deepEqual(one(json, list).problems.slice(0, 1), [ambiguous('h[0]').replace('00:00–00:00', '0:00–0:00')]);
+  // A JSON object and a field with a dot make the pair together.
+  const both = { ...json, 'h.closes': { column: 'c', transform: 'time' } };
+  assert.deepEqual(one(both, { j: '{"opens":"00:00"}', c: '0:00' }).problems, [ambiguous('h')]);
+  assert.deepEqual(one(both, { j: '{"opens":"00:00"}', c: '0:00' }, 'open').entity.h, { opens: '00:00', closes: '23:59' });
+});
+
+test('convert.allDay repairs a value: of the mapping in each row without changing the mapping, and the hours of a via mapping once', () => {
+  const value = { opens: '00:00', closes: '00:00' };
+  const m = { convert: { id: 'urn:ngsi-ld:T:{n}', allDay: 'open' }, fields: { n: { column: 'n' }, h: { value } } };
+  const r = convertRows([{ n: '1' }, { n: '2' }], m, { type: 'T' });
+  assert.deepEqual(r.map((x) => x.entity.h), [{ opens: '00:00', closes: '23:59' }, { opens: '00:00', closes: '23:59' }]);
+  assert.deepEqual(value, { opens: '00:00', closes: '00:00' });
+  // closed leaves 00:00–00:00: the outer mapping does not read the via mapping's result again.
+  const hours = { convert: { allDay: 'closed' }, fields: { opens: { column: 'o', transform: 'time' }, closes: { column: 'c', transform: 'time' } } };
+  const v = convertRows([{ n: '1', o: '0:00', c: '0:00' }], { convert: { id: 'urn:ngsi-ld:T:{n}' }, fields: { n: { column: 'n' }, h: { via: 'hours' } } }, { type: 'T', mappings: { hours } })[0];
+  assert.deepEqual(v.fixes.filter((f) => f.repair.startsWith('read 0:00')).map((f) => f.field), ['opens']);
+});
