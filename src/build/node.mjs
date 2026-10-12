@@ -10,7 +10,7 @@
 //   licenseUrl: https://models.example.org/LICENSE   # optional
 //   nodes:                                           # optional: other nodes this node knows
 //     - { url: https://datamodels.jp/, index: https://datamodels.jp/catalog.json }
-import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
 import { catalogUrls } from './urls.mjs';
@@ -116,6 +116,8 @@ export async function buildNode(dir, { out = join(dir, '_site'), now, pages: wit
   const pages = withPages ? await writePages(subjects, { urls, node, out, adapters }) : [];
   await writeFile(join(out, '_headers'), headersFile());
   const redirectRules = redirectsFile(result.redirects);
+  // No redirects (hash IRIs): remove the file an earlier build with slash IRIs left.
   if (redirectRules) await writeFile(join(out, '_redirects'), redirectRules);
+  else await rm(join(out, '_redirects'), { force: true });
   return { node, subjects, ...result, pages, notes };
 }

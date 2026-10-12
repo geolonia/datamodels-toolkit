@@ -222,6 +222,9 @@ test('slash IRIs when node.yaml asks for them, with their redirects', async () =
   const { pages } = await buildNode(dir);
   assert.ok(pages.includes('models/road/index.html'), 'the subject page is under /models/ with slash IRIs');
   assert.equal(buildVocabulary(subjects[0], { urls: catalogUrls(BASE), languages: ['en'] })['@graph'].length, 3);
+  // The node changed to hash IRIs and built into the same folder: the old redirects go.
+  await buildNode(await node(), { out: join(dir, '_site') });
+  await assert.rejects(access(join(dir, '_site', '_redirects')), { code: 'ENOENT' }, 'no stale _redirects after slash IRIs became hash IRIs');
 });
 
 test('a context may import the contexts of the nodes listed in node.yaml, and no others', async () => {
