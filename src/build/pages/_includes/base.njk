@@ -52,6 +52,11 @@ dd { margin: 0 0 0.5rem 2ch; overflow-wrap: anywhere; }
 table { border-collapse: collapse; }
 th, td { padding: 0.2rem 2ch 0.2rem 0; vertical-align: top; text-align: left; font-weight: normal; }
 header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 2ch; }
+/* The Download row of a model page: a small outlined button per file, wrapping on a narrow screen. */
+.downloads { display: flex; flex-wrap: wrap; gap: 0.4rem 1ch; margin: 0.2rem 0 0.4rem; }
+a.button { display: inline-block; padding: 0.1rem 1ch; border: 1px solid; border-radius: 4px; text-decoration: none; }
+a.button::before { content: "↓ " / ""; }
+a.button:hover, a.button:focus-visible { background: color-mix(in srgb, currentColor 12%, transparent); }
 </style>
 </head>
 <body>
