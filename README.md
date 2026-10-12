@@ -41,7 +41,7 @@ npx @geolonia/datamodels@0.3.10 init my-models
 
 This Action does that for you. You keep your models in a GitHub repository, and every change goes online as a website on GitHub Pages: no server, and every change checked before it is published.
 
-- **On every pull request** it checks the models: the schemas, the examples, and that each term means what the schema says. A version that is already published must stay exactly the same. A mistake shows up as a failed check, before anything goes online.
+- **On every pull request** it checks the models: the schemas, the examples, and that each term means what the schema says. The published versions of the schemas, `@context` files and vocabulary must stay exactly the same; examples and pages can still be corrected. A mistake shows up as a failed check, before anything goes online.
 - **On every push to `main`** it builds the website and publishes it on GitHub Pages: a page for each model, the JSON Schemas, the `@context` files, the vocabulary, and files for spreadsheets, AI and PostgreSQL.
 
 You need it only to publish data models of your own. To use existing models, start at [datamodels.jp](https://datamodels.jp/en/).
@@ -67,6 +67,8 @@ Sites that run on it: [models.geolonia.com](https://models.geolonia.com/) ([repo
 
 ```yaml
 # .github/workflows/publish.yml
+# Checks the node on pull requests; on main, builds it and deploys it to GitHub Pages
+# (Settings → Pages → Source: GitHub Actions). Written by datamodels init.
 name: Publish
 on:
   pull_request:
@@ -80,6 +82,7 @@ jobs:
   check:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -93,6 +96,7 @@ jobs:
   publish:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pages: write
