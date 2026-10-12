@@ -1,0 +1,68 @@
+name: Publish
+
+# Publishes @geolonia/datamodels to npmjs.org when a GitHub release is
+# published. It runs only for a release whose tag is `v` + the version in
+# package.json, and only after the tests pass. A pre-release publishes nothing.
+#
+# Trusted publishing: npm accepts GitHub's OIDC token from this workflow, so no
+# npm token is stored in the repository, and npm adds provenance (the commit and
+# the workflow that built the package). The trusted publisher in the package's
+# settings on npmjs.com names this file, publish.yml: renaming it stops
+# publishing until the setting is changed too.
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  publish:
+    name: Publish
+    # A pre-release stays on GitHub; npm's `latest` gets full releases only.
+    if: ${{ !github.event.release.prerelease }}
+    # Trusted publishing works on GitHub-hosted runners only.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write   # the OIDC token npm exchanges for a publish token
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # No registry-url: it writes an .npmrc that expects NODE_AUTH_TOKEN,
+      # and npm would then not use the OIDC token. No npm cache either: a
+      # cache written by another run is not trusted in a publishing job.
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      # Trusted publishing needs npm 11.5.1 or later. An exact version, not
+      # whatever npm the Node release brings.
+      - name: Set up npm
+        run: npm install --global --ignore-scripts npm@11.20.0 # zizmor: ignore[adhoc-packages] exact version
+
+      - name: The tag is the package version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::The release tag is $TAG, but package.json says $version (expected tag v$version)."
+            exit 1
+          fi
+
+      # --ignore-scripts: no dependency runs code while this job can get an
+      # OIDC token. The toolkit needs no install scripts.
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Test
+        run: npm test
+
+      - name: Publish
+        run: npm publish --access public --provenance

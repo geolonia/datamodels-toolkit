@@ -8,6 +8,7 @@ import { mkdir, readFile, readdir, writeFile, stat } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import YAML from 'yaml';
 import { settingsProblems, httpUrl, LANGUAGE_TAG } from './build/node.mjs';
+import { npxSpec } from './version.mjs';
 
 // The version of this repository's GitHub Action a new node's workflow uses:
 // the commit SHA of a release tag, with the tag as a comment, so Dependabot
@@ -219,8 +220,8 @@ A data model node: JSON Schemas, JSON-LD @contexts and vocabularies at ${node.ba
 Licence: ${license ? `[${node.license}](${license})` : node.license}.
 
 \`\`\`bash
-npx github:geolonia/datamodels-toolkit#${ACTION_VERSION} check
-npx github:geolonia/datamodels-toolkit#${ACTION_VERSION} build   # into _site/
+npx ${npxSpec(ACTION_VERSION)} check
+npx ${npxSpec(ACTION_VERSION)} build   # into _site/
 \`\`\`
 `;
 }

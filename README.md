@@ -6,11 +6,13 @@ Command-line tools for the [datamodels.jp](https://datamodels.jp) catalog.
 
 ## Install
 
-Node.js 24 or later. Until the package is on npm, run a release from GitHub:
+Node.js 24 or later. Run a release of [`@geolonia/datamodels`](https://www.npmjs.com/package/@geolonia/datamodels) with `npx`:
 
 ```bash
-npx github:geolonia/datamodels-toolkit#v0.3.8 convert <subject>/<Type> <mapping> <file.csv>
+npx @geolonia/datamodels@0.3.8 convert <subject>/<Type> <mapping> <file.csv>
 ```
+
+Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.3.8`) and run `npx datamodels …` there. Releases before 0.3.8 are not on npm; they run from GitHub (`npx github:geolonia/datamodels-toolkit#v0.3.7 …`).
 
 ## convert
 
@@ -332,7 +334,7 @@ datamodels upgrade              # the latest release
 datamodels upgrade --to v0.3.0
 ```
 
-Moves the node to a release of this toolkit: the Action in `.github/workflows/` is pinned to the release's commit SHA, with the tag as a comment, and `npx github:geolonia/datamodels-toolkit#vX.Y.Z` in the Markdown files at the top of the node runs that release. It reads the release from the GitHub API. Dependabot does the same for the workflow, a week or so later.
+Moves the node to a release of this toolkit: the Action in `.github/workflows/` is pinned to the release's commit SHA, with the tag as a comment, and `npx @geolonia/datamodels@X.Y.Z` in the Markdown files at the top of the node runs that release; `npx github:geolonia/datamodels-toolkit#vX.Y.Z`, the form before the package was on npm, becomes the npm form too. It reads the release from the GitHub API. Dependabot does the same for the workflow, a week or so later.
 
 ## GitHub Action
 
@@ -471,6 +473,17 @@ npm test
 The tests read `test/fixtures/site/`, a copy of the files datamodels.jp serves for the mappings they use. After the catalog changes one of those models or mappings, refresh it with `npm run fixtures` and commit the result.
 
 `test/fixtures/catalog/` holds the sources of two subjects of [geolonia/datamodels](https://github.com/geolonia/datamodels) and the files datamodels.jp serves for them; the build library must produce exactly those files. Refresh it with `npm run fixtures:build -- <path to a datamodels checkout>` when the catalog changes those subjects.
+
+### Releases
+
+A release reaches npmjs.org through the workflow `.github/workflows/publish.yml`:
+
+1. A release pull request raises `version` in `package.json` (and `package-lock.json`) and moves the Unreleased part of `CHANGELOG.md` under the new version.
+2. After it is merged, tag the merge commit `vX.Y.Z` and publish a GitHub release for the tag.
+3. The workflow checks that the tag is `v` followed by the version in `package.json`, runs the tests, and publishes `@geolonia/datamodels`. A pre-release on GitHub publishes nothing.
+4. Then pin `init` (`ACTION_REF`, `ACTION_VERSION` in `src/init.mjs`) and the README's `npx` lines to the new release.
+
+The workflow uses npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm accepts GitHub's OIDC token, so there is no npm token in the repository, and npm adds provenance (the commit and the workflow that built the package). The trusted publisher in the package's settings on npmjs.com names this repository and the file `publish.yml`; after renaming the file, change that setting too.
 
 ## Issues and contributions
 

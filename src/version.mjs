@@ -8,13 +8,21 @@ import { releaseSubject } from './release.mjs';
 
 const REPO = 'geolonia/datamodels-toolkit';
 const TAG = /^v\d+\.\d+\.\d+$/;
+// The first release on npmjs.org. Older releases run only from GitHub.
+const FIRST_NPM = [0, 3, 8];
+// How a node's Markdown runs the toolkit: from npm (`npx @geolonia/datamodels@0.3.8`),
+// or from GitHub as before (`npx github:geolonia/datamodels-toolkit#v0.3.8`); not
+// the start of a longer version such as 0.3.8-rc.1.
+const NPX = /(?:@geolonia\/datamodels@|github:geolonia\/datamodels-toolkit#v)\d+\.\d+\.\d+(?![\w.-]*\w)/g;
 const exists = (p) => stat(p).then(() => true, () => false);
 
 /**
  * Move the node in `dir` to a release of the toolkit (`to`, default the
  * latest): the Action in its workflows is pinned to the release's commit SHA
- * with the tag as a comment, and `npx github:…#vX.Y.Z` in its Markdown files
- * at the top runs that release. Returns { version, sha, changed }.
+ * with the tag as a comment, and `npx` in its Markdown files at the top runs
+ * that release: `npx @geolonia/datamodels@X.Y.Z`, also where the file ran it
+ * from GitHub (`npx github:geolonia/datamodels-toolkit#vX.Y.Z`); a release
+ * from before npm stays with the GitHub form. Returns { version, sha, changed }.
  */
 export async function upgradeNode(dir, { to, fetch: fetchUrl = globalThis.fetch, timeout = 20000 } = {}) {
   if (to !== undefined && !TAG.test(to)) throw new Error(`--to needs a release tag such as v0.3.0, got ${JSON.stringify(to)}`);
@@ -45,10 +53,19 @@ export async function upgradeNode(dir, { to, fetch: fetchUrl = globalThis.fetch,
       await rewrite(join('.github', 'workflows', f), (t) => t.replace(/(uses:\s*geolonia\/datamodels-toolkit@)[^\s#]+(?:[ \t]*#[^\n]*)?/g, `$1${sha} # ${version}`));
     }
   }
+  const npx = npxSpec(version);
   for (const f of (await readdir(dir)).filter((f) => f.endsWith('.md')).sort()) {
-    await rewrite(f, (t) => t.replace(/(github:geolonia\/datamodels-toolkit)#v\d+\.\d+\.\d+/g, `$1#${version}`));
+    await rewrite(f, (t) => t.replace(NPX, npx));
   }
   return { version, sha, changed };
+}
+
+/** What `npx` runs for the release `version` (vX.Y.Z): the npm package, or GitHub before the first npm release. */
+export function npxSpec(version) {
+  const parts = version.slice(1).split('.').map(Number);
+  const i = parts.findIndex((n, k) => n !== FIRST_NPM[k]);
+  const onNpm = i === -1 || parts[i] > FIRST_NPM[i];
+  return onNpm ? `@geolonia/datamodels@${version.slice(1)}` : `github:${REPO}#${version}`;
 }
 
 const LEVELS = ['patch', 'minor', 'major'];

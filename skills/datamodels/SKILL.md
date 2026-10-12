@@ -29,7 +29,7 @@ datamodels.jp is a catalog of data models that work in Japan: JSON Schemas, JSON
 
 ## Convert your data
 
-A CSV list becomes entities of a datamodels.jp model with `datamodels convert`. Run it with `npx github:geolonia/datamodels-toolkit#<version>` (Node.js 24 or later).
+A CSV list becomes entities of a datamodels.jp model with `datamodels convert`. Run it with `npx @geolonia/datamodels@<version>` (Node.js 24 or later).
 
 1. **A standard list:** if the model page (or `mappingUrls` in catalog.json) has a mapping for the list's standard, use it: `datamodels convert <subject>/<Type> <mapping> <file.csv> --check`.
 2. **The CSV template:** a CSV made from `datamodels export <subject>/<Type> --to csv` converts with `csv-template` as the mapping.
@@ -50,7 +50,7 @@ Rules:
 
 ## A node with datamodels-toolkit
 
-Run the commands with `npx github:geolonia/datamodels-toolkit#<version>` (Node.js 24 or later); use the release the node pins (see its README).
+Run the commands with `npx @geolonia/datamodels@<version>` (Node.js 24 or later); use the release the node pins (see its README). A node made before the package was on npm runs it from GitHub, `npx github:geolonia/datamodels-toolkit#v<version>`; `upgrade` changes that to the npm form.
 
 - `init`: `node.yaml`, the first subject, README, LICENSE (CC0-1.0, CC-BY-4.0), the GitHub Pages workflow and Dependabot. **The base URL is in every IRI: choose it once** (your domain, or a w3id.org address that redirects to it: https://datamodels.jp/en/toolkit/start#w3id). Then set Settings → Pages → Source: GitHub Actions.
 - `add <subject>/<Type>`: a new model (schema, catalog.yaml, example, notes.yaml).

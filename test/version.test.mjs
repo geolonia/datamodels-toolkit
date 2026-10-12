@@ -6,7 +6,7 @@ import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { upgradeNode, bumpSubject, nextVersion } from '../src/version.mjs';
+import { upgradeNode, bumpSubject, nextVersion, npxSpec } from '../src/version.mjs';
 import { buildNode } from '../src/build/index.mjs';
 
 const run = promisify(execFile);
@@ -60,6 +60,39 @@ test('upgrade pins the Action to the release and runs it with npx', async () => 
   await assert.rejects(upgradeNode(dir, { to: 'v0.2.9', fetch: github() }), /v0\.2\.9 is not a release/, 'a tag is not enough, it must be a release');
   assert.deepEqual((await upgradeNode(dir, { to: 'v0.3.0', fetch: github() })).version, 'v0.3.0');
   await assert.rejects(upgradeNode(dir, { to: 'main', fetch: github() }), /--to needs a release tag such as v0\.3\.0/);
+});
+
+test('upgrade runs a release from npm, also where the node ran it from GitHub', async () => {
+  assert.deepEqual(['v0.3.8', 'v0.3.10', 'v0.4.0', 'v1.0.0'].map(npxSpec), ['@geolonia/datamodels@0.3.8', '@geolonia/datamodels@0.3.10', '@geolonia/datamodels@0.4.0', '@geolonia/datamodels@1.0.0']);
+  assert.deepEqual(['v0.3.7', 'v0.2.9', 'v0.0.1'].map(npxSpec), ['github:geolonia/datamodels-toolkit#v0.3.7', 'github:geolonia/datamodels-toolkit#v0.2.9', 'github:geolonia/datamodels-toolkit#v0.0.1'], 'before npm: GitHub');
+  const dir = await node();
+  const readme = [
+    'npx github:geolonia/datamodels-toolkit#v0.3.7 check',
+    'npx @geolonia/datamodels@0.3.8 build   # into _site/',
+    'npm install --save-dev @geolonia/datamodels@0.3.8.',
+    "import { catalogUrls } from '@geolonia/datamodels/build';",
+    'npx @geolonia/datamodels@0.4.0-rc.1 check',
+    '',
+  ].join('\n');
+  await writeFile(join(dir, 'README.md'), readme);
+  const releases = async (url) => {
+    if (url === `${API}/releases/latest` || url === `${API}/releases/tags/v0.3.9`) return json({ tag_name: 'v0.3.9' });
+    if (url === `${API}/commits/v0.3.9`) return json({ sha: NEW });
+    return github()(url);
+  };
+  assert.deepEqual((await upgradeNode(dir, { fetch: releases })).changed, ['.github/workflows/publish.yml', 'README.md']);
+  assert.equal(await readFile(join(dir, 'README.md'), 'utf8'), [
+    'npx @geolonia/datamodels@0.3.9 check',
+    'npx @geolonia/datamodels@0.3.9 build   # into _site/',
+    'npm install --save-dev @geolonia/datamodels@0.3.9.',
+    "import { catalogUrls } from '@geolonia/datamodels/build';",
+    'npx @geolonia/datamodels@0.4.0-rc.1 check',
+    '',
+  ].join('\n'), 'both forms; the import path and a longer version stay');
+  assert.deepEqual((await upgradeNode(dir, { fetch: releases })).changed, [], 'a second run changes nothing');
+  // Back to a release from before npm: the GitHub form again.
+  await upgradeNode(dir, { to: 'v0.3.0', fetch: releases });
+  assert.match(await readFile(join(dir, 'README.md'), 'utf8'), /^npx github:geolonia\/datamodels-toolkit#v0\.3\.0 check\nnpx github:geolonia\/datamodels-toolkit#v0\.3\.0 build/);
 });
 
 test('bump releases the current version, then raises the version and the schema URLs', async () => {
