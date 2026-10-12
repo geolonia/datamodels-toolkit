@@ -9,10 +9,10 @@ Command-line tools for the [datamodels.jp](https://datamodels.jp) catalog.
 Node.js 24 or later. Run a release of [`@geolonia/datamodels`](https://www.npmjs.com/package/@geolonia/datamodels) with `npx`:
 
 ```bash
-npx @geolonia/datamodels@0.3.8 convert <subject>/<Type> <mapping> <file.csv>
+npx @geolonia/datamodels@0.3.9 convert <subject>/<Type> <mapping> <file.csv>
 ```
 
-Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.3.8`) and run `npx datamodels …` there. Releases before 0.3.8 are not on npm; they run from GitHub (`npx github:geolonia/datamodels-toolkit#v0.3.7 …`).
+Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.3.9`) and run `npx datamodels …` there. Releases before 0.3.8 are not on npm; they run from GitHub (`npx github:geolonia/datamodels-toolkit#v0.3.7 …`).
 
 ## convert
 
@@ -361,7 +361,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: geolonia/datamodels-toolkit@bea3f9317d19043bac3ddbfd29702c8ac4f0287a # v0.3.8
+      - uses: geolonia/datamodels-toolkit@9bae3f6987df35a6d2a8fea92904621769d0f929 # v0.3.9
         with:
           deploy: 'false'
 
@@ -383,7 +383,7 @@ jobs:
         with:
           persist-credentials: false
       - id: node
-        uses: geolonia/datamodels-toolkit@bea3f9317d19043bac3ddbfd29702c8ac4f0287a # v0.3.8
+        uses: geolonia/datamodels-toolkit@9bae3f6987df35a6d2a8fea92904621769d0f929 # v0.3.9
 ```
 
 In the repository settings, set Pages to deploy from GitHub Actions. Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). Outputs: `page_url`, and `site`, the folder with the built files, for a step that publishes them elsewhere ([Other hosts](#other-hosts); new in v0.3.7). A node upgrades by changing the pinned version; Dependabot can propose it. `datamodels init` writes this workflow.
@@ -420,7 +420,7 @@ Once: create the project (`npx wrangler pages project create my-models --product
         with:
           persist-credentials: false
       - id: node
-        uses: geolonia/datamodels-toolkit@bea3f9317d19043bac3ddbfd29702c8ac4f0287a # v0.3.8
+        uses: geolonia/datamodels-toolkit@9bae3f6987df35a6d2a8fea92904621769d0f929 # v0.3.9
         with:
           deploy: 'false'
       - uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
