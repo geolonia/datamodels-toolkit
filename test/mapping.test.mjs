@@ -355,6 +355,8 @@ test('mapping suggests yesno for a boolean column of 有 and 無, and weekdays a
   assert.deepEqual(m.fields['openingHoursSpecification.opens'], { column: '開始時間', transform: 'time' });
   assert.deepEqual(m.fields['openingHoursSpecification.closes'], { column: '終了時間', transform: 'time' });
   assert.equal(m.fields.openingHoursSpecification, undefined);
+  // The summary counts every TODO in the file, the one for 0:00–0:00 too.
+  assert.equal(Number(/; (\d+) TODO\(s\)/.exec(r.stderr)[1]), r.stdout.match(/# TODO：/g).length);
   // The comments of the fields come from the value type's catalog texts.
   assert.match(r.stdout, /^ {2}openingHoursSpecification\.closes: .*# .*24:00 はその日の終わり/m);
   // A boolean: yesno when the rows hold 有 and 無, flag when the column is empty.
@@ -363,6 +365,27 @@ test('mapping suggests yesno for a boolean column of 有 and 無, and weekdays a
   // The CSV template keeps the opening hours as one JSON column.
   const model = await siteModel(reader, 'facility/AEDLocation');
   assert.deepEqual(templateMapping(model.columns).fields.openingHoursSpecification, { column: 'openingHoursSpecification', transform: 'json' });
+});
+
+test('mapping asks what 0:00–0:00 means when the model has opening hours (convert.allDay), with or without an id template', async () => {
+  const model = await siteModel(reader, 'facility/AEDLocation');
+  const todo = /^ {2}# TODO: does the list write 0:00–0:00 \(openingHoursSpecification\)\? Say what it means: allDay: open .* or allDay: closed .*$/m;
+  const a = startMapping({ target: 'facility/AEDLocation', ...model, header: ['name', 'opens', 'closes'], csv: 'a.csv' });
+  assert.match(a.text, todo);
+  assert.equal(a.allDayTodo, true);
+  // Under convert:, after the id; once written in place of the TODO, convert reads it.
+  const done = a.text.replace(todo, '  allDay: open');
+  assert.equal(YAML.parse(done).convert.allDay, 'open');
+  // An id column: the convert block holds only the TODO.
+  const b = startMapping({ target: 'facility/AEDLocation', ...model, header: ['id', 'name'], csv: 'b.csv' });
+  assert.match(b.text, /^convert:\n {2}# TODO: does the list write 0:00–0:00/m);
+  assert.equal(YAML.parse(b.text.replace(todo, '  allDay: closed')).convert.allDay, 'closed');
+  // In Japanese for a Japanese header; a model without opening hours gets no such TODO.
+  assert.match(startMapping({ target: 'facility/AEDLocation', ...model, header: ['名称'], csv: 'c.csv' }).text, /^ {2}# TODO：一覧に 0:00～0:00 はありますか（openingHoursSpecification）？/m);
+  const site = await siteModel(reader, 'disaster/EvacuationSite');
+  const c = startMapping({ target: 'disaster/EvacuationSite', ...site, header: ['name'], csv: 'd.csv' });
+  assert.equal(c.allDayTodo, false);
+  assert.doesNotMatch(c.text, /allDay/);
 });
 
 test('mapping takes the values of a catalog rule along with its column', () => {

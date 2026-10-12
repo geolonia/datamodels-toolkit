@@ -396,13 +396,16 @@ test('an AED row with weekdays, times and 有/無 becomes a valid AEDLocation; 2
   assert.deepEqual(mappingProblems(map, { ...aed.mappings, 'common/OpeningHours/jichitai-opendata-hours': hours }), []);
   // As Chuo City's list writes it (2026-10-11), with an ID of its own instead of 1.31E+11.
   const row = { 全国地方公共団体コード: '131024', ID: '1', 名称: '中央区役所', 緯度: '35.670599', 経度: '139.77201', 設置位置: '1階正面玄関受付横', 利用可能曜日: '月火水木金土日', 開始時間: '0:00', 終了時間: '0:00', 小児対応設備の有無: '有', 外部利用不可: '' };
-  const convert = (r) => convertRows([r], map, { type: 'AEDLocation', mappings: { ...aed.mappings, 'common/OpeningHours/jichitai-opendata-hours': hours } })[0];
-  const a = convert(row);
+  const convert = (r, m = map) => convertRows([r], m, { type: 'AEDLocation', mappings: { ...aed.mappings, 'common/OpeningHours/jichitai-opendata-hours': hours } })[0];
+  // 0:00–0:00 means around the clock in this list; the mapping says so (convert.allDay).
+  const a = convert(row, { ...map, convert: { ...map.convert, allDay: 'open' } });
   assert.deepEqual(a.problems, []);
-  assert.deepEqual(a.entity.openingHoursSpecification, { dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], opens: '00:00', closes: '00:00' });
+  assert.deepEqual(a.entity.openingHoursSpecification, { dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], opens: '00:00', closes: '23:59' });
   assert.deepEqual([a.entity.pediatricSupport, a.entity.restrictedAccess], [true, false]);
-  assert.deepEqual(a.fixes.map((f) => `${f.field}: ${f.detail}`), ['opens: 0:00 → 00:00', 'closes: 0:00 → 00:00']);
+  assert.deepEqual(a.fixes.map((f) => `${f.field}: ${f.detail}`), ['opens: 0:00 → 00:00', 'closes: 0:00 → 00:00', 'opens: 00:00–00:00 → 00:00–23:59']);
   assert.ok(aed.validate(a.entity), aed.errorsText(aed.validate.errors));
+  // Without it, the row is a problem: 00:00–00:00 would read as closed every day.
+  assert.deepEqual(convert(row).problems, ['opens, closes: 00:00–00:00 is ambiguous (open all day, or closed?); say in the mapping what it means for this list (convert.allDay: open or closed)']);
   // 24:00 closes the day; as an opening time the schema rejects it.
   const b = convert({ ...row, 利用可能曜日: '月～金', 開始時間: '9:00', 終了時間: '24:00' });
   assert.ok(aed.validate(b.entity), aed.errorsText(aed.validate.errors));
@@ -436,4 +439,53 @@ test('values are checked before any row is read: a map, on a transform that take
     'j: transform time reads exactly 1 column, got 2',
   ]);
   for (const t of ['yesno', 'weekdays', 'time']) assert.ok(TRANSFORMS.includes(t), t);
+});
+
+test('0:00–0:00 is ambiguous: a problem of the row unless the mapping says what it means (convert.allDay)', () => {
+  const hours = { fields: { opens: { column: 'o', transform: 'time' }, closes: { column: 'c', transform: 'time' } } };
+  const rows = [{ n: '1', o: '0:00', c: '0:00' }, { n: '2', o: '9:00', c: '17:00' }, { n: '3', o: '9:00', c: '24:00' }, { n: '4', o: '00:00:00', c: '0:00' }, { n: '5', o: '0:00', c: '24:00' }];
+  const run = (allDay) => convertRows(rows, { convert: { id: 'urn:ngsi-ld:T:{n}', ...(allDay ? { allDay } : {}) }, fields: { n: { column: 'n' }, h: { via: 'hours' } } }, { type: 'T', mappings: { hours } });
+  const ambiguous = 'opens, closes: 00:00–00:00 is ambiguous (open all day, or closed?); say in the mapping what it means for this list (convert.allDay: open or closed)';
+  const none = run();
+  assert.deepEqual(none.map((r) => r.problems), [[ambiguous], [], [], [ambiguous.replace('00:00–00:00', '00:00:00–00:00')], []]);
+  // Not written: the row has no opening and closing time at all.
+  assert.deepEqual(none[0].entity.h, undefined);
+  // A normal range, 24:00 as the end of the day and 0:00–24:00 are kept as they are, with any option.
+  for (const r of [none, run('open'), run('closed')]) assert.deepEqual(r.slice(1).filter((_, i) => i !== 2).map((x) => x.entity.h), [{ opens: '09:00', closes: '17:00' }, { opens: '09:00', closes: '24:00' }, { opens: '00:00', closes: '24:00' }]);
+  const open = run('open');
+  assert.deepEqual(open.map((r) => r.problems), [[], [], [], [], []]);
+  assert.deepEqual([open[0].entity.h, open[3].entity.h], [{ opens: '00:00', closes: '23:59' }, { opens: '00:00', closes: '23:59' }]);
+  assert.deepEqual(open[0].fixes.at(-1), { field: 'opens', repair: 'read 0:00–0:00 as open all day (convert.allDay: open)', detail: '00:00–00:00 → 00:00–23:59' });
+  const closed = run('closed');
+  assert.deepEqual(closed.map((r) => r.problems), [[], [], [], [], []]);
+  assert.deepEqual([closed[0].entity.h, closed[3].entity.h], [{ opens: '00:00', closes: '00:00' }, { opens: '00:00', closes: '00:00' }]);
+  assert.deepEqual(closed[0].fixes.at(-1), { field: 'opens', repair: 'read 0:00–0:00 as closed all day (convert.allDay: closed)', detail: '00:00–00:00 → 00:00–00:00' });
+});
+
+test('convert.allDay: the outermost mapping decides, also for the hours a via mapping builds; fields with a dot too', () => {
+  const row = { n: '1', o: '0:00', c: '0:00' };
+  const hours = (allDay) => ({ ...(allDay ? { convert: { allDay } } : {}), fields: { opens: { column: 'o', transform: 'time' }, closes: { column: 'c', transform: 'time' } } });
+  const top = (allDay) => ({ convert: { id: 'urn:ngsi-ld:T:{n}', ...(allDay ? { allDay } : {}) }, fields: { n: { column: 'n' }, h: { via: 'hours' } } });
+  const h = (map, sub) => convertRows([row], map, { type: 'T', mappings: { hours: sub } })[0].entity.h;
+  // The via mapping's own word holds when the outer one says nothing; a mapping of your own overrides it.
+  assert.deepEqual(h(top(), hours('closed')), { opens: '00:00', closes: '00:00' });
+  assert.deepEqual(h(top('open'), hours('closed')), { opens: '00:00', closes: '23:59' });
+  // A field with a dot, in a mapping of your own.
+  const dotted = { convert: { id: 'urn:ngsi-ld:T:{n}', allDay: 'open' }, fields: { n: { column: 'n' }, 'h.opens': { column: 'o', transform: 'time' }, 'h.closes': { column: 'c', transform: 'time' } } };
+  assert.deepEqual(convertRows([row], dotted, { type: 'T' })[0].entity.h, { opens: '00:00', closes: '23:59' });
+  assert.deepEqual(convertRows([row], { ...dotted, convert: { id: dotted.convert.id } }, { type: 'T' })[0].problems, ['h.opens, h.closes: 00:00–00:00 is ambiguous (open all day, or closed?); say in the mapping what it means for this list (convert.allDay: open or closed)']);
+  // Only open and closed, checked before any row is read, in the mapping and in those it reaches.
+  assert.deepEqual(mappingProblems(top('yes'), { hours: hours('24h') }), [
+    'convert.allDay must be open or closed (what 0:00–0:00 means in this list)',
+    'hours: convert.allDay must be open or closed (what 0:00–0:00 means in this list)',
+  ]);
+  assert.deepEqual(mappingProblems(top('open'), { hours: hours('closed') }), []);
+});
+
+test('opens and closes at the same time other than 0:00 is a problem, whatever convert.allDay says', () => {
+  for (const allDay of [undefined, 'open', 'closed']) {
+    const r = convertRows([{ n: '1', o: '9:00', c: '9:00' }], { convert: { id: 'urn:ngsi-ld:T:{n}', allDay }, fields: { n: { column: 'n' }, opens: { column: 'o', transform: 'time' }, closes: { column: 'c', transform: 'time' } } }, { type: 'T' })[0];
+    assert.deepEqual(r.problems, ['opens, closes: 09:00–09:00 opens and closes at the same time (open 24 hours from then, or not at all?); fix the list, or leave the hours of this row out'], allDay);
+    assert.equal(r.entity.opens, undefined);
+  }
 });

@@ -4,8 +4,13 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Added
+
+- `convert.allDay` in a mapping file says what opening hours of 0:00 to 0:00 mean in the list: `open` writes `00:00` to `23:59` (open 24 hours, as Google's structured data guidelines read it), `closed` writes `00:00` to `00:00` (closed all day). It applies to the mappings reached through `via` too, and the outermost mapping that says it wins, so a mapping of your own decides it for the catalog's OpeningHours mapping. `datamodels mapping` writes a TODO for it when the model has opening hours.
+
 ### Changed
 
+- `datamodels convert` reports opening hours of 0:00 to 0:00 as a problem of the row unless the mapping has `convert.allDay`: written as they are, they read as "closed all day" to tools that follow Google's convention, while Japanese lists mean "around the clock". An opening and a closing time that are the same at another hour (9:00 to 9:00) are always a problem of the row.
 - `datamodels init` writes a workflow pinned to the v0.3.6 release of the Action, and a README whose `npx` commands run v0.3.6.
 
 ## [0.3.6] - 2026-10-12

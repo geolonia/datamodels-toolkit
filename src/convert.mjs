@@ -113,6 +113,9 @@ export const YES_NO = Object.freeze({
   無: false, 無し: false, なし: false, ナシ: false, いいえ: false, '×': false, '✕': false,
 });
 
+/** What convert.allDay can say opening hours of 0:00–0:00 mean: open all day (00:00–23:59) or closed all day (00:00–00:00). */
+export const ALL_DAY = Object.freeze(['open', 'closed']);
+
 /** The days of the week as OpeningHours.dayOfWeek names them (schema.org DayOfWeek), Monday first, then public holidays. */
 export const WEEKDAYS = Object.freeze(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'PublicHolidays']);
 const DAY_CHARS = '月火水木金土日';
@@ -224,6 +227,8 @@ export function mappingProblems(mapping, mappings = {}) {
       }
       if (rule.via && !mappings[rule.via]) out.push(`${where}: no mapping ${rule.via}`);
     }
+    const allDay = map?.convert?.allDay;
+    if (allDay !== undefined && !ALL_DAY.includes(allDay)) out.push(`${name ? `${name}: ` : ''}convert.allDay must be ${ALL_DAY.join(' or ')} (what 0:00–0:00 means in this list)`);
   }
   return out;
 }
@@ -372,6 +377,36 @@ function nest(flat, problems) {
   return Object.fromEntries(order.filter((k) => k in out).map((k) => [k, out[k]]));
 }
 
+const seconds = (t) => t.split(':').reduce((s, n, i) => s + Number(n) * [3600, 60, 1][i], 0);
+
+// Opening hours whose opens and closes are the same time. schema.org says only that a closing time
+// before the opening time runs into the next day; Google's guidelines read 00:00–23:59 as open 24
+// hours and 00:00–00:00 as closed all day, while Japanese lists write 0:00–0:00 for around the
+// clock. So 0:00–0:00 is converted only when the mapping says what it means (convert.allDay), and
+// another time (9:00–9:00) is always a problem: no convention gives it a meaning.
+// `out` is the flat object of one mapping: each pair opens and closes (or x.opens and x.closes).
+function sameHours(out, allDay, fixes, problems) {
+  for (const key of Object.keys(out)) {
+    if (key !== 'opens' && !key.endsWith('.opens')) continue;
+    const at = key.slice(0, -'opens'.length), closes = `${at}closes`;
+    const [o, c] = [time(out[key]), time(out[closes])];
+    if (!o || !c || seconds(o) !== seconds(c)) continue;
+    const span = `${out[key]}–${out[closes]}`;
+    if (seconds(o) !== 0) problems.push(`${key}, ${closes}: ${span} opens and closes at the same time (open 24 hours from then, or not at all?); fix the list, or leave the hours of this row out`);
+    else if (allDay === 'open') {
+      fixes.push({ field: key, repair: 'read 0:00–0:00 as open all day (convert.allDay: open)', detail: `${span} → 00:00–23:59` });
+      Object.assign(out, { [key]: '00:00', [closes]: '23:59' });
+      continue;
+    } else if (allDay === 'closed') {
+      fixes.push({ field: key, repair: 'read 0:00–0:00 as closed all day (convert.allDay: closed)', detail: `${span} → 00:00–00:00` });
+      Object.assign(out, { [key]: '00:00', [closes]: '00:00' });
+      continue;
+    } else problems.push(`${key}, ${closes}: ${span} is ambiguous (open all day, or closed?); say in the mapping what it means for this list (convert.allDay: open or closed)`);
+    delete out[key];
+    delete out[closes];
+  }
+}
+
 const valueAt = (obj, path) => path.split('.').reduce((v, k) => (v && typeof v === 'object' ? v[k] : undefined), obj);
 
 /**
@@ -386,7 +421,9 @@ const valueAt = (obj, path) => path.split('.').reduce((v, k) => (v && typeof v =
  */
 export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {}) {
   // chain: the via names being built, so a cycle is reported instead of recursing forever.
-  const build = (map, row, fixes, problems, top, chain = []) => {
+  // allDay: what 0:00–0:00 means (convert.allDay); the outermost mapping that says it wins, so
+  // a mapping of your own decides it also for the catalog mappings it reaches through via.
+  const build = (map, row, fixes, problems, top, chain = [], allDay = map.convert?.allDay) => {
     const out = {};
     for (const [field, rule] of Object.entries(map.fields ?? {})) {
       if (rule?.value !== undefined) { out[field] = rule.value; continue; }
@@ -394,7 +431,7 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
         const sub = mappings[rule.via];
         if (!sub) { problems.push(`${field}: no mapping ${rule.via}`); continue; }
         if (chain.includes(rule.via)) { problems.push(`${field}: via cycle ${[...chain, rule.via].join(' → ')}`); continue; }
-        const v = build(sub, row, fixes, problems, false, [...chain, rule.via]);
+        const v = build(sub, row, fixes, problems, false, [...chain, rule.via], allDay ?? sub.convert?.allDay);
         const meaningful = Object.entries(v).some(([k]) => sub.fields[k]?.value === undefined);
         if (meaningful) out[field] = v;
         continue;
@@ -410,6 +447,7 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
       if (r.fix) fixes.push({ field, ...r.fix });
       if (r.value !== undefined) out[field] = r.value;
     }
+    sameHours(out, allDay, fixes, problems);
     return nest(out, problems);
   };
   // The columns a value of the id comes from, followed through via and dotted field names, to see
