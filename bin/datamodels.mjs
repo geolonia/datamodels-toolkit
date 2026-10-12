@@ -60,6 +60,16 @@
 // output of AI models, a PostgreSQL / PostGIS table. The model is the node's
 // in dir when it has one; otherwise it is read from --index (default: the
 // first node in node.yaml, else datamodels.jp).
+//
+//   datamodels search <words…> [--index URL] [--depth N] [--limit N] [--json]
+//   datamodels nodes [--index URL] [--depth N] [--json]
+//
+// search finds models by words in their type, title, attributes and
+// description, in an index (default datamodels.jp) and the nodes it links to
+// (`nodes` and `extends` in its catalog.json), up to --depth links away
+// (default 1). nodes lists those nodes. A linked node that cannot be read is
+// noted on standard error; the exit code is 1 only when the index itself
+// cannot be read.
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
@@ -80,6 +90,7 @@ import { exportModel, writeExport } from '../src/export.mjs';
 import { ADAPTERS } from '../src/adapters/index.mjs';
 import { unionCount } from '../src/adapters/ai/index.mjs';
 import { crossRules } from '../src/adapters/model.mjs';
+import { discoverNodes, searchModels, words, plain, DEFAULT_INDEX, MAX_DEPTH } from '../src/discover.mjs';
 
 const USAGES = {
   convert: `usage: datamodels convert <subject>/<Type> <mapping|file.yaml|${TEMPLATE}> <file.csv> [--set attr=value]... [--normalized] [--out file.json] [--check [--rows N]] [--site URL|dir]`,
@@ -92,6 +103,8 @@ const USAGES = {
   upgrade: `usage: datamodels upgrade [dir] [--to vX.Y.Z]`,
   extend: `usage: datamodels extend <model> <subject>/<Type> [dir] [--index URL] [--subclass]`,
   export: `usage: datamodels export <subject>/<Type> [dir] --to ${ADAPTERS.map((a) => a.name).join(',')} [--out dir] [--index URL]`,
+  search: `usage: datamodels search <words...> [--index URL] [--depth N] [--limit N] [--json]`,
+  nodes: `usage: datamodels nodes [--index URL] [--depth N] [--json]`,
   init: `usage: datamodels init [dir] [--base-url URL] [--iris hash|slash] [--languages en,ja] [--publisher name] [--publisher-url URL] [--license id] [--subject name] [--github owner/name] [--yes]`,
 };
 const USAGE = Object.values(USAGES).join('\n');
@@ -103,10 +116,11 @@ const fail = (msg) => { throw new Exit(1, msg); };
 
 // The command line, with commander (#9). Its own messages are replaced by the
 // one-line errors above, so scripts see the same text and exit codes as before.
-function program({ onConvert, onMapping, onBuild, onCheck, onInit, onAdd, onRelease, onExtend, onBump, onUpgrade, onExport }) {
+function program({ onConvert, onMapping, onBuild, onCheck, onInit, onAdd, onRelease, onExtend, onBump, onUpgrade, onExport, onSearch, onNodes }) {
   // An option's value: present, not empty (--out=) and not another option.
   const value = (name) => (v) => { if (v === '' || v.startsWith('-')) throw new InvalidArgumentError(`${name} needs a value`); return v; };
   const count = (name) => (v) => { if (!/^[1-9]\d*$/.test(v)) throw new InvalidArgumentError(`${name} needs a whole number above 0`); return Number(v); };
+  const depth = (v) => { if (!/^\d+$/.test(v) || Number(v) > MAX_DEPTH) throw new InvalidArgumentError(`--depth needs a whole number from 0 to ${MAX_DEPTH}`); return Number(v); };
   const cli = new Command('datamodels')
     .exitOverride()
     .configureOutput({ outputError: () => {} })
@@ -208,6 +222,22 @@ function program({ onConvert, onMapping, onBuild, onCheck, onInit, onAdd, onRele
     .option('--out <dir>', 'where to write the files (default: the current directory)', value('--out'))
     .option('--index <URL>', "another node's catalog.json (default: the first node in node.yaml, else datamodels.jp)", value('--index'))
     .action(onExport);
+  cli.command('search')
+    .description('find models by words in their type, title, attributes and description, in datamodels.jp (or another index) and the nodes it links to')
+    .usage(USAGES.search.replace('usage: datamodels search ', ''))
+    .argument('<words...>', 'what to look for, in English or Japanese, for example 避難 or "road closure"')
+    .option('--index <URL>', 'the catalog.json, or the address of a node, to start at', value('--index'), DEFAULT_INDEX)
+    .option('--depth <N>', 'how many links to follow from it; 0 reads only the index', depth, 1)
+    .option('--limit <N>', 'how many models to list', count('--limit'), 10)
+    .option('--json', 'machine-readable output: the models with their type IRI, schema, @context and index')
+    .action(onSearch);
+  cli.command('nodes')
+    .description('list the data model nodes reachable from datamodels.jp (or another index): name, address, licence and number of models')
+    .usage(USAGES.nodes.replace('usage: datamodels nodes ', ''))
+    .option('--index <URL>', 'the catalog.json, or the address of a node, to start at', value('--index'), DEFAULT_INDEX)
+    .option('--depth <N>', 'how many links to follow from it; 0 reads only the index', depth, 1)
+    .option('--json', 'machine-readable output')
+    .action(onNodes);
   return cli;
 }
 
@@ -241,6 +271,8 @@ async function main(args) {
     onUpgrade: async (dir, options) => { code = await upgrade(dir, options); },
     onExtend: async (model, target, dir, options) => { code = await extend(model, target, dir, options); },
     onExport: async (target, dir, options) => { code = await exportFiles(target, dir, options); },
+    onSearch: async (query, options) => { code = await search(query, options); },
+    onNodes: async (options) => { code = await listNodes(options); },
   });
   // datamodels --help lists the commands; datamodels help build is commander's.
   if (args.length === 1 && ['--help', '-h', 'help'].includes(args[0])) { cli.outputHelp(); return 0; }
@@ -432,6 +464,44 @@ async function exportFiles(target, dir, { to, out = '.', index }) {
   const unions = ai ? unionCount(JSON.parse(ai.content).schema) : 0;
   if (unions > 16) console.error(`  note: ${unions} properties of the AI schema can be null; Claude's strict mode takes 16 per request, so use it there without strict, or remove the attributes you do not need (OpenAI's strict mode takes it as it is)`);
   console.error(`${target}: ${r.typeIri}, from ${r.from}`);
+  return 0;
+}
+
+async function search(query, { index, depth, limit, json }) {
+  const text = query.join(' ');
+  if (!words(text).size) usage(`nothing to search for in "${text}": a word in Latin letters needs 3 or more, a Japanese word 2 or more characters with a kanji or katakana`, USAGES.search);
+  let found;
+  try { found = await discoverNodes(index, { depth }); } catch (e) { fail(e.message); }
+  const { nodes, notes } = found;
+  const { results, total } = searchModels(text, nodes, { limit });
+  for (const n of notes) console.error(`  note: ${n}`);
+  if (json) {
+    console.log(JSON.stringify({ query: text, index: nodes[0].index, depth, nodes: nodes.map(({ name, url, index: i }) => ({ name, url, index: i })), results, total, notes }, null, 2));
+  } else {
+    for (const r of results) {
+      const title = [...new Set(Object.values(r.title).filter((t) => typeof t === 'string'))].join(' / ');
+      console.log([`${plain(r.subject ? `${r.subject}/${r.type}` : r.type)}${r.kind === 'value' ? ' (value type)' : ''}`, plain(title), plain(r.site, 80), plain(r.pageUrl ?? r.typeIri ?? '', 300)].filter(Boolean).join('  '));
+    }
+  }
+  const models = nodes.reduce((sum, n) => sum + n.catalog.models.length, 0);
+  console.error(`${total ? `${total} of ${models}` : `none of ${models}`} models in ${nodes.length} node(s) match${total > results.length ? `; the first ${results.length} are listed (--limit)` : ''}`);
+  return 0;
+}
+
+async function listNodes({ index, depth, json }) {
+  let found;
+  try { found = await discoverNodes(index, { depth }); } catch (e) { fail(e.message); }
+  const { nodes, notes } = found;
+  for (const n of notes) console.error(`  note: ${n}`);
+  const rows = nodes.map(({ name, url, index: i, license, depth: d, linkedFrom, catalog }) => ({ name, url, index: i, license, models: catalog.models.length, depth: d, linkedFrom }));
+  if (json) console.log(JSON.stringify({ index: nodes[0].index, depth, nodes: rows, notes }, null, 2));
+  else {
+    const nameOf = new Map(rows.map((r) => [r.index, r.name]));
+    for (const r of rows) {
+      console.log([plain(r.name, 80), plain(r.url, 300), plain(r.license ?? 'no licence given', 80), `${r.models} model${r.models === 1 ? '' : 's'}`, r.linkedFrom ? `(linked from ${plain(nameOf.get(r.linkedFrom) ?? r.linkedFrom, 80)})` : ''].filter(Boolean).join('  '));
+    }
+  }
+  console.error(`${nodes.length} node(s) within ${depth} link(s) of ${nodes[0].index}`);
   return 0;
 }
 

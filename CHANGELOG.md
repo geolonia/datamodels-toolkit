@@ -7,10 +7,15 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 ### Added
 
 - `datamodels check` has the checks of datamodels.jp's validator for schemas and examples (geolonia/datamodels#226): the `type` const, `$id` and `x-version` of each schema, the `x-ngsi.type` names, polygon rings that close, the NGSI-LD rules of `example-normalized.jsonld` (attribute types, typed dates, the same id and vocab values as `example.json`, a valid key-values form, the alias URL in its `@context`), and a JSON-LD processor that expands the normalized example, the example of a value type and the vocabulary without losing anything. It also checks that an entity schema accepts the `@context` that data may carry.
+- `datamodels search <words…> [--index URL] [--depth N] [--limit N] [--json]`: find models by words in their type, title, attributes and description, in datamodels.jp (or another index) and the nodes it links to through `nodes` and `extends`, up to `--depth` links away (default 1). Japanese is matched by pairs of characters, as datamodels.jp matches model proposals. Each result names its node and page; `--json` adds the type IRI, schema, `@context` and index (geolonia/datamodels#222).
+- `datamodels nodes [--index URL] [--depth N] [--json]`: the nodes reachable from an index, with their name, address, licence, number of models and the node that links to them.
+- Both read other sites only over https and from a public address, each index once (a cycle ends), at most 50. A linked node that cannot be read is a note on standard error, not a failure.
+- The agent skill tells agents to look for an existing model with `datamodels search` before proposing one.
 - `convert.allDay` in a mapping file says what opening hours of 0:00 to 0:00 mean in the list: `open` writes `00:00` to `23:59` (open 24 hours, as Google's structured data guidelines read it), `closed` writes `00:00` to `00:00` (closed all day). It applies to the mappings reached through `via` too, and the outermost mapping that says it wins, so a mapping of your own decides it for the catalog's OpeningHours mapping. `datamodels mapping` writes a TODO for it when the model has opening hours.
 
 ### Fixed
 
+- `datamodels build` writes the pages (index.html, 404.html, the model and subject pages) when the toolkit is installed in a project (`npm i @geolonia/datamodels`) and run from that project's folder. They were missing: the toolkit's page templates are then under `node_modules`, which Eleventy skips by default, as it skips what the project's `.gitignore` lists.
 - `datamodels check` validates an `example.json` without the `{"json": ...}` and `{"vocab": ...}` wrappers of `JsonProperty` and `VocabProperty` attributes, as the schema describes them; such an example was reported as invalid (datamodels.jp's Decision).
 - `datamodels check` reads the @contexts of the node's own subjects from the build, offline too, instead of from the site: an import of the node's own common context is checked against what is about to be published.
 
