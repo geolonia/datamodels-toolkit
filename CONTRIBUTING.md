@@ -5,6 +5,7 @@
 - 不具合や要望は、このリポジトリの Issue に書いてください。日本語でも英語でも構いません。
 - モデルや対応表（`mapping/*.yaml`）の中身についての質問や提案は、[geolonia/datamodels](https://github.com/geolonia/datamodels/issues) へ。
 - Pull Request には、変更を確かめるテストを付けてください（`npm test`）。
+- 利用者に関わる変更は、`CHANGELOG.md` を直接編集せず、`changes/` にファイルを 1 つ追加してください（書き方は [changes/README.md](changes/README.md)）。
 - すべてのコミットに `git commit -s` で署名（DCO）を付けてください。
 
 ---
@@ -22,7 +23,8 @@ Bug reports, questions and pull requests are welcome, in English or Japanese.
 2. Add a test for every change in behaviour (`test/`), and run `npm test`.
 3. If the catalog changed a model or mapping file that the tests use, refresh the fixtures with `npm run fixtures` and commit them in the same pull request.
 4. Keep the README in step with the command line.
-5. Sign off every commit (below).
+5. For a change users notice, add a file in `changes/` (for example `changes/<branch>.md`) with its CHANGELOG entry; do not edit `CHANGELOG.md`. One file per change means parallel pull requests do not conflict. The format is in [changes/README.md](changes/README.md); a change users do not notice (tests, CI) needs no file.
+6. Sign off every commit (below).
 
 A new subcommand needs a named user and a task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)). Please describe both in the issue first.
 

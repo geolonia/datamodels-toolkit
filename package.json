@@ -33,7 +33,8 @@
   "scripts": {
     "test": "node --test",
     "fixtures": "node scripts/update-fixtures.mjs",
-    "fixtures:build": "node scripts/update-build-fixtures.mjs"
+    "fixtures:build": "node scripts/update-build-fixtures.mjs",
+    "changelog": "node scripts/changelog.mjs"
   },
   "repository": {
     "type": "git",

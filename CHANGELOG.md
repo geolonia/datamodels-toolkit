@@ -2,15 +2,9 @@
 
 All notable changes to `@geolonia/datamodels`. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version numbers follow [Semantic Versioning](https://semver.org/). Before 1.0.0, a minor version may change the command line.
 
+Entries for the next release wait in [`changes/`](changes/), one file per change; the release folds them in here ([`changes/README.md`](changes/README.md)). Do not add them under Unreleased.
+
 ## [Unreleased]
-
-### Changed
-
-- The documentation is on datamodels.jp ([/en/toolkit](https://datamodels.jp/en/toolkit/), with a [command reference](https://datamodels.jp/en/toolkit/reference)), and the README keeps the essentials (#87). `--help` links the command reference instead of the README.
-
-### Changed
-
-- `datamodels init` writes a workflow pinned to the v0.3.10 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.3.10`. The README uses 0.3.10 too.
 
 ## [0.3.10] - 2026-10-12
 

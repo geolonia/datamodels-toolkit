@@ -30,7 +30,7 @@ Owner: See catalog-info.yaml
 - Plain English in code comments, commit messages and docs.
 - The conversion rules belong to geolonia/datamodels (mapping files); this repository applies them. New subcommands only for a named user and task (geolonia/datamodels#91).
 - Never call `process.exit()` in the command line: it can cut off output to a pipe. Throw `Exit` or return the code from `main()`.
-- Update CHANGELOG.md under "Unreleased" for user-visible changes.
+- For user-visible changes, add one file `changes/<branch>.md` (front matter `section: Added|Changed|Deprecated|Removed|Fixed|Security`, then `- ` list items); never edit CHANGELOG.md, except in a release PR via `npm run changelog -- X.Y.Z`. See changes/README.md.
 
 ## Issue intake (from Slack / Claude)
 

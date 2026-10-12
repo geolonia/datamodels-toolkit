@@ -117,7 +117,7 @@ The tests read `test/fixtures/site/`, a copy of the files datamodels.jp serves f
 
 A release reaches npmjs.org through the workflow `.github/workflows/publish.yml`:
 
-1. A release pull request raises `version` in `package.json` (and `package-lock.json`) and moves the Unreleased part of `CHANGELOG.md` under the new version.
+1. A release pull request raises `version` in `package.json` (and `package-lock.json`, for example with `npm version X.Y.Z --no-git-tag-version`) and runs `npm run changelog -- X.Y.Z`: it moves the change files in `changes/` into `CHANGELOG.md` under `## [X.Y.Z] - <today>` and deletes them. Then write the summary line of the release under that heading.
 2. After it is merged, tag the merge commit `vX.Y.Z` and publish a GitHub release for the tag.
 3. The workflow checks that the tag is `v` followed by the version in `package.json`, runs the tests, and stages `@geolonia/datamodels` on npmjs.org (`npm stage publish`). A pre-release on GitHub stages nothing.
 4. A maintainer of the package approves the staged release, with 2FA: on npmjs.com, in the package's Staged Packages tab, or with `npm stage list @geolonia/datamodels` and `npm stage approve <stage-id>` (npm 11.15.0 or later; [staged publishing](https://docs.npmjs.com/staged-publishing)). Only then is the version public. The workflow cannot approve: approval needs 2FA, and the workflow's OIDC token cannot give it.
@@ -127,7 +127,7 @@ The workflow uses npm's [trusted publishing](https://docs.npmjs.com/trusted-publ
 
 ## Issues and contributions
 
-Problems with the tool go to [this repository's issues](https://github.com/geolonia/datamodels-toolkit/issues). Questions about a model or a mapping file go to [geolonia/datamodels](https://github.com/geolonia/datamodels/issues). Pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). The documentation is in [geolonia/datamodels](https://github.com/geolonia/datamodels) (`site/toolkit/`, `site/en/toolkit/`): a change to a command changes its page there too. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+Problems with the tool go to [this repository's issues](https://github.com/geolonia/datamodels-toolkit/issues). Questions about a model or a mapping file go to [geolonia/datamodels](https://github.com/geolonia/datamodels/issues). Pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). The documentation is in [geolonia/datamodels](https://github.com/geolonia/datamodels) (`site/toolkit/`, `site/en/toolkit/`): a change to a command changes its page there too. Changes are listed in [CHANGELOG.md](CHANGELOG.md); a pull request adds its entry as a file in [`changes/`](changes/README.md), not in CHANGELOG.md.
 
 ## Licence
 
