@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.7 release of the Action, and a README whose `npx` commands run v0.3.7.
+
 ## [0.3.7] - 2026-10-12
 
 Find models across linked sites, check a node as datamodels.jp does, publish on hosts other than GitHub Pages, and say what opening hours of 0:00 to 0:00 mean.
