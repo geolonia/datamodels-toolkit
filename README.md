@@ -4,6 +4,8 @@ Command-line tools for the [datamodels.jp](https://datamodels.jp) catalog.
 
 `search` finds existing models in datamodels.jp and the nodes it links to; `convert` turns a published list (CSV) into entities of a catalog model, also a list of your own with a mapping you write with `mapping`; `export` writes files made from a model for tools that do not read NGSI-LD (a spreadsheet, an AI model, PostgreSQL); `build` writes the files of a data model node, a site of your own in the [web of data models](https://github.com/geolonia/datamodels/issues/200). More commands come only when someone needs them for a real task that existing JSON-LD and FIWARE tools do not cover ([geolonia/datamodels#91](https://github.com/geolonia/datamodels/issues/91)).
 
+**As a GitHub Action**, it publishes a node: a repository with `node.yaml` and your models in `models/` becomes a site on GitHub Pages, with each model's JSON Schema, JSON-LD `@context` and pages. Pull requests are checked first. The workflow is under [GitHub Action](#github-action), and `datamodels init` writes it for you.
+
 ## Install
 
 Node.js 24 or later. Run a release of [`@geolonia/datamodels`](https://www.npmjs.com/package/@geolonia/datamodels) with `npx`:

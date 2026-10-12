@@ -7,12 +7,12 @@
 # `deploy: 'false'` it only checks and builds, and a later step can publish the
 # folder in the `site` output elsewhere (#51). Inputs reach the shell only
 # through environment variables, never inside a command.
-name: Data model node
-description: Check and build a data model node (node.yaml and models/) and deploy it to GitHub Pages.
+name: Data model node (datamodels.jp)
+description: Publish your own NGSI-LD data models as a site. Checks and builds node.yaml and models/, then deploys to GitHub Pages.
 author: Geolonia
 branding:
   icon: database
-  color: gray-dark
+  color: blue
 
 inputs:
   directory:

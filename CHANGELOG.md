@@ -4,6 +4,10 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ## [Unreleased]
 
+### Changed
+
+- For a listing on the GitHub Marketplace, the Action is called "Data model node (datamodels.jp)", its description says what it publishes, and its badge is blue. Workflows refer to it by repository, so they need no change.
+
 ## [0.3.9] - 2026-10-12
 
 The toolkit is on npm: `npx @geolonia/datamodels@0.3.9`. Releases are staged on npm by a workflow and approved by a maintainer.
