@@ -3,7 +3,7 @@
   layout: "base.njk",
   // Only for a node with adapter files.
   eleventyComputed: {
-    permalink: (data) => (data.adapterRows.length ? "adapters/index.html" : false),
+    permalink: (data) => (data.hasAdapterFiles ? "adapters/index.html" : false),
     title: (data) => `${data.t.adapters}${data.t.titleSep}${data.site.title}`,
     description: (data) => data.t.adaptersIntro,
     path: "adapters/",
@@ -11,6 +11,7 @@
   },
 }
 ---
+{#- What each adapter's file is, how to use it and where to get it; the files themselves are on the model pages. #}
 <h1>{{ t.adapters }}</h1>
 <p>{{ t.adaptersIntro }}</p>
 <ul>
@@ -18,16 +19,16 @@
 <li>{{ r }}</li>
 {%- endfor %}
 </ul>
-<table>
-<tr><th>{{ t.adapter }}</th><th>{{ t.adapterWhat }}</th></tr>
 {%- for a in adapters %}
-<tr><td lang="{{ a.label.lang }}">{{ a.label.text }}</td><td{% if a.note %} lang="{{ a.note.lang }}"{% endif %}>{% if a.note %}{{ a.note.text }}{% endif %}</td></tr>
+{%- set get = t.adapterGetText(a.name) %}
+<h2 id="{{ a.name }}" lang="{{ a.label.lang }}">{{ a.label.text }}</h2>
+<dl>
+{%- if a.note %}
+<dt>{{ t.adapterWhat }}</dt><dd lang="{{ a.note.lang }}">{{ a.note.text }}</dd>
+{%- endif %}
+{%- if a.use %}
+<dt>{{ t.adapterUse }}</dt><dd lang="{{ a.use.lang }}">{{ a.use.text }}</dd>
+{%- endif %}
+<dt>{{ t.adapterGet }}</dt><dd>{{ get[0] }}<a href="{{ t.exportGuideUrl }}">{{ t.exportGuide }}</a>{{ get[1] }}</dd>
+</dl>
 {%- endfor %}
-</table>
-<h2 id="models">{{ t.byModel }}</h2>
-<table>
-<tr><th>{{ t.model }}</th>{% for a in adapters %}<th lang="{{ a.label.lang }}">{{ a.label.text }}</th>{% endfor %}</tr>
-{%- for r in adapterRows %}
-<tr id="{{ r.anchor }}"><td><a href="{{ r.page }}">{{ r.name }}</a></td>{% for f in r.files %}<td>{% if f %}<a href="{{ f.url }}">{{ f.name }}</a>{% else %}—{% endif %}</td>{% endfor %}</tr>
-{%- endfor %}
-</table>

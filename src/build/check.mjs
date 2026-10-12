@@ -1,9 +1,11 @@
 // The checks a node runs in CI before it publishes (#12): its schemas and
 // examples are valid, every type and attribute is a term of its @context with
-// the same IRI (#26), its release snapshots match the sources, an exact
-// version already online did not change, and no model redefines a term of a
-// model it extends. Other nodes that cannot be reached are noted and skipped:
-// a node that is down never fails someone else's build (docs/node.md, section 5).
+// the same IRI (#26), the examples follow the NGSI-LD rules and survive a
+// JSON-LD processor (examples.mjs, geolonia/datamodels#226), its release
+// snapshots match the sources, an exact version already online did not
+// change, and no model redefines a term of a model it extends. Other nodes
+// that cannot be reached are noted and skipped: a node that is down never
+// fails someone else's build (docs/node.md, section 5).
 import { readFileSync } from 'node:fs';
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -12,6 +14,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { buildNode } from './node.mjs';
 import { catalogUrls, attributesOf } from './urls.mjs';
+import { schemaRuleProblems, exampleProblems, contextLoader, jsonldProblems, vocabularyProblems } from './examples.mjs';
 
 // A schema on another site that could not be read: noted and skipped, never a problem of this node.
 class Unavailable extends Error {}
@@ -56,6 +59,9 @@ const FULL_IRI = /^(https?|urn):/;
  * imports (datamodels.jp's subject contexts import its common one). A URL may
  * come again later and applies again; only an import of itself is refused.
  *
+ * `local(url)` gives this node's own documents (from its build), offline
+ * too: the parsed document, or undefined for a URL of another site.
+ *
  * An import that cannot be read (or is not read: `offline`) leaves the
  * outcome open: what came before may be overridden, and any term may come
  * from it. A term's IRI is fixed where it is defined, from the prefixes known
@@ -65,7 +71,7 @@ const FULL_IRI = /^(https?|urn):/;
  * unknown, whether an unread import may define terms not seen, and what
  * could not be read.
  */
-export async function resolveContext(context, getJson, { offline = false } = {}) {
+export async function resolveContext(context, getJson, { offline = false, local = async () => undefined } = {}) {
   const state = { iris: new Map(), uncertain: new Set(), open: false, notes: [] };
   const docs = new Map();
   const walk = async (ctx, stack) => {
@@ -89,6 +95,13 @@ export async function resolveContext(context, getJson, { offline = false } = {})
       if (typeof part !== 'string') continue;
       if (stack.includes(part)) throw new Error(`${part} imports itself (${[...stack, part].join(' → ')})`);
       let theirs;
+      const own = await local(part);
+      if (own !== undefined) {
+        theirs = own?.['@context'];
+        if (theirs === undefined) throw new Error(`${part} has no @context`);
+        await walk(theirs, [...stack, part]);
+        continue;
+      }
       if (!offline) {
         try {
           if (!docs.has(part)) docs.set(part, getJson(part));
@@ -173,8 +186,16 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
       return res.json();
     };
 
+    // A file of this node is read from the build, offline too: what it is about to publish, not what is online.
+    const local = async (url) => {
+      if (!url.startsWith(`${urls.baseUrl}/`)) return undefined;
+      const path = url.slice(urls.baseUrl.length + 1).split(/[?#]/)[0];
+      try { if (path.split('/').includes('..')) throw new Error(); return JSON.parse(await readFile(join(out, path), 'utf8')); } catch { throw new Error(`${url} is not a file that this node publishes`); }
+    };
+
     // Schemas and examples. A schema of this node is read from the build; one on another site only online.
-    const ajv = new Ajv2020({ allErrors: true, strict: false, loadSchema: async (uri) => {
+    // ownProperties: an optional attribute named like a member of Object.prototype (constructor) is absent when the data lacks it.
+    const ajv = new Ajv2020({ allErrors: true, strict: false, ownProperties: true, loadSchema: async (uri) => {
       if (uri.startsWith(`${urls.baseUrl}/`)) return JSON.parse(await readFile(join(out, uri.slice(urls.baseUrl.length + 1)), 'utf8'));
       if (offline) throw new Unavailable(`${uri} is on another site, not read with --offline`);
       try { return await getJson(uri); } catch (e) { throw new Unavailable(`${uri} could not be read (${e.cause?.code ?? e.message})`); }
@@ -183,25 +204,45 @@ export async function checkNode(dir, { offline = false, fetch: fetchUrl = global
     for (const s of subjects) for (const m of s.models) {
       const where = `${s.name}/${m.type}`;
       for (const f of m.unreadExamples ?? []) notes.push(`${where}/examples/${f}: not read; a model has one example, example.json (and example-normalized.jsonld)`);
+      problems.push(...schemaRuleProblems(s, m, urls));
       let validate;
       // A schema another one referenced is already loaded (from the build, the same bytes): use it.
       try { validate = (m.schema.$id && ajv.getSchema(m.schema.$id)) || await ajv.compileAsync(m.schema); } catch (e) {
         if (e instanceof Unavailable) notes.push(`${where}/schema.json: not validated, ${e.message}`); else problems.push(`${where}/schema.json: ${e.message}`);
         continue;
       }
-      if (m.examples['example.json'] && !validate(m.examples['example.json'])) problems.push(`${where}/examples/example.json: ${ajv.errorsText(validate.errors)}`);
+      problems.push(...exampleProblems(s, m, { urls, validate, errorsText: (errors) => ajv.errorsText(errors) }));
     }
 
-    // Types and attributes against the @context; contexts it imports by URL are read online only.
+    // Types and attributes against the @context; contexts of other sites that it imports are read online only.
     const resolvedBySubject = new Map();
     for (const s of subjects) {
       let resolved;
-      try { resolved = await resolveContext(s.context['@context'], getJson, { offline }); } catch (e) { problems.push(`${s.name}/context.jsonld: ${e.message}`); continue; }
+      try { resolved = await resolveContext(s.context['@context'], getJson, { offline, local }); } catch (e) { problems.push(`${s.name}/context.jsonld: ${e.message}`); continue; }
       resolvedBySubject.set(s.name, resolved);
       notes.push(...resolved.notes.map((n) => `${s.name}/context.jsonld: ${n}`));
       const found = termProblems(s, urls, resolved);
       problems.push(...found.problems);
       notes.push(...found.notes);
+    }
+
+    // The examples and vocabularies through a JSON-LD processor, with this node's files from the build.
+    const loader = contextLoader({ local, getJson, offline });
+    const core = contextTerms(CORE_CONTEXT);
+    for (const s of subjects) {
+      const v = await vocabularyProblems(s, { urls, languages: node.languages }, loader);
+      problems.push(...v.problems);
+      notes.push(...v.notes);
+      const resolved = resolvedBySubject.get(s.name);
+      // A @context that could not be resolved is already a problem; its examples would only repeat it.
+      if (!resolved) continue;
+      // The IRI of a term, when the @context fixes it; the term check reports the others.
+      const iriOf = (name) => (resolved.iris.has(name) ? (resolved.uncertain.has(name) ? undefined : resolved.iris.get(name) ?? undefined) : resolved.open ? undefined : core.get(name));
+      for (const m of s.models) {
+        const r = await jsonldProblems(s, m, { urls, loader, iriOf });
+        problems.push(...r.problems);
+        notes.push(...r.notes);
+      }
     }
 
     if (offline) { notes.push('offline: the published files and the models this node extends were not checked'); return { problems, notes }; }

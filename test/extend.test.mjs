@@ -34,6 +34,8 @@ const files = {
     $schema: 'https://json-schema.org/draft/2020-12/schema', $id: SCHEMA, title: 'Task', 'x-version': '1.0.0', 'x-derived-from': 'RFC 8984', type: 'object',
     properties: {
       id: { type: 'string', format: 'uri' }, type: { type: 'string', const: 'Task' },
+      // As on datamodels.jp: data may carry its @context (check tries the example with one).
+      '@context': { oneOf: [{ type: 'string', format: 'uri' }, { type: 'array', items: { type: 'string', format: 'uri' }, minItems: 1 }] },
       name: { type: 'string', 'x-iri': 'https://uri.etsi.org/ngsi-ld/name' },
       due: { type: 'string', format: 'date-time', 'x-iri': `${DJ}/ns/task/due` },
     },

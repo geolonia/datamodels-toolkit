@@ -172,6 +172,11 @@ export default {
     ja: 'CREATE TABLE 文。列名は属性名の snake_case で、必須・使える値・パターンを制約で検査します。位置は SRID 4326 のジオメトリ（GiST インデックス付き）、説明と IRI は COMMENT にあります。',
     en: 'A CREATE TABLE statement: columns are the attribute names in snake_case, with constraints for required attributes, allowed values and patterns; location is a geometry in SRID 4326 with a GiST index; descriptions and IRIs are in the comments.',
   },
+  // How to use the file, for the node's /adapters/ page.
+  use: {
+    ja: 'psql -f <このファイル> で実行すると、制約と空間インデックス付きのテーブルができます。データベースに PostGIS の拡張（CREATE EXTENSION postgis）が要ります。',
+    en: 'Run it with psql -f <this file> to get a table with constraints and a spatial index. The database needs the PostGIS extension (CREATE EXTENSION postgis).',
+  },
   urlFor: (subject, model, context) => {
     const url = adapterUrl('postgis', 'sql')(subject, model, context);
     if (!url) return null;
