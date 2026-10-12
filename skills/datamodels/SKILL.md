@@ -44,6 +44,7 @@ Rules:
 - **Never invent values.** A value comes from a column of the list, or from `value:` only when the user confirms it is true for every row (such as `addressCountry: JP` for a list of Japanese addresses). Do not fill an attribute from your own knowledge, and do not change the data to make a row valid.
 - **Leave unmatched columns out.** A column that fits no attribute stays in the comment at the end of the mapping; do not force it into the nearest attribute.
 - **Ask the user about ambiguous columns:** two columns that could fill the same attribute, a column whose meaning is unclear from its name and sample values, a code whose system you do not know, and which attributes make the id unique. Do not guess.
+- Opening hours of 0:00 to 0:00 can mean open all day or closed all day. Ask the user what the list means, then write `allDay: open` or `allDay: closed` under `convert:` (the TODO that `datamodels mapping` writes).
 - Duplicate ids and ids like `1.31E+11` (a spreadsheet rounded them) are problems of the list: tell the user; do not work around them with another id without asking.
 - Keep the mapping file: it is the record of how the list was converted, and it converts the next version of the list.
 

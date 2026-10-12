@@ -382,7 +382,7 @@ async function mapping(target, file, { out, site }) {
   for (const n of catalog.notes) console.error(`  note: ${n}`);
   const [hint] = r.hints;
   if (hint) console.error(`  note: the header has ${hint.n} of the ${hint.all} columns of the catalog's mapping ${hint.name}; if the list follows that standard, try: datamodels convert ${target} ${hint.name} ${file} --check`);
-  console.error(`  ${r.chosen.size} of ${r.targets.length} attributes and fields have a column; ${r.todos.length + (r.idTodo ? 1 : 0)} TODO(s)`);
+  console.error(`  ${r.chosen.size} of ${r.targets.length} attributes and fields have a column; ${r.todos.length + (r.idTodo ? 1 : 0) + (r.allDayTodo ? 1 : 0)} TODO(s)`);
   if (r.unused.length) console.error(`  columns no row reads: ${r.unused.join(', ')}`);
   console.error(`${file}: ${encoding}, ${rows.columns.length} column(s)${out ? `, mapping written to ${out}` : ''}. Next: fill in the TODOs, then datamodels convert ${target} ${out ?? '<mapping.yaml>'} ${file} --check`);
   return 0;

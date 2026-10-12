@@ -292,6 +292,7 @@ const TEXTS = {
     idFrom: (name) => `From the catalog's mapping ${name}.`,
     idTodo: (ex) => `TODO: which attributes tell the rows apart? Put them in braces${ex ? `, for example "${ex}"` : ''}.`,
     idColumn: 'The entity id: the id column as it is (a URI such as urn:ngsi-ld:Type:001).',
+    allDay: (names) => `TODO: does the list write 0:00–0:00 (${names.join(', ')})? Say what it means: allDay: open (open all day, written 00:00–23:59) or allDay: closed (closed all day, 00:00–00:00). Delete this line when it does not.`,
     required: 'Required: every entity needs these.',
     atLeastOne: (names) => `At least one of ${names.join(', ')} is required.`,
     optional: 'Optional.',
@@ -318,6 +319,7 @@ const TEXTS = {
     idFrom: (name) => `カタログの対応表 ${name} と同じです。`,
     idTodo: (ex) => `TODO：どの属性で行を見分けますか？ 波括弧で書きます${ex ? `（例 "${ex}"）` : ''}。`,
     idColumn: 'エンティティの ID：id の列をそのまま使います（urn:ngsi-ld:Type:001 のような URI）。',
+    allDay: (names) => `TODO：一覧に 0:00～0:00 はありますか（${names.join('、')}）？ 意味を書きます：allDay: open（終日利用可。00:00–23:59 と書く）か allDay: closed（終日利用不可。00:00–00:00）。無ければこの行を消します。`,
     required: '必須：どのエンティティにも要ります。',
     atLeastOne: (names) => `${names.join('、')} のどれか 1 つは必須です。`,
     optional: '任意。',
@@ -337,7 +339,7 @@ const TEXTS = {
  * `header` and `rows` are the parsed CSV (parseCsv); `catalog` the model's
  * catalog mappings (catalogMappings). `csv` and `out` are the paths the
  * comments name in the commands to run next.
- * Returns { text, targets, chosen, todos, unused, hints }.
+ * Returns { text, targets, chosen, todos, unused, hints, idTodo, allDayTodo }.
  */
 export function startMapping({ target, entry, model, languages, columns, header, rows = [], catalog = [], csv, out }) {
   const lang = header.some(cjk) && languages.includes('ja') ? 'ja' : 'en';
@@ -352,6 +354,8 @@ export function startMapping({ target, entry, model, languages, columns, header,
   // Only a value that is mapped itself: {address} with only address.addressLocality mapped would be an object in the id.
   const fromCatalog = catalog.find((c) => typeof c.mapping?.convert?.id === 'string' && [...c.mapping.convert.id.matchAll(/\{([\w.]+)\}/g)].every((m) => chosen.has(m[1])));
   const idLike = [...chosen.keys()].find((k) => /(Id|ID)$/.test(k) && !k.includes('.'));
+  // Values with an opening and a closing time, such as the opening hours: what 0:00–0:00 means is the list's to say (convert.allDay).
+  const hours = [...new Set(targets.filter((t) => t.part === 'opens').map((t) => t.attribute))].filter((a) => targets.some((t) => t.attribute === a && t.part === 'closes'));
 
   const lines = [];
   const comment = (text) => lines.push(`# ${text}`);
@@ -381,8 +385,10 @@ export function startMapping({ target, entry, model, languages, columns, header,
   }
 
   lines.push('');
-  if (idColumn) comment(T.idColumn);
-  else {
+  if (idColumn) {
+    comment(T.idColumn);
+    if (hours.length) lines.push('convert:');
+  } else {
     comment(T.idTemplate);
     lines.push('convert:');
     if (fromCatalog) {
@@ -393,6 +399,7 @@ export function startMapping({ target, entry, model, languages, columns, header,
       lines.push(`  id: ${q(`urn:ngsi-ld:${model.type}:{TODO}`)}`);
     }
   }
+  if (hours.length) lines.push(`  # ${T.allDay(hours)}`);
 
   lines.push('', 'fields:');
   if (idColumn) lines.push(`  id: ${flowRule({ column: 'id' })}`);
@@ -436,5 +443,5 @@ export function startMapping({ target, entry, model, languages, columns, header,
     comment(T.unused);
     for (const h of unused) comment(`  ${h}`);
   }
-  return { text: `${lines.join('\n')}\n`, targets, chosen, todos, unused, hints, idTodo: !idColumn && !fromCatalog };
+  return { text: `${lines.join('\n')}\n`, targets, chosen, todos, unused, hints, idTodo: !idColumn && !fromCatalog, allDayTodo: hours.length > 0 };
 }

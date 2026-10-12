@@ -36,6 +36,7 @@ It reads `catalog.json`, the model's schema and the mapping file from the site, 
 
 - A field with `column` (one column or a list), an optional `transform`, a constant `value`, or `via` is converted.
 - The `convert.id` template names the entities: `{attribute}` is that attribute's value in the row (`{address.localGovernmentCode}` for a field of a value). A template that is only one value, such as `"{id}"`, takes the value as it is; inside a longer id a value is URL-encoded. A field `id` with a `column` gives the entity id as it is, when there is no template.
+- `convert.allDay` (`open` or `closed`) says what opening hours of 0:00 to 0:00 mean in the list ([below](#opening-hours-of-000-to-000)).
 - Fields with only `to` are documentation.
 - A field name with a dot fills a field of a value: `address.postalCode: { column: 郵便番号 }`. The catalog's mapping files mostly use `via` instead, so that several models share the rules for an address.
 
@@ -51,7 +52,7 @@ It reads `catalog.json`, the model's schema and the mapping file from the site, 
 | `flags` | `values` | a list of the values whose column holds `1`: `values: { 洪水: flood, 地震: earthquake }` |
 | `split` | 1 | a list, split at `;` or `；` |
 | `weekdays` | 1 | the days of OpeningHours (`Monday` … `Sunday`, `PublicHolidays`) from `月～金`, `月-金`, `月火水木金`, `月・水・金`, `土日祝`, `月曜日～金曜日`, `12345` (1 is Monday, 7 Sunday), `平日` (Monday to Friday) and `毎日` (the seven days). A range wraps: `金～月` is Friday to Monday. `祝` and `祝日` are `PublicHolidays`, only when the text names them |
-| `time` | 1 | a time as `HH:MM`: `9:00`, `9時` and `9時30分` become `09:00` and `09:30`, full-width digits half-width; seconds are kept (`17:00:30`). Each change is listed as a repair |
+| `time` | 1 | a time as `HH:MM`: `9:00`, `9時` and `9時30分` become `09:00` and `09:30`, full-width digits half-width; seconds are kept (`17:00:30`). Each change is listed as a repair. An opening and a closing time of 0:00 need `convert.allDay` ([below](#opening-hours-of-000-to-000)) |
 | `geometry` | 1 to 3 | two columns, longitude and latitude, make a GeoJSON Point; one column holds a GeoJSON geometry; with three, the third is the GeoJSON for rows without longitude and latitude |
 | `json` | 1 | the JSON in the column |
 | `municipality` | 1 | a municipality name; a value that goes on (`宇都宮市中央本町1-29`) is left out and reported |
@@ -62,9 +63,24 @@ It reads `catalog.json`, the model's schema and the mapping file from the site, 
 
 No transform guesses. A text outside the forms above, such as `不明` for `yesno`, `月～金（祝日を除く）` or `第2土曜` for `weekdays` and `25:00` or `9時半` for `time`, is a problem of the row, named with its column and the text.
 
-Times: `time` reads the hours 0 to 24. `0:00` becomes `00:00`, the start of the day, also as a closing time: the OpeningHours schema allows `00:00` for both, and the definition sheet does not say that `0:00` to `0:00` means open all day, so the converter does not turn it into `24:00`. `24:00` is kept: the schema allows it as a closing time (the end of the day) and rejects it as an opening time, so such a row is invalid. `24:30` and `25:00` are problems.
+Times: `time` reads the hours 0 to 24. `0:00` becomes `00:00`, the start of the day. `24:00` is kept: the schema allows it as a closing time (the end of the day) and rejects it as an opening time, so such a row is invalid. `24:30` and `25:00` are problems.
 
 It detects UTF-8 and Shift_JIS. It repairs only what it can prove, such as a local government code that lost its leading zero or lacks its check digit (the check digit decides), and lists every repair on standard error. Invalid rows are left out and listed by line. An id that more than one row gets, and an id value in exponent form such as `1.31E+11` (a spreadsheet rounded the number and its digits are lost), make those rows invalid. The exit code is 1 when a row is invalid or a file cannot be read, and 2 for a usage error.
+
+### Opening hours of 0:00 to 0:00
+
+schema.org says only that a closing time before the opening time runs into the next day. Google's guidelines for structured data, the most used convention, read `00:00` to `23:59` as open 24 hours and `00:00` to `00:00` as closed all day, while Japanese lists often write `0:00` to `0:00` for "around the clock".
+
+So when the opening and the closing time of a value (`opens` and `closes` of OpeningHours, from columns or from a JSON value such as the CSV template's, also in a list) are both 0:00, the row has a problem until the mapping says what the list means:
+
+```yaml
+convert:
+  id: "urn:ngsi-ld:AEDLocation:{localGovernmentCode}-{externalFacilityId}"
+  allDay: open      # 0:00 to 0:00 is open all day: written as 00:00 to 23:59
+# allDay: closed    # 0:00 to 0:00 is closed all day: written as 00:00 to 00:00
+```
+
+`convert.allDay` applies to the opening hours that the mapping builds and to those of every mapping it reaches through `via`. When more than one of them says it, the outermost one wins: a mapping of your own decides it for the catalog's OpeningHours mapping without a change to that file. Each row it applies to is listed as a repair. The meaning belongs to one list, so the catalog's mapping files leave it out; to convert such a list, use a mapping file of your own. The same time at another hour, such as `9:00` to `9:00`, is always a problem of the row: no convention says what it means.
 
 ### Your own list
 
@@ -115,6 +131,7 @@ Writes a first mapping file for a CSV and a catalog model, for you or an AI agen
 - `transform` follows the attribute's type: `integer`, `number`, `flag` for a boolean (`boolean` when the column holds true and false, `yesno` when it holds 有 and 無 or the other words of `yesno`), `split` for a list, `weekdays` for a list of days of the week, `time` for a time (HH:MM), `geometry` for the location, `code6` for a local government code. A rule taken from a catalog mapping keeps its `values`.
 - A value whose fields include a list, such as the opening hours, gets one row per field too (`openingHoursSpecification.dayOfWeek`, `openingHoursSpecification.opens`); the CSV template keeps it as one JSON column.
 - `convert.id` comes from a catalog mapping of the model when the columns it needs are there; otherwise it is a TODO.
+- A model with opening hours gets a TODO under `convert:`: what 0:00 to 0:00 means in the list (`allDay: open` or `allDay: closed`, [above](#opening-hours-of-000-to-000)). Delete it when the list has no such hours.
 - The CSV columns that no row reads are listed at the end, as a comment.
 - When the header has nearly all the columns of one of the catalog's mapping files, it says so: that mapping may convert the list as it is.
 
