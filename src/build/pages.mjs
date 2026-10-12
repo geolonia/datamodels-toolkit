@@ -149,6 +149,12 @@ export async function writePages(subjects, { urls, node, out, adapters = [] }) {
       quietMode: true,
       configPath: CONFIG,
       config(config) {
+        // The templates are the toolkit's own, under node_modules when it is installed in a project.
+        // Eleventy ignores node_modules and the .gitignore of the current directory (the user's
+        // project) by default, which would skip every template: those ignores are not ours.
+        // (A .eleventyignore in the current directory is still read; Eleventy has no option for it.)
+        config.ignores.delete('**/node_modules/**');
+        config.setUseGitIgnore(false);
         config.setNunjucksEnvironmentOptions({ autoescape: true, throwOnUndefined: true });
         for (const [k, v] of Object.entries(data)) config.addGlobalData(k, v);
       },
