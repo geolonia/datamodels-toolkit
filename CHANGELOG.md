@@ -26,8 +26,8 @@ All notable changes to `@geolonia/datamodels`. The format follows [Keep a Change
 
 ### Changed
 
-- Model pages: the Download row shows a small button per file (CSV template, Table Schema, AI structured output, PostgreSQL / PostGIS), still plain HTML without JavaScript, and "About these files" links the adapters page.
-- The adapters page explains each adapter in its own section (`#csv`, `#table-schema`, `#ai`, `#postgis`): what the file is, how to use it and where to get it. The table of files by model is gone, so the page no longer grows with every model; an old link to a model's row (`/adapters/#<subject>-<type>`) opens the page at the top. Each adapter has a new `use` text (ja, en) for this.
+- Model pages: the Download row shows a small button per file (CSV template, Table Schema, AI structured output, PostgreSQL / PostGIS), still plain HTML without JavaScript, and "About these files" links the explanation of the files on datamodels.jp, in the page's language (`https://datamodels.jp/adapters/#downloads` for Japanese, `https://datamodels.jp/en/adapters/#downloads` for English and any other language).
+- `build` no longer writes an `/adapters/` page: the explanation lives in one place, datamodels.jp, not on every node. It removes an `adapters/index.html` (and `<lang>/adapters/index.html`, also of a language no longer in `node.yaml`) left in the output folder by an older version, so it is not published; only a page the toolkit wrote (its `<meta name="generator" content="datamodels-toolkit …">`), so a page of your own at that path stays. The adapters' files (`/adapters/<name>/<subject>/<Type>.<ext>`) and their entries under `adapters` in `catalog.json` are unchanged.
 - `datamodels init` writes a workflow pinned to the v0.3.6 release of the Action, and a README whose `npx` commands run v0.3.6.
 
 ## [0.3.6] - 2026-10-12

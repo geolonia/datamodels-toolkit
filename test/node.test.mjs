@@ -3,12 +3,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { randomBytes } from 'node:crypto';
 import { readNode, buildNode, buildVocabulary, catalogUrls } from '../src/build/index.mjs';
+import { pageTexts } from '../src/build/page-texts.mjs';
 
 const run = promisify(execFile);
 const BIN = join(import.meta.dirname, '..', 'bin', 'datamodels.mjs');
@@ -86,7 +87,7 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   const desc = join(dir, 'models', 'road', 'subject.yaml');
   await writeFile(desc, (await readFile(desc, 'utf8')).replace('Road maintenance.', '"Road <b>maintenance</b>."'));
   const { pages, catalog } = await buildNode(dir);
-  assert.deepEqual(pages, ['404.html', 'adapters/index.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
+  assert.deepEqual(pages, ['404.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
   const read = (p) => readFile(join(dir, '_site', p), 'utf8');
   for (const p of pages) {
     const html = await read(p);
@@ -115,14 +116,11 @@ test('the pages: plain HTML, an anchor for every term IRI, a link to catalog.jso
   assert.match(model, /<h3 id="route">route<\/h3>/);
   assert.match(model, /<dt>Extends<\/dt><dd><a href="https:\/\/datamodels\.jp\/ns\/task\/Task">/);
   assert.match(model, /<title>RoadPatrol: Data models by Example Inc\.<\/title>/);
-  // The adapters' files: the model page has a button per file to download and links the adapters page, without naming a product.
-  assert.match(model, /<dt>Download<\/dt><dd><span class="downloads"><a class="button" href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv" download lang="en">CSV template<\/a> <a class="button" href="https:\/\/models\.example\.org\/adapters\/table-schema\/road\/RoadPatrol\.tableschema\.json" download lang="en">Table Schema<\/a> <a class="button" [^>]*ai\/road\/RoadPatrol\.ai\.json" download lang="en">Structured output for AI<\/a> <a class="button" [^>]*postgis\/road\/RoadPatrol\.sql" download lang="en">PostgreSQL \/ PostGIS table<\/a> <\/span><a href="https:\/\/models\.example\.org\/adapters\/">About these files<\/a><\/dd>/);
-  // The adapters page explains each adapter (what, how to use it, where to get it) and lists no files by model.
-  const adapters = await read('adapters/index.html');
-  for (const name of ['csv', 'table-schema', 'ai', 'postgis']) {
-    assert.match(adapters, new RegExp(`<h2 id="${name}" lang="en">[^<]+</h2>\n<dl>\n<dt>What it is</dt><dd lang="en">[^<]+</dd>\n<dt>How to use it</dt><dd lang="en">[^<]+</dd>\n<dt>Where to get it</dt><dd>The Download row of each model page\\. Programs: adapters\\.${name} in catalog\\.json\\. To make it yourself: datamodels export &lt;subject&gt;/&lt;Type&gt; --to ${name} \\(<a href="https://datamodels\\.jp/en/toolkit/export">guide</a>\\)\\.</dd>`), name);
-  }
-  assert.doesNotMatch(adapters, /RoadPatrol|<table/, 'no files by model');
+  // The adapters' files: the model page has a button per file to download and links datamodels.jp's explanation
+  // of the files, without naming a product. The node has no adapters page of its own.
+  assert.match(model, /<dt>Download<\/dt><dd><span class="downloads"><a class="button" href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv" download lang="en">CSV template<\/a> <a class="button" href="https:\/\/models\.example\.org\/adapters\/table-schema\/road\/RoadPatrol\.tableschema\.json" download lang="en">Table Schema<\/a> <a class="button" [^>]*ai\/road\/RoadPatrol\.ai\.json" download lang="en">Structured output for AI<\/a> <a class="button" [^>]*postgis\/road\/RoadPatrol\.sql" download lang="en">PostgreSQL \/ PostGIS table<\/a> <\/span><a href="https:\/\/datamodels\.jp\/en\/adapters\/#downloads">About these files<\/a><\/dd>/);
+  await assert.rejects(read('adapters/index.html'), { code: 'ENOENT' });
+  for (const p of pages) assert.doesNotMatch(await read(p), /href="https:\/\/models\.example\.org\/(en\/)?adapters\/"/, p);
   assert.deepEqual(catalog.models[0].adapters, Object.fromEntries(['csv', 'table-schema', 'ai', 'postgis'].map((n, i) => [n, `${BASE}/adapters/${n}/road/RoadPatrol.${['csv', 'tableschema.json', 'ai.json', 'sql'][i]}`])));
   assert.equal(await read('adapters/csv/road/RoadPatrol.csv'), 'id,route\n');
   // The anchor follows the IRI, not the attribute's name.
@@ -155,10 +153,32 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   await writeFile(join(road, 'RoadPatrol', 'notes.yaml'), 'notes:\n  - { ja: 巡回の記録だけを扱う。, en: Only the record of a patrol. }\n');
   await mkdir(join(road, 'RoadPatrol', 'mapping'));
   await writeFile(join(road, 'RoadPatrol', 'mapping', 'city-ledger.yaml'), 'standard:\n  name: { ja: 市の道路台帳, en: The city road ledger }\n  url: https://example.org/ledger\nfields:\n  route: { to: 路線名 }\n');
-  const { pages } = await buildNode(dir);
+  // An adapters page left in _site by a build before 0.3.7 (build does not empty the folder) is removed, also in the
+  // folder of a language node.yaml no longer lists (fr). Only a page the toolkit wrote: ja/adapters/ cannot be one
+  // (the first language is at the root), so it is the publisher's own and stays.
+  const oldPage = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="datamodels-toolkit 0.3.6">\n<title>Adapters</title>\n</head>\n<body><h1>Adapters</h1></body>\n</html>\n';
+  const ownPage = '<!doctype html>\n<html lang="ja">\n<head>\n<meta name="generator" content="Hugo 0.140.0">\n<title>アダプター</title>\n</head>\n<body><h1>アダプター</h1></body>\n</html>\n';
+  for (const [p, html] of [['adapters', oldPage], [join('en', 'adapters'), oldPage], [join('fr', 'adapters'), oldPage], [join('ja', 'adapters'), ownPage]]) {
+    await mkdir(join(dir, '_site', p), { recursive: true });
+    await writeFile(join(dir, '_site', p, 'index.html'), html);
+  }
+  await writeFile(join(dir, '_site', 'fr', 'adapters', 'notes.txt'), 'kept\n');
+  const { pages, catalog: built } = await buildNode(dir);
   // One 404.html, at the root: static hosts answer every missing address with it.
-  assert.deepEqual(pages, ['404.html', 'adapters/index.html', 'en/adapters/index.html', 'en/index.html', 'en/models/road/RoadPatrol/index.html', 'en/ns/road.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
+  assert.deepEqual(pages, ['404.html', 'en/index.html', 'en/models/road/RoadPatrol/index.html', 'en/ns/road.html', 'index.html', 'models/road/RoadPatrol/index.html', 'ns/road.html']);
   const read = (p) => readFile(join(dir, '_site', p), 'utf8');
+  await assert.rejects(read('adapters/index.html'), { code: 'ENOENT' });
+  await assert.rejects(read('en/adapters/index.html'), { code: 'ENOENT' });
+  await assert.rejects(read('fr/adapters/index.html'), { code: 'ENOENT' });
+  assert.equal(await read('ja/adapters/index.html'), ownPage);
+  assert.equal(await read('fr/adapters/notes.txt'), 'kept\n');
+  // Only the page: the adapters' files and their entries in catalog.json stay.
+  assert.equal(await read('adapters/csv/road/RoadPatrol.csv'), 'id,route\n');
+  assert.deepEqual(Object.keys(built.models[0].adapters), ['csv', 'table-schema', 'ai', 'postgis']);
+  // A page that cannot be read is an error, not "no page": a stale page could otherwise stay published.
+  await mkdir(join(dir, '_site', 'de', 'adapters', 'index.html'), { recursive: true });
+  await assert.rejects(buildNode(dir), { code: 'EISDIR' });
+  await rm(join(dir, '_site', 'de'), { recursive: true });
   const missing = await read('404.html');
   assert.match(missing, /<html lang="ja">/);
   assert.match(missing, /<h1 lang="ja">ページが見つかりません<\/h1>/);
@@ -178,11 +198,11 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   assert.match(ja, /<link rel="alternate" hreflang="x-default" href="https:\/\/models\.example\.org\/models\/road\/RoadPatrol\/">/);
   assert.match(ja, /<span lang="ja">日本語<\/span> \| <a href="https:\/\/models\.example\.org\/en\/models\/road\/RoadPatrol\/" hreflang="en" lang="en">English<\/a>/);
   assert.match(ja, /<dt>段階<\/dt><dd>試行<\/dd>/);
-  assert.match(ja, /<dt>ダウンロード<\/dt><dd><span class="downloads"><a class="button" href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv" download lang="ja">CSV テンプレート<\/a>.*<\/span><a href="https:\/\/models\.example\.org\/adapters\/">これらのファイルについて<\/a><\/dd>/);
-  assert.match(en, /<dt>Download<\/dt><dd><span class="downloads"><a class="button" href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv" download lang="en">CSV template<\/a>.*<\/span><a href="https:\/\/models\.example\.org\/en\/adapters\/">About these files<\/a><\/dd>/);
-  const jaAdapters = await read('adapters/index.html');
-  assert.match(jaAdapters, /<h1>アダプター<\/h1>/);
-  assert.match(jaAdapters, /<h2 id="csv" lang="ja">CSV テンプレート<\/h2>\n<dl>\n<dt>内容<\/dt><dd lang="ja">[^<]+<\/dd>\n<dt>使い方<\/dt><dd lang="ja">[^<]+<\/dd>\n<dt>入手先<\/dt><dd>各モデルのページの「ダウンロード」の行。.*datamodels export &lt;subject&gt;\/&lt;Type&gt; --to csv（<a href="https:\/\/datamodels\.jp\/toolkit\/export">ガイド<\/a>）。<\/dd>/);
+  // "About these files" opens datamodels.jp's explanation in the page's language.
+  assert.match(ja, /<dt>ダウンロード<\/dt><dd><span class="downloads"><a class="button" href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv" download lang="ja">CSV テンプレート<\/a>.*<\/span><a href="https:\/\/datamodels\.jp\/adapters\/#downloads">これらのファイルについて<\/a><\/dd>/);
+  assert.match(en, /<dt>Download<\/dt><dd><span class="downloads"><a class="button" href="https:\/\/models\.example\.org\/adapters\/csv\/road\/RoadPatrol\.csv" download lang="en">CSV template<\/a>.*<\/span><a href="https:\/\/datamodels\.jp\/en\/adapters\/#downloads">About these files<\/a><\/dd>/);
+  // A language without texts of its own gets the English ones, and so the English explanation.
+  assert.equal(pageTexts('de').aboutFilesUrl, 'https://datamodels.jp/en/adapters/#downloads');
   // Why the model is as it is: the standards it maps and its notes, in the page's language.
   assert.match(ja, /<h2>参照している標準<\/h2>\n<ul>\n<li><a href="https:\/\/example\.org\/ledger" lang="ja">市の道路台帳<\/a>（<a href="https:\/\/models\.example\.org\/mapping\/road\/RoadPatrol\/city-ledger\.yaml">対応表<\/a>）<\/li>/);
   assert.match(ja, /<h2>注記<\/h2>\n<ul>\n<li lang="ja">巡回の記録だけを扱う。<\/li>/);
