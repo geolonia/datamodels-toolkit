@@ -203,6 +203,22 @@ test('notes.yaml: notes and history are lists of texts in every language, licens
   ]);
 });
 
+test('the normalized example references the same targets, of the declared type', () => {
+  const patrol = model('Patrol', { car: 'Relationship' });
+  patrol.schema.properties.car['x-ngsi'].target = iri('Car');
+  const car = { ...model('Car'), examples: { 'example.json': { id: 'urn:ngsi-ld:Car:c1', type: 'Car' } } };
+  const norm = (target) => ({ id: 'urn:ngsi-ld:Patrol:p1', type: 'Patrol', car: { type: 'Relationship', object: target } });
+  const both = { ...patrol, examples: { 'example.json': { id: 'urn:ngsi-ld:Patrol:p1', type: 'Patrol', car: 'urn:ngsi-ld:Car:c1' }, 'example-normalized.jsonld': norm('urn:ngsi-ld:Car:c9') } };
+  assert.deepEqual(exampleRefProblems([{ name: 'road', version: '0.1.0', models: [both, car] }], { urls }), [
+    'road/Patrol/examples/example-normalized.jsonld: car: references urn:ngsi-ld:Car:c9, but example.json references urn:ngsi-ld:Car:c1',
+  ]);
+  // Without example.json, the normalized example's references are checked on their own.
+  const alone = { ...patrol, examples: { 'example-normalized.jsonld': norm('urn:ngsi-ld:Person:x') } };
+  assert.deepEqual(exampleRefProblems([{ name: 'road', version: '0.1.0', models: [alone, car] }], { urls }), [
+    'road/Patrol/examples/example-normalized.jsonld: car: urn:ngsi-ld:Person:x is a Person, but schema.json declares a Car target',
+  ]);
+});
+
 test('datamodels check keeps a build error that the rules do not list', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'datamodels-rules-'));
   await cp(join(import.meta.dirname, 'fixtures', 'node'), dir, { recursive: true });
