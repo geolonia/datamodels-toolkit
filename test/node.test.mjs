@@ -151,7 +151,7 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   await writeFile(join(road, 'subject.yaml'), 'name: road\nversion: 0.1.0\nsource: minted\ntitle: { ja: 道路, en: Roads }\ndescription: { ja: 道路の維持管理。, en: Road maintenance. }\n');
   const cat = join(road, 'RoadPatrol', 'catalog.yaml');
   await writeFile(cat, (await readFile(cat, 'utf8')).replace('title: { en: Road patrol }', 'title: { ja: 道路パトロール, en: Road patrol }').replace('description: { en: One patrol run. }', 'description: { ja: 1 回の巡回。, en: One patrol run. }').replace('route: { en: The route patrolled }', 'route: { ja: 巡回したルート, en: The route patrolled }'));
-  await writeFile(join(road, 'RoadPatrol', 'notes.yaml'), 'notes:\n  - { ja: 巡回の記録だけを扱う。, en: Only the record of a patrol. }\n');
+  await writeFile(join(road, 'RoadPatrol', 'notes.yaml'), 'notes:\n  - { ja: 巡回の記録だけを扱う。, en: Only the record of a patrol. }\nhistory:\n  - { ja: 2026-10-13：追加。, en: \"2026-10-13: added.\" }\n');
   await mkdir(join(road, 'RoadPatrol', 'mapping'));
   await writeFile(join(road, 'RoadPatrol', 'mapping', 'city-ledger.yaml'), 'standard:\n  name: { ja: 市の道路台帳, en: The city road ledger }\n  url: https://example.org/ledger\nfields:\n  route: { to: 路線名 }\n');
   // An adapters page left in _site by a build before 0.3.7 (build does not empty the folder) is removed, also in the
@@ -207,6 +207,9 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   // Why the model is as it is: the standards it maps and its notes, in the page's language.
   assert.match(ja, /<h2>参照している標準<\/h2>\n<ul>\n<li><a href="https:\/\/example\.org\/ledger" lang="ja">市の道路台帳<\/a>（<a href="https:\/\/models\.example\.org\/mapping\/road\/RoadPatrol\/city-ledger\.yaml">対応表<\/a>）<\/li>/);
   assert.match(ja, /<h2>注記<\/h2>\n<ul>\n<li lang="ja">巡回の記録だけを扱う。<\/li>/);
+  // The dated changes, folded away below the notes.
+  assert.match(ja, /<details id="history">\n<summary>変更の記録（1 件）<\/summary>\n<ul>\n<li lang="ja">2026-10-13：追加。<\/li>\n<\/ul>\n<\/details>/);
+  assert.match(en, /<summary>Change history \(1\)<\/summary>\n<ul>\n<li lang="en">2026-10-13: added\.<\/li>/);
   assert.match(en, /<h2>Standards referenced<\/h2>[\s\S]*The city road ledger[\s\S]*<h2>Notes<\/h2>\n<ul>\n<li lang="en">Only the record of a patrol\.<\/li>/);
   // Each text once, in the page's language.
   assert.ok(ja.includes('道路パトロール') && !ja.includes('Road patrol'));

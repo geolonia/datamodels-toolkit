@@ -95,6 +95,8 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
         // Why the model is as it is: the standards it maps (mapping/*.yaml) and its notes (notes.yaml).
         standards: (model.mappings ?? []).map((x) => ({ name: texts(x.standard?.name)[0] ?? { lang, text: x.name }, url: httpOnly(x.standard?.url), mapping: `${mu.mapping}${x.name}.yaml` })),
         notes: (Array.isArray(model.notes?.notes) ? model.notes.notes : []).map((n) => texts(n)).filter((n) => n.length),
+        // The dated changes (notes.yaml history), folded away below the notes.
+        history: (Array.isArray(model.notes?.history) ? model.notes.history : []).map((n) => texts(n)).filter((n) => n.length),
         subject: { name: subject.name, page: at(su.page) },
       };
       // The adapters' files, to download from the model page (a button each, product-neutral);
