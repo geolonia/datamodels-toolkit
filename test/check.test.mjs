@@ -379,7 +379,7 @@ test('datamodels check exits with 1 on a problem', async () => {
   let r = await datamodels('check', dir, '--offline');
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stderr, /note: offline/);
-  await writeFile(join(dir, 'models', 'road', 'RoadPatrol', 'examples', 'example.json'), '{"id": "x"}');
+  await writeFile(join(dir, 'models', 'road', 'RoadPatrol', 'examples', 'example.json'), '{"id": "urn:ngsi-ld:RoadPatrol:x"}');
   r = await datamodels('check', dir, '--offline');
   assert.equal(r.code, 1);
   assert.match(r.stderr, /example\.json: data must have required property 'type'\n.*1 problem\(s\)/);

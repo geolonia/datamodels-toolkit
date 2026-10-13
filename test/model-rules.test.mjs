@@ -6,7 +6,7 @@ import { mkdtemp, readFile, writeFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { catalogUrls } from '../src/build/urls.mjs';
-import { modelRuleProblems } from '../src/build/model-rules.mjs';
+import { modelRuleProblems, exampleRefProblems } from '../src/build/model-rules.mjs';
 import { checkNode } from '../src/build/check.mjs';
 
 const BASE = 'https://models.example.org';
@@ -218,6 +218,30 @@ test('datamodels check keeps a build error that the rules do not list', async ()
     'road/RoadPatrol/catalog.yaml: attributes.car is missing',
     'RoadPatrol.anon: no x-iri, so catalog.json cannot list its IRI',
   ]);
+});
+
+test('an example id names its type; a Relationship references the declared type, and its example', () => {
+  const withExample = (m, example) => ({ ...m, examples: { 'example.json': example } });
+  const patrol = model('Patrol', { car: 'Relationship', crew: 'Relationship', next: 'Relationship', site: 'Relationship' });
+  patrol.schema.properties.car['x-ngsi'].target = iri('Car');
+  patrol.schema.properties.crew['x-ngsi'].target = iri('Car');
+  // A target on another site fixes no type here.
+  patrol.schema.properties.site['x-ngsi'].target = 'https://datamodels.jp/ns/disaster/EvacuationSite';
+  const subjects = [{ name: 'road', version: '0.1.0', models: [
+    withExample(patrol, { id: 'urn:ngsi-ld:Patrol:p1', type: 'Patrol', car: 'urn:ngsi-ld:Car:c2', crew: ['urn:ngsi-ld:Person:x', 'crew-1'], next: 'urn:ngsi-ld:Patrol:p2', site: 'urn:ngsi-ld:EvacuationSite:e1' }),
+    withExample(model('Car'), { id: 'urn:ngsi-ld:Car:c1', type: 'Car' }),
+    withExample(model('Van', {}, { schema: { 'x-alias-of': iri('Car') } }), { id: 'urn:ngsi-ld:Truck:t1', type: 'Van' }),
+    withExample(model('Point', {}, { kind: 'value' }), { x: 1 }),
+  ] }];
+  assert.deepEqual(exampleRefProblems(subjects, { urls }), [
+    'road/Patrol/examples/example.json: car: urn:ngsi-ld:Car:c2 should reference the Car example, urn:ngsi-ld:Car:c1',
+    'road/Patrol/examples/example.json: crew: urn:ngsi-ld:Person:x is a Person, but schema.json declares a Car or Van target',
+    'road/Patrol/examples/example.json: crew: "crew-1" is not urn:ngsi-ld:<Type>:<local id>',
+    'road/Van/examples/example.json: id must be urn:ngsi-ld:Van:<local id>, got "urn:ngsi-ld:Truck:t1"',
+  ]);
+  // A model name in two subjects: no example to compare a reference with.
+  const rail = { name: 'rail', version: '0.1.0', models: [withExample(model('Car'), { id: 'urn:ngsi-ld:Car:r1', type: 'Car' })] };
+  assert.ok(!exampleRefProblems([...subjects, rail], { urls }).some((p) => p.includes('should reference the Car example')));
 });
 
 test('datamodels check lists every missing text, where the build stops at the first', async () => {

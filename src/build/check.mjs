@@ -14,7 +14,7 @@ import { join } from 'node:path';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { buildNode, loadNode } from './node.mjs';
-import { modelRuleProblems } from './model-rules.mjs';
+import { modelRuleProblems, exampleRefProblems } from './model-rules.mjs';
 import { catalogUrls, attributesOf } from './urls.mjs';
 import { schemaRuleProblems, exampleProblems, contextLoader, jsonldProblems, vocabularyProblems } from './examples.mjs';
 import { mappingFileProblems, viaCycles } from './mapping-check.mjs';
@@ -187,7 +187,7 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
     let rules;
     try {
       const loaded = await loadNode(dir);
-      rules = modelRuleProblems(loaded.subjects, { urls: loaded.urls, languages: loaded.node.languages });
+      rules = [...modelRuleProblems(loaded.subjects, { urls: loaded.urls, languages: loaded.node.languages }), ...exampleRefProblems(loaded.subjects, { urls: loaded.urls })];
     } catch (e) { return { problems: [e.message], notes }; }
     // The build also stops on a release snapshot (models/<subject>/releases/vX.Y.Z/) that differs from the sources.
     // A missing attribute text stops it too; the rules list that one already, with all the others.

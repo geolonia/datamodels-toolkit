@@ -174,3 +174,46 @@ export function modelRuleProblems(subjects, { urls, languages }) {
   }
   return out;
 }
+
+// The id of an example entity: urn:ngsi-ld:<Type>:<local id>, the form the
+// catalog's examples and `datamodels add` use, so a reference shows its type.
+const EXAMPLE_ID = /^urn:ngsi-ld:([A-Za-z_][A-Za-z0-9_-]*):[A-Za-z0-9][A-Za-z0-9._-]*(:[A-Za-z0-9][A-Za-z0-9._-]*)*$/;
+
+/**
+ * The examples of the entity models: the id names the model's type, and a
+ * Relationship references an entity of the type its schema declares
+ * (x-ngsi.target), the example of that type when the node has one.
+ */
+export function exampleRefProblems(subjects, { urls }) {
+  const out = [];
+  const exampleIdOf = new Map();
+  // Type names per type IRI: an alias shares the IRI of its type.
+  const typeNamesOfIri = new Map();
+  for (const s of subjects) for (const m of s.models) {
+    if (m.kind !== 'entity') continue;
+    // Two subjects with a model of the same name: a reference to that name names neither example.
+    const id = m.examples?.['example.json']?.id;
+    exampleIdOf.set(m.type, exampleIdOf.has(m.type) ? null : typeof id === 'string' ? id : null);
+    const iri = urls.modelUrls(s, m).typeIri;
+    typeNamesOfIri.set(iri, [...(typeNamesOfIri.get(iri) ?? []), m.type]);
+  }
+  for (const s of subjects) for (const m of s.models) {
+    const kv = m.examples?.['example.json'];
+    if (m.kind !== 'entity' || !isObject(kv)) continue;
+    const at = `${s.name}/${m.type}/examples/example.json`;
+    if (EXAMPLE_ID.exec(typeof kv.id === 'string' ? kv.id : '')?.[1] !== m.type) out.push(`${at}: id must be urn:ngsi-ld:${m.type}:<local id>, got ${JSON.stringify(kv.id)}`);
+    for (const [name, prop] of attributesOf(m)) {
+      if (prop?.['x-ngsi']?.type !== 'Relationship' || kv[name] === undefined) continue;
+      // A target of another site, or none ("any"), fixes no type here.
+      const declared = typeNamesOfIri.get(prop['x-ngsi'].target);
+      for (const target of [kv[name]].flat()) {
+        const targetType = EXAMPLE_ID.exec(typeof target === 'string' ? target : '')?.[1];
+        if (!targetType) { out.push(`${at}: ${name}: ${JSON.stringify(target)} is not urn:ngsi-ld:<Type>:<local id>`); continue; }
+        if (declared && !declared.includes(targetType)) { out.push(`${at}: ${name}: ${target} is a ${targetType}, but schema.json declares a ${declared.join(' or ')} target`); continue; }
+        const expected = targetType !== m.type ? exampleIdOf.get(targetType) : undefined;
+        if (expected && target !== expected) out.push(`${at}: ${name}: ${target} should reference the ${targetType} example, ${expected}`);
+      }
+    }
+  }
+  return out;
+}
