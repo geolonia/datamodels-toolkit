@@ -14,6 +14,11 @@ const nonEmpty = (v) => typeof v === 'string' && v.trim() !== '';
 // JSON values compared by content, whatever the order of their keys.
 const canonical = (v) => (Array.isArray(v) ? v.map(canonical) : isObject(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical(v[k])])) : v);
 const same = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+// anyOf is unordered, and so is each alternative's required list: both are sorted before they are compared.
+const anyOfKey = (v) => (Array.isArray(v)
+  ? v.map((a) => (isObject(a) && Array.isArray(a.required) ? { ...a, required: [...new Set(a.required)].sort() } : a)).map((a) => JSON.stringify(canonical(a))).sort()
+  : v ?? null);
+const sameAnyOf = (a, b) => same(anyOfKey(a), anyOfKey(b));
 // A list of names compared as a set; anything else (a malformed schema) by content.
 const sameSet = (a, b) => (Array.isArray(a ?? []) && Array.isArray(b ?? []) ? same([...new Set(a ?? [])].sort(), [...new Set(b ?? [])].sort()) : same(a, b));
 
@@ -90,7 +95,7 @@ export function modelRuleProblems(subjects, { urls, languages }) {
         const differing = names.filter((k) => !same(asRead(schema.properties?.[k], m.kind), asRead(t.properties?.[k], target.m.kind)));
         if (differing.length) out.push(`${at}: an alias of ${target.where} has the same attributes, these differ: ${differing.join(', ')} (a narrower type sets x-subclass-of)`);
         if (!sameSet(schema.required, t.required)) out.push(`${at}: an alias of ${target.where} has the same required attributes`);
-        if (!same(schema.anyOf ?? null, t.anyOf ?? null)) out.push(`${at}: an alias of ${target.where} has the same anyOf`);
+        if (!sameAnyOf(schema.anyOf, t.anyOf)) out.push(`${at}: an alias of ${target.where} has the same anyOf`);
         if (m.kind !== target.m.kind) out.push(`${at}: an alias of ${target.where} is of the same kind (${target.m.kind}, not ${m.kind})`);
         if (!same(schema.additionalProperties ?? true, t.additionalProperties ?? true)) out.push(`${at}: an alias of ${target.where} has the same additionalProperties`);
       } else if (typeof aliasOf === 'string' && aliasOf.startsWith(ownNamespace)) out.push(`${at}: x-alias-of ${aliasOf} is not a type of this node`);
@@ -115,7 +120,7 @@ export function modelRuleProblems(subjects, { urls, languages }) {
         // Only an alternative that is nothing but a required list can be met that way.
         const alts = t.anyOf;
         const onlyRequired = (a) => isObject(a) && Object.keys(a).length === 1 && Array.isArray(a.required) && a.required.length > 0;
-        if (Array.isArray(alts) && !same(schema.anyOf ?? null, alts) && !alts.some((a) => onlyRequired(a) && a.required.every((r) => own.includes(r)))) {
+        if (Array.isArray(alts) && !sameAnyOf(schema.anyOf, alts) && !alts.some((a) => onlyRequired(a) && a.required.every((r) => own.includes(r)))) {
           out.push(`${at}: a subclass of ${target.where} keeps its anyOf (${alts.map((a) => (Array.isArray(a?.required) ? a.required.join('+') : '') || 'other rules').join(' or ')}) or requires one of them`);
         }
       } else if (typeof subclassOf === 'string' && subclassOf.startsWith(ownNamespace)) out.push(`${at}: x-subclass-of ${subclassOf} is not a type of this node`);

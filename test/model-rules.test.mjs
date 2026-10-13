@@ -100,6 +100,10 @@ test('review fixes: the node namespace, anyOf alternatives with more than requir
   ]);
   // An empty notes.yaml is not a mapping (a missing one is fine).
   assert.deepEqual(problems(model('Patrol', {}, { notes: null })), ['road/Patrol/notes.yaml: must be a mapping with notes, history and license']);
+  // anyOf and each required list in it are unordered.
+  const either = { anyOf: [{ required: ['car', 'crew'] }, { required: ['route'] }] };
+  const reordered = { anyOf: [{ required: ['route'] }, { required: ['crew', 'car'] }] };
+  assert.deepEqual(problems(model('Patrol', {}, { schema: either }), model('Round', {}, { schema: { ...reordered, 'x-alias-of': iri('Patrol') } }), model('Lap', {}, { schema: { ...reordered, 'x-subclass-of': iri('Patrol') } })), []);
   // A model is not its own parent.
   assert.deepEqual(problems(model('Loop', {}, { schema: { 'x-subclass-of': iri('Loop') } })), [`road/Loop/schema.json: x-subclass-of names the model's own type; a class is not its own parent`]);
   // A hash vocabulary: the class name is after the #.
