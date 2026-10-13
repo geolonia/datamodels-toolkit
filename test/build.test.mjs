@@ -100,3 +100,11 @@ test('a context may import only the catalog\'s own contexts, unless the node all
   const [s] = await loadSubjects(models, { ...opts, importable: (url) => url.startsWith('https://datamodels.jp/context/') });
   assert.deepEqual(s.imports, ['https://datamodels.jp/context/task/v1.jsonld']);
 });
+
+test('the NGSI-LD core context is exported, with its URL', async () => {
+  const { CORE_CONTEXT, CORE_CONTEXT_URL, contextTerms } = await import('../src/build/index.mjs');
+  assert.equal(CORE_CONTEXT_URL, 'https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context-v1.8.jsonld');
+  const core = contextTerms(CORE_CONTEXT);
+  assert.equal(core.get('location'), 'https://uri.etsi.org/ngsi-ld/location');
+  assert.ok(core.size > 50);
+});

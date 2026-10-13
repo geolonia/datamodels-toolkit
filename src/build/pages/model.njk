@@ -54,11 +54,23 @@ eleventyComputed:
 {%- endfor %}
 </ul>
 {%- endif %}
-{%- if m.notes.length %}
+{%- if m.notes.length or m.history.length %}
 <h2>{{ t.notes }}</h2>
+{%- if m.notes.length %}
 <ul>
 {%- for n in m.notes %}
 <li lang="{{ n[0].lang }}">{{ n[0].text }}</li>
 {%- endfor %}
 </ul>
+{%- endif %}
+{%- if m.history.length %}
+<details id="history">
+<summary>{{ t.history(m.history.length) }}</summary>
+<ul>
+{%- for n in m.history %}
+<li lang="{{ n[0].lang }}">{{ n[0].text }}</li>
+{%- endfor %}
+</ul>
+</details>
+{%- endif %}
 {%- endif %}

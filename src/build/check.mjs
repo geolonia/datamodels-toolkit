@@ -24,7 +24,8 @@ class Unavailable extends Error {}
 
 // The NGSI-LD core context (v1.8): every broker knows its terms (location,
 // observedAt, …) without a node defining them, and they cannot be redefined.
-const CORE_CONTEXT = JSON.parse(readFileSync(new URL('./ngsi-ld-core-context-v1.8.jsonld', import.meta.url), 'utf8'))['@context'];
+// Its @context, from a local copy; exported for programs that list its terms.
+export const CORE_CONTEXT = JSON.parse(readFileSync(new URL('./ngsi-ld-core-context-v1.8.jsonld', import.meta.url), 'utf8'))['@context'];
 
 /** The term definitions of an @context (object or array; imported URLs are not followed). */
 export function contextDefs(context) {

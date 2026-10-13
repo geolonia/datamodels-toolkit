@@ -6,7 +6,8 @@
 # `github-pages` environment; see the README for the whole workflow. With
 # `deploy: 'false'` it only checks and builds, and a later step can publish the
 # folder in the `site` output elsewhere (#51). Inputs reach the shell only
-# through environment variables, never inside a command.
+# through environment variables, never inside a command. On a pull request it
+# fetches the base branch to compare the release snapshots with it.
 name: Data model node (datamodels.jp)
 description: Publish your own NGSI-LD data models as a site. Checks and builds node.yaml and models/, then deploys to GitHub Pages.
 author: Geolonia
@@ -52,9 +53,24 @@ runs:
         TOOLKIT: ${{ github.action_path }}
         NODE_DIR: ${{ inputs.directory }}
         OFFLINE: ${{ inputs.offline }}
+        BASE_REF: ${{ github.base_ref }}
+        TOKEN: ${{ github.token }}
       run: |
         args=(check "$NODE_DIR")
         if [ "$OFFLINE" = true ]; then args+=(--offline); fi
+        # On a pull request, also compare with the base branch: a published version
+        # is never changed or removed, not even a whole release folder (#93). The
+        # checkout keeps no credentials, so the token is passed to this one fetch
+        # in the environment, never on the command line.
+        if [ -n "$BASE_REF" ]; then
+          depth=()
+          if [ "$(git -C "$NODE_DIR" rev-parse --is-shallow-repository)" = true ]; then depth=(--depth=1); fi
+          auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 | tr -d '\n')
+          echo "::add-mask::$auth"
+          GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.$GITHUB_SERVER_URL/.extraheader" GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
+            git -C "$NODE_DIR" fetch --quiet --no-tags "${depth[@]}" origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
+          args+=(--base "origin/$BASE_REF")
+        fi
         node "$TOOLKIT/bin/datamodels.mjs" "${args[@]}"
 
     - name: Build

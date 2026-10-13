@@ -1,5 +1,10 @@
 # datamodels-toolkit
 
+[![npm](https://img.shields.io/npm/v/@geolonia/datamodels)](https://www.npmjs.com/package/@geolonia/datamodels)
+[![Test](https://github.com/geolonia/datamodels-toolkit/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/geolonia/datamodels-toolkit/actions/workflows/test.yml)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Data%20model%20node-blue?logo=github)](https://github.com/marketplace/actions/data-model-node-datamodels-jp)
+[![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
+
 Command-line tools and a GitHub Action for the [datamodels.jp](https://datamodels.jp) catalog: publish data models of your own on a site of your own, convert CSV lists into entities of a model, and export models for tools that do not read NGSI-LD.
 
 **Documentation: [datamodels.jp/en/toolkit](https://datamodels.jp/en/toolkit/)** ([日本語](https://datamodels.jp/toolkit/)), with every command and option in the [command reference](https://datamodels.jp/en/toolkit/reference).
@@ -41,7 +46,7 @@ npx @geolonia/datamodels@0.3.11 init my-models
 
 This Action does that for you. You keep your models in a GitHub repository, and every change goes online as a website on GitHub Pages: no server, and every change checked before it is published.
 
-- **On every pull request** it checks the models: the schemas, the examples, and that each term means what the schema says. The published versions of the schemas, `@context` files and vocabulary must stay exactly the same; examples and pages can still be corrected. (Not yet caught: deleting a whole published release folder, [#93](https://github.com/geolonia/datamodels-toolkit/issues/93).) A mistake shows up as a failed check, before anything goes online.
+- **On every pull request** it checks the models: the schemas, the examples, and that each term means what the schema says. The published versions of the schemas, `@context` files and vocabulary must stay exactly the same and stay online (it compares them with the pull request's base branch); examples and pages can still be corrected. A mistake shows up as a failed check, before anything goes online.
 - **On every push to `main`** it builds the website and publishes it on GitHub Pages: a page for each model, the JSON Schemas, the `@context` files, the vocabulary, and files for spreadsheets, AI and PostgreSQL.
 
 You need it only to publish data models of your own. To use existing models, start at [datamodels.jp](https://datamodels.jp/en/).
@@ -130,6 +135,8 @@ const urls = catalogUrls('https://models.example.org', { iris: 'hash' }); // sla
 const subjects = await loadSubjects('models', { urls, languages: ['en'], subjectFields: ['title', 'description'] });
 await publishCatalog(subjects, { urls, outDir: 'dist', languages: ['en'], head: { license: 'CC0-1.0' } });
 ```
+
+It also exports the NGSI-LD core context that the build uses (`CORE_CONTEXT`, `CORE_CONTEXT_URL`), and `contextTerms`, which lists the terms of a context.
 
 `@geolonia/datamodels/ngsi` converts entities between the normalized form and key-values (`toNormalized`, `toKeyValues`). It has no Node.js imports, so it also runs in a browser.
 
