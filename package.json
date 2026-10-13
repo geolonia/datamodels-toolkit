@@ -1,6 +1,6 @@
 {
   "name": "@geolonia/datamodels",
-  "version": "0.3.12",
+  "version": "0.3.13",
   "description": "Command-line tools for the datamodels.jp catalog",
   "keywords": [
     "datamodels.jp",
