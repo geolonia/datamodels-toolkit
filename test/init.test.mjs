@@ -34,12 +34,12 @@ test('init writes a node that passes check and builds', async () => {
   assert.match(workflow, /uses: actions\/checkout@[0-9a-f]{40} # v/);
   // Pinned to a release: a commit SHA with the tag as a comment, as Dependabot expects.
   // The release this version of the toolkit writes: change both lines together with src/init.mjs.
-  assert.ok(workflow.includes('uses: geolonia/datamodels-toolkit@eed03254a925ef9262de5c6c5f6e1bfde5394949 # v0.3.11\n'));
+  assert.ok(workflow.includes('uses: geolonia/datamodels-toolkit@91a2df2e2d31b9f680cc092b7449f826f66bb6cb # v0.3.12\n'));
   assert.match(workflow, /pages: write\n {6}id-token: write/);
   // The commands in the README run the same release as the workflow.
   const readme = await readFile(join(dir, 'README.md'), 'utf8');
-  assert.ok(readme.includes('npx @geolonia/datamodels@0.3.11 check\n'));
-  assert.ok(readme.includes('npx @geolonia/datamodels@0.3.11 build   # into _site/\n'));
+  assert.ok(readme.includes('npx @geolonia/datamodels@0.3.12 check\n'));
+  assert.ok(readme.includes('npx @geolonia/datamodels@0.3.12 build   # into _site/\n'));
   assert.doesNotMatch(readme, /datamodels-toolkit (check|build)/);
   // The licence: its legal code as LICENSE, named in the README.
   assert.ok((await readFile(join(dir, 'LICENSE'), 'utf8')).startsWith('Creative Commons Legal Code\n\nCC0 1.0 Universal\n'));
