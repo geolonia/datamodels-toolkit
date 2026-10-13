@@ -86,7 +86,7 @@ test('an extension in catalog.json has its texts in the catalog\'s languages', (
   const ext = { name: 'acme', organization: { ja: 'アクメ', en: 'Acme' }, version: '1.0.0', context: 'https://acme.example/context.jsonld', terms: { x: { iri: 'https://acme.example/x', description: { ja: 'エックス', en: 'X' } } } };
   assert.deepEqual(extensionEntry(ext, { languages: ['en'] }).organization, { en: 'Acme' });
   assert.deepEqual(extensionEntry(ext).terms[0].description, { ja: 'エックス', en: 'X' });
-  assert.throws(() => extensionEntry({ ...ext, terms: { x: { iri: 'https://acme.example/x' } } }), /extension acme: the description of x needs a ja or en text/);
+  assert.throws(() => extensionEntry({ ...ext, terms: { x: { iri: 'https://acme.example/x' } } }), /extension acme: the description of x needs a text in ja or en/);
 });
 
 test('a context may import only the catalog\'s own contexts, unless the node allows more', async () => {

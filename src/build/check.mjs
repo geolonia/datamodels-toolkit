@@ -19,6 +19,7 @@ import { catalogUrls, attributesOf } from './urls.mjs';
 import { schemaRuleProblems, exampleProblems, contextLoader, jsonldProblems, vocabularyProblems } from './examples.mjs';
 import { mappingFileProblems, viaCycles } from './mapping-check.mjs';
 import { compareWithBase } from './published.mjs';
+import { verifyRelease } from './releases.mjs';
 
 // A schema on another site that could not be read: noted and skipped, never a problem of this node.
 class Unavailable extends Error {}
@@ -188,12 +189,22 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
     try {
       const loaded = await loadNode(dir);
       rules = [...modelRuleProblems(loaded.subjects, { urls: loaded.urls, languages: loaded.node.languages }), ...exampleRefProblems(loaded.subjects, { urls: loaded.urls })];
+      // A release snapshot (models/<subject>/releases/vX.Y.Z/) that differs from the sources is one problem
+      // among the others, not the end of the check: the build below leaves the snapshots to this.
+      const options = { urls: loaded.urls, languages: loaded.node.languages };
+      for (const s of loaded.subjects) {
+        const changed = await verifyRelease(s, options);
+        if (!changed.length) continue;
+        const how = loaded.node.prerelease === true
+          ? `during the pre-release (prerelease: true in node.yaml) correct the snapshot too: remove models/${s.name}/releases/v${s.version}/ and run datamodels release ${s.name}; after the launch, give the subject a new version`
+          : 'give the subject a new version (datamodels bump)';
+        rules.push(`${s.name} v${s.version} was published and its files would change; ${how}:\n${changed.map((p) => `  ${p}`).join('\n')}`);
+      }
     } catch (e) { return { problems: [e.message], notes }; }
-    // The build also stops on a release snapshot (models/<subject>/releases/vX.Y.Z/) that differs from the sources.
-    // A missing attribute text stops it too; the rules list that one already, with all the others.
+    // A missing attribute text stops the build; the rules list that one already, with all the others.
     let built;
-    try { built = await buildNode(dir, { out, pages: false, offline, fetch: fetchUrl, timeout }); } catch (e) {
-      const listed = rules.length && /: catalog\.yaml needs an? .* description for catalog\.json$/.test(e.message);
+    try { built = await buildNode(dir, { out, pages: false, offline, fetch: fetchUrl, timeout, verifyReleases: false }); } catch (e) {
+      const listed = rules.length && /: catalog\.yaml needs a description in .* for catalog\.json$/.test(e.message);
       return { problems: [...rules, ...(listed ? [] : [e.message])], notes };
     }
     problems.push(...rules);

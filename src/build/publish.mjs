@@ -20,12 +20,13 @@ const json = (o) => JSON.stringify(o, null, 2) + '\n';
  * - `head`: the fields of catalog.json before `models` (licence, publisher, ...).
  * - `adapters`: [{ name, urlFor(subject, model), content(subject, model) }], files made from each model for one tool.
  * - `now`: the time written as generatedAt (a Date; tests pass a fixed one).
+ * - `verify`: false leaves the release snapshots to the caller, which reports a changed one with the rest (check).
  *
  * Returns { catalog, exactPaths, redirects }: catalog.json as written, the
  * paths of exact versions (for immutable caching), and [from, to] paths that
  * make each minted IRI lead to its page.
  */
-export async function publishCatalog(subjects, { urls, outDir, languages = ['ja', 'en'], head = {}, adapters = [], now = new Date() }) {
+export async function publishCatalog(subjects, { urls, outDir, languages = ['ja', 'en'], head = {}, adapters = [], now = new Date(), verify = true }) {
   const rel = (url) => url.slice(urls.baseUrl.length).replace(/^\//, '');
   const write = async (url, content) => {
     const file = join(outDir, rel(url).endsWith('/') ? rel(url) + 'index.html' : rel(url));
@@ -41,7 +42,7 @@ export async function publishCatalog(subjects, { urls, outDir, languages = ['ja'
   for (const subject of subjects) {
     const u = urls.subjectUrls(subject);
     // A version that has a snapshot was published: its exact files must not change.
-    const changed = await verifyRelease(subject, options);
+    const changed = verify ? await verifyRelease(subject, options) : [];
     if (changed.length) throw new Error(`${subject.name} v${subject.version} was published and its files would change; give the subject a new version:\n${changed.map((p) => `  ${p}`).join('\n')}`);
     // Every published version first, then the current one on top (identical
     // bytes when it has been snapshotted; an immutability check confirms).

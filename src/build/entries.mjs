@@ -25,7 +25,7 @@ export function attributeEntries(model, { urls, languages = ['ja', 'en'] }) {
     const description = model.catalog?.attributes?.[name];
     if (!prop['x-iri']) throw new Error(`${model.type}.${name}: no x-iri, so catalog.json cannot list its IRI`);
     const missing = languages.filter((l) => !description?.[l]);
-    if (missing.length) throw new Error(`${model.type}.${name}: catalog.yaml needs a ${missing.join(' and ')} description for catalog.json`);
+    if (missing.length) throw new Error(`${model.type}.${name}: catalog.yaml needs a description in ${missing.join(' and ')} for catalog.json`);
     return {
       name,
       iri: prop['x-iri'],
@@ -53,7 +53,7 @@ export function attributeEntries(model, { urls, languages = ['ja', 'en'] }) {
 export function extensionEntry(ext, { languages = ['ja', 'en'] } = {}) {
   const texts = (o, what) => {
     const out = Object.fromEntries(languages.filter((l) => typeof o?.[l] === 'string').map((l) => [l, o[l]]));
-    if (!Object.keys(out).length) throw new Error(`extension ${ext.name}: ${what} needs a ${languages.join(' or ')} text`);
+    if (!Object.keys(out).length) throw new Error(`extension ${ext.name}: ${what} needs a text in ${languages.join(' or ')}`);
     return out;
   };
   return {

@@ -88,7 +88,17 @@ test('a release snapshot that differs from the sources is a problem', async () =
   assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
   const m = join(dir, 'models', 'road', 'RoadPatrol', 'catalog.yaml');
   await writeFile(m, (await readFile(m, 'utf8')).replace('The route', 'The route taken'));
-  assert.match((await checkNode(dir, { offline: true })).problems.join('\n'), /road v0\.1\.0 vocabulary: snapshot differs from the sources/);
+  assert.match((await checkNode(dir, { offline: true })).problems.join('\n'), /road v0\.1\.0 was published and its files would change; give the subject a new version \(datamodels bump\):\n {2}road v0\.1\.0 vocabulary: snapshot differs from the sources/);
+  // Not the end of the check: another problem is listed with it.
+  const s = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  await writeFile(s, (await readFile(s, 'utf8')).replace('"type":"object"', '"type":"object","x-subclass-of":"Patrol"'));
+  const both = (await checkNode(dir, { offline: true })).problems.join('\n');
+  assert.match(both, /snapshot differs from the sources/);
+  assert.match(both, /x-subclass-of must be the full http\(s\) IRI of a class/);
+  // During the pre-release the snapshot is corrected too.
+  const yaml = join(dir, 'node.yaml');
+  await writeFile(yaml, `${await readFile(yaml, 'utf8')}prerelease: true\n`);
+  assert.match((await checkNode(dir, { offline: true })).problems.join('\n'), /during the pre-release \(prerelease: true in node\.yaml\) correct the snapshot too: remove models\/road\/releases\/v0\.1\.0\/ and run datamodels release road/);
 });
 
 test('an exact version already online must not change', async () => {

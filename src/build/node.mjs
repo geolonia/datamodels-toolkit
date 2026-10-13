@@ -133,13 +133,13 @@ async function removeOldAdaptersPages(out) {
  * none, and those models get no adapter files. Returns
  * { node, subjects, catalog, exactPaths, redirects, pages, notes }.
  */
-export async function buildNode(dir, { out = join(dir, '_site'), now, pages: withPages = true, fetch = globalThis.fetch, timeout = 20000, offline = false } = {}) {
+export async function buildNode(dir, { out = join(dir, '_site'), now, pages: withPages = true, fetch = globalThis.fetch, timeout = 20000, offline = false, verifyReleases = true } = {}) {
   const { node, urls, subjects } = await loadNode(dir);
   const head = { publisher: node.publisher, license: node.license, ...(node.licenseUrl ? { licenseUrl: node.licenseUrl } : {}), ...(node.nodes ? { nodes: node.nodes } : {}) };
   await mkdir(out, { recursive: true });
   await removeOldAdaptersPages(out);
   const { adapters, notes } = await nodeAdapters(subjects, { urls, languages: node.languages, fetch, timeout, offline, nodes: node.nodes });
-  const result = await publishCatalog(subjects, { urls, outDir: out, languages: node.languages, head, adapters, ...(now ? { now } : {}) });
+  const result = await publishCatalog(subjects, { urls, outDir: out, languages: node.languages, head, adapters, verify: verifyReleases, ...(now ? { now } : {}) });
   const name = node.publisher.name.en ?? node.languages.map((l) => node.publisher.name[l]).find(Boolean) ?? Object.values(node.publisher.name)[0];
   await writeFile(join(out, 'llms.txt'), llmsTxt(subjects, { urls, name: `Data models by ${name}`, languages: node.languages }));
   const pages = withPages ? await writePages(subjects, { urls, node, out, adapters }) : [];
