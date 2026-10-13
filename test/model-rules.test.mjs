@@ -92,6 +92,14 @@ test('review fixes: the node namespace, anyOf alternatives with more than requir
   const parent = model('Patrol', { car: 'Relationship' }, { schema: { anyOf: [{ required: ['car'], properties: { car: { const: 'x' } } }, { properties: { car: { const: 'y' } } }] } });
   const child = model('Inspection', { car: 'Relationship' }, { schema: { 'x-subclass-of': iri('Patrol'), required: ['id', 'type', 'car'] } });
   assert.deepEqual(problems(parent, child), ['road/Inspection/schema.json: a subclass of road/Patrol keeps its anyOf (car or other rules) or requires one of them']);
+  // additionalProperties as a schema is compared by content; a malformed required or anyOf does not stop the check.
+  const open = { additionalProperties: { type: 'string' } };
+  assert.deepEqual(problems(model('Patrol', {}, { schema: open }), model('Round', {}, { schema: { ...open, 'x-alias-of': iri('Patrol') } })), []);
+  assert.deepEqual(problems(model('Patrol', {}, { schema: { required: 'id', anyOf: [{ required: 7 }] } }), model('Lap', {}, { schema: { 'x-subclass-of': iri('Patrol'), required: 'id' } }), model('Leg', {}, { schema: { 'x-alias-of': iri('Patrol'), required: 'id', anyOf: [{ required: 7 }] } })), [
+    'road/Lap/schema.json: a subclass of road/Patrol keeps its anyOf (other rules) or requires one of them',
+  ]);
+  // An empty notes.yaml is not a mapping (a missing one is fine).
+  assert.deepEqual(problems(model('Patrol', {}, { notes: null })), ['road/Patrol/notes.yaml: must be a mapping with notes, history and license']);
   // A model is not its own parent.
   assert.deepEqual(problems(model('Loop', {}, { schema: { 'x-subclass-of': iri('Loop') } })), [`road/Loop/schema.json: x-subclass-of names the model's own type; a class is not its own parent`]);
   // A hash vocabulary: the class name is after the #.

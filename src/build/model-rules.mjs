@@ -14,7 +14,8 @@ const nonEmpty = (v) => typeof v === 'string' && v.trim() !== '';
 // JSON values compared by content, whatever the order of their keys.
 const canonical = (v) => (Array.isArray(v) ? v.map(canonical) : isObject(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical(v[k])])) : v);
 const same = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
-const sameSet = (a = [], b = []) => same([...new Set(a)].sort(), [...new Set(b)].sort());
+// A list of names compared as a set; anything else (a malformed schema) by content.
+const sameSet = (a, b) => (Array.isArray(a ?? []) && Array.isArray(b ?? []) ? same([...new Set(a ?? [])].sort(), [...new Set(b ?? [])].sort()) : same(a, b));
 
 // An attribute of an entity without x-ngsi.type is a Property, everywhere in the toolkit.
 const ngsiType = (prop) => prop?.['x-ngsi']?.type ?? 'Property';
@@ -91,7 +92,7 @@ export function modelRuleProblems(subjects, { urls, languages }) {
         if (!sameSet(schema.required, t.required)) out.push(`${at}: an alias of ${target.where} has the same required attributes`);
         if (!same(schema.anyOf ?? null, t.anyOf ?? null)) out.push(`${at}: an alias of ${target.where} has the same anyOf`);
         if (m.kind !== target.m.kind) out.push(`${at}: an alias of ${target.where} is of the same kind (${target.m.kind}, not ${m.kind})`);
-        if ((schema.additionalProperties ?? true) !== (t.additionalProperties ?? true)) out.push(`${at}: an alias of ${target.where} has the same additionalProperties`);
+        if (!same(schema.additionalProperties ?? true, t.additionalProperties ?? true)) out.push(`${at}: an alias of ${target.where} has the same additionalProperties`);
       } else if (typeof aliasOf === 'string' && aliasOf.startsWith(ownNamespace)) out.push(`${at}: x-alias-of ${aliasOf} is not a type of this node`);
       else if (!httpIri(aliasOf)) out.push(`${at}: x-alias-of must be the full http(s) IRI of a type, got ${JSON.stringify(aliasOf)}`);
     }
@@ -115,7 +116,7 @@ export function modelRuleProblems(subjects, { urls, languages }) {
         const alts = t.anyOf;
         const onlyRequired = (a) => isObject(a) && Object.keys(a).length === 1 && Array.isArray(a.required) && a.required.length > 0;
         if (Array.isArray(alts) && !same(schema.anyOf ?? null, alts) && !alts.some((a) => onlyRequired(a) && a.required.every((r) => own.includes(r)))) {
-          out.push(`${at}: a subclass of ${target.where} keeps its anyOf (${alts.map((a) => (a?.required ?? []).join('+') || 'other rules').join(' or ')}) or requires one of them`);
+          out.push(`${at}: a subclass of ${target.where} keeps its anyOf (${alts.map((a) => (Array.isArray(a?.required) ? a.required.join('+') : '') || 'other rules').join(' or ')}) or requires one of them`);
         }
       } else if (typeof subclassOf === 'string' && subclassOf.startsWith(ownNamespace)) out.push(`${at}: x-subclass-of ${subclassOf} is not a type of this node`);
       else if (!httpIri(subclassOf)) out.push(`${at}: x-subclass-of must be the full http(s) IRI of a class, got ${JSON.stringify(subclassOf)}`);
@@ -154,7 +155,8 @@ export function modelRuleProblems(subjects, { urls, languages }) {
     }
 
     // notes.yaml: the design notes and the dated changes, each a text in every language.
-    if (m.notes == null) continue;
+    // The loader gives {} for a missing file, so null is an empty one: a mistake like any other non-mapping.
+    if (m.notes === undefined) continue;
     const nf = `${where}/notes.yaml`;
     if (!isObject(m.notes)) { out.push(`${nf}: must be a mapping with notes, history and license`); continue; }
     for (const key of ['notes', 'history']) {
