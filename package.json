@@ -19,6 +19,7 @@
   },
   "exports": {
     "./build": "./src/build/index.mjs",
+    "./ngsi": "./src/ngsi.mjs",
     "./adapters": "./src/adapters/index.mjs",
     "./package.json": "./package.json"
   },

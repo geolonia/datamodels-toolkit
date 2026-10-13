@@ -7,7 +7,6 @@
 // One set of pages per language of the node: the first language at the base
 // URL (where the IRIs open), each other one under /<lang>/, with links between
 // them. A text missing in a language falls back to the node's first language.
-import Eleventy from '@11ty/eleventy';
 import { join, relative } from 'node:path';
 import { attributesOf } from './urls.mjs';
 import { readFileSync } from 'node:fs';
@@ -128,6 +127,8 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
 
 /** Write the pages into `out`, one set per language. Returns the paths written, relative to `out`. */
 export async function writePages(subjects, { urls, node, out, adapters = [] }) {
+  // Loaded here, not at the top: every other command and library import stays without Eleventy (geolonia/datamodels#226).
+  const { default: Eleventy } = await import('@11ty/eleventy');
   const written = [];
   const former = new Map();
   for (const s of subjects) former.set(s.name, await formerOf(s, { urls, languages: node.languages }));
