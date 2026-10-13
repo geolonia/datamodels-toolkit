@@ -230,6 +230,14 @@ test('pages in every language: the first at the root, the others under /<lang>/,
   assert.equal(catalog.models[0].pageUrlEn, `${BASE}/en/models/road/RoadPatrol/`);
 });
 
+test('a model with a change history but no notes still gets the Notes heading', async () => {
+  const dir = await node();
+  await writeFile(join(dir, 'models', 'road', 'RoadPatrol', 'notes.yaml'), 'history:\n  - { en: "2026-10-13: added." }\n');
+  await buildNode(dir);
+  const page = await readFile(join(dir, '_site', 'models', 'road', 'RoadPatrol', 'index.html'), 'utf8');
+  assert.match(page, /<h2>Notes<\/h2>\n<details id="history">\n<summary>Change history \(1\)<\/summary>\n<ul>\n<li lang="en">2026-10-13: added\.<\/li>/);
+});
+
 test('an eleventy.config.js where the command runs does not change the pages', async () => {
   const dir = await node();
   await writeFile(join(dir, 'eleventy.config.js'), "export default function () { throw new Error('the node\\'s own Eleventy configuration was loaded'); }\n");
