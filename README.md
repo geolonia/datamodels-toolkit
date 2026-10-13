@@ -1,5 +1,10 @@
 # datamodels-toolkit
 
+[![npm](https://img.shields.io/npm/v/@geolonia/datamodels)](https://www.npmjs.com/package/@geolonia/datamodels)
+[![Test](https://github.com/geolonia/datamodels-toolkit/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/geolonia/datamodels-toolkit/actions/workflows/test.yml)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Data%20model%20node-blue?logo=github)](https://github.com/marketplace/actions/data-model-node-datamodels-jp)
+[![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
+
 Command-line tools and a GitHub Action for the [datamodels.jp](https://datamodels.jp) catalog: publish data models of your own on a site of your own, convert CSV lists into entities of a model, and export models for tools that do not read NGSI-LD.
 
 **Documentation: [datamodels.jp/en/toolkit](https://datamodels.jp/en/toolkit/)** ([日本語](https://datamodels.jp/toolkit/)), with every command and option in the [command reference](https://datamodels.jp/en/toolkit/reference).
