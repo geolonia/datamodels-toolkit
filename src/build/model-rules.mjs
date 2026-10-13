@@ -30,6 +30,12 @@ function httpIri(iri) {
   } catch { return false; }
 }
 
+/** The local name of a class IRI: its fragment, or the last segment of its path. */
+function classNameOf(iri) {
+  const u = new URL(iri);
+  return u.hash ? u.hash.slice(1) : u.pathname.split('/').pop() ?? '';
+}
+
 /** An http(s) URL with a host. */
 function httpUrl(url) {
   try {
@@ -55,6 +61,8 @@ function textsProblem(v, languages) {
  */
 export function modelRuleProblems(subjects, { urls, languages }) {
   const out = [];
+  // Where the node mints its type IRIs: a target there must be one of its models.
+  const ownNamespace = `${urls.baseUrl}/ns/`;
   const all = subjects.flatMap((s) => s.models.map((m) => ({ s, m, where: `${s.name}/${m.type}`, iri: urls.modelUrls(s, m).typeIri })));
   // The models that own their type IRI: an alias has the IRI of the type it names.
   const owners = new Map();
@@ -84,32 +92,36 @@ export function modelRuleProblems(subjects, { urls, languages }) {
         if (!same(schema.anyOf ?? null, t.anyOf ?? null)) out.push(`${at}: an alias of ${target.where} has the same anyOf`);
         if (m.kind !== target.m.kind) out.push(`${at}: an alias of ${target.where} is of the same kind (${target.m.kind}, not ${m.kind})`);
         if ((schema.additionalProperties ?? true) !== (t.additionalProperties ?? true)) out.push(`${at}: an alias of ${target.where} has the same additionalProperties`);
-      } else if (typeof aliasOf === 'string' && aliasOf.startsWith(`${urls.baseUrl}/`)) out.push(`${at}: x-alias-of ${aliasOf} is not a type of this node`);
+      } else if (typeof aliasOf === 'string' && aliasOf.startsWith(ownNamespace)) out.push(`${at}: x-alias-of ${aliasOf} is not a type of this node`);
       else if (!httpIri(aliasOf)) out.push(`${at}: x-alias-of must be the full http(s) IRI of a type, got ${JSON.stringify(aliasOf)}`);
     }
 
     // A subclass keeps its own type IRI, uses its parent's attribute IRIs and NGSI-LD types, and stays as strict.
     if (subclassOf !== undefined) {
       const target = owners.get(subclassOf);
-      if (target) {
+      if (target?.m === m) out.push(`${at}: x-subclass-of names the model's own type; a class is not its own parent`);
+      else if (target) {
         const t = target.m.schema;
         for (const [name, prop] of attributesOf(m)) {
           const pp = t.properties?.[name];
-          if (!pp) continue;
+          if (!isObject(pp)) continue;
           if (pp['x-iri'] !== prop?.['x-iri']) out.push(`${at}: ${name}: a subclass of ${target.where} uses its IRI ${pp['x-iri']}, not ${prop?.['x-iri'] ?? '(no x-iri)'}`);
           if (ngsiType(pp) !== ngsiType(prop)) out.push(`${at}: ${name}: a subclass of ${target.where} keeps its NGSI-LD type ${ngsiType(pp)}`);
         }
-        const own = schema.required ?? [];
-        for (const r of t.required ?? []) if (!own.includes(r)) out.push(`${at}: a subclass of ${target.where} keeps "${r}" required`);
+        const own = Array.isArray(schema.required) ? schema.required : [];
+        for (const r of Array.isArray(t.required) ? t.required : []) if (!own.includes(r)) out.push(`${at}: a subclass of ${target.where} keeps "${r}" required`);
         // An either/or requirement stays too: the same anyOf, or stricter by requiring one alternative outright.
+        // Only an alternative that is nothing but a required list can be met that way.
         const alts = t.anyOf;
-        if (Array.isArray(alts) && !same(schema.anyOf ?? null, alts) && !alts.some((a) => (a?.required ?? []).every((r) => own.includes(r)))) {
-          out.push(`${at}: a subclass of ${target.where} keeps its anyOf (${alts.map((a) => (a?.required ?? []).join('+')).join(' or ')}) or requires one of them`);
+        const onlyRequired = (a) => isObject(a) && Object.keys(a).length === 1 && Array.isArray(a.required) && a.required.length > 0;
+        if (Array.isArray(alts) && !same(schema.anyOf ?? null, alts) && !alts.some((a) => onlyRequired(a) && a.required.every((r) => own.includes(r)))) {
+          out.push(`${at}: a subclass of ${target.where} keeps its anyOf (${alts.map((a) => (a?.required ?? []).join('+') || 'other rules').join(' or ')}) or requires one of them`);
         }
-      } else if (typeof subclassOf === 'string' && subclassOf.startsWith(`${urls.baseUrl}/`)) out.push(`${at}: x-subclass-of ${subclassOf} is not a type of this node`);
+      } else if (typeof subclassOf === 'string' && subclassOf.startsWith(ownNamespace)) out.push(`${at}: x-subclass-of ${subclassOf} is not a type of this node`);
       else if (!httpIri(subclassOf)) out.push(`${at}: x-subclass-of must be the full http(s) IRI of a class, got ${JSON.stringify(subclassOf)}`);
       // Only the form: a misspelled class name passes, so open the IRI before using it.
-      else if (!/^[A-Z]/.test(new URL(subclassOf).pathname.split('/').pop() ?? '')) out.push(`${at}: x-subclass-of ${subclassOf} does not name a class (a class name starts with a capital letter)`);
+      // The class name is after the # when there is one (a hash vocabulary), else the last path segment.
+      else if (!/^[A-Z]/.test(classNameOf(subclassOf))) out.push(`${at}: x-subclass-of ${subclassOf} does not name a class (a class name starts with a capital letter)`);
     }
 
     for (const [name, prop] of attributesOf(m)) {

@@ -85,6 +85,22 @@ test('a subclass uses its parent\'s IRIs and NGSI-LD types and stays as strict; 
   assert.deepEqual(problems(parent, strict), []);
 });
 
+test('review fixes: the node namespace, anyOf alternatives with more than required, class names after #', () => {
+  // Only /ns/ is the node's namespace: another vocabulary on the same site is outside it.
+  assert.deepEqual(problems(model('Round', {}, { schema: { 'x-alias-of': `${BASE}/vocab/Round` } })), []);
+  // An alternative with other assertions is not kept by requiring its fields.
+  const parent = model('Patrol', { car: 'Relationship' }, { schema: { anyOf: [{ required: ['car'], properties: { car: { const: 'x' } } }, { properties: { car: { const: 'y' } } }] } });
+  const child = model('Inspection', { car: 'Relationship' }, { schema: { 'x-subclass-of': iri('Patrol'), required: ['id', 'type', 'car'] } });
+  assert.deepEqual(problems(parent, child), ['road/Inspection/schema.json: a subclass of road/Patrol keeps its anyOf (car or other rules) or requires one of them']);
+  // A model is not its own parent.
+  assert.deepEqual(problems(model('Loop', {}, { schema: { 'x-subclass-of': iri('Loop') } })), [`road/Loop/schema.json: x-subclass-of names the model's own type; a class is not its own parent`]);
+  // A hash vocabulary: the class name is after the #.
+  assert.deepEqual(problems(
+    model('A', {}, { schema: { 'x-subclass-of': 'https://example.org/vocab#Place' } }),
+    model('B', {}, { schema: { 'x-subclass-of': 'https://example.org/Vocab#place' } }),
+  ), ['road/B/schema.json: x-subclass-of https://example.org/Vocab#place does not name a class (a class name starts with a capital letter)']);
+});
+
 test('a missing x-ngsi.type is a Property when a subclass or an alias is compared', () => {
   const parent = model('Patrol', { route: 'Property' });
   delete parent.schema.properties.route['x-ngsi'];
