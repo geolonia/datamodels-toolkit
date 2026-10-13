@@ -10,8 +10,8 @@ name: Publish
 # GitHub's OIDC token from this workflow, so no npm token is stored in the
 # repository, and npm adds provenance (the commit and the workflow that built
 # the package). The trusted publisher in the package's settings on npmjs.com
-# names this file, publish.yml: renaming the file stops publishing until the
-# setting is changed too.
+# names this file, publish.yml, and must allow publishing (not only staging):
+# renaming the file stops publishing until the setting is changed too.
 on:
   release:
     types: [published]

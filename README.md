@@ -156,7 +156,7 @@ A release reaches npmjs.org through the workflow `.github/workflows/publish.yml`
 3. The workflow checks that the tag is `v` followed by the version in `package.json`, runs the tests, and publishes `@geolonia/datamodels` on npmjs.org. A pre-release on GitHub publishes nothing. Publishing the GitHub release is the only gate.
 4. Then pin `init` (`ACTION_REF`, `ACTION_VERSION` in `src/init.mjs`) and the README's `npx` lines to the new release.
 
-The workflow uses npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm accepts GitHub's OIDC token, so there is no npm token in the repository, and npm adds provenance (the commit and the workflow that built the package). The trusted publisher in the package's settings on npmjs.com names this repository and the file `publish.yml`; after renaming the file, change that setting too.
+The workflow uses npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm accepts GitHub's OIDC token, so there is no npm token in the repository, and npm adds provenance (the commit and the workflow that built the package). The trusted publisher in the package's settings on npmjs.com names this repository and the file `publish.yml`, and must allow publishing (not only staging); after renaming the file, change that setting too.
 
 ## Issues and contributions
 
