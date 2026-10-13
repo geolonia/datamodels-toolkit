@@ -131,6 +131,8 @@ const subjects = await loadSubjects('models', { urls, languages: ['en'], subject
 await publishCatalog(subjects, { urls, outDir: 'dist', languages: ['en'], head: { license: 'CC0-1.0' } });
 ```
 
+It also exports the NGSI-LD core context that the build uses (`CORE_CONTEXT`, `CORE_CONTEXT_URL`), and `contextTerms`, which lists the terms of a context.
+
 
 ## Agent skill
 
