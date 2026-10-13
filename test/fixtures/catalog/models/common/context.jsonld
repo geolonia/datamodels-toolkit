@@ -3,7 +3,9 @@
     "common": "https://datamodels.jp/ns/common/",
     "schema": "https://schema.org/",
     "Geometry": "common:Geometry",
+    "ContactPoint": "common:ContactPoint",
     "JapaneseAddress": "common:JapaneseAddress",
+    "OpeningHours": "common:OpeningHours",
     "address": "schema:address",
     "addressCountry": "schema:addressCountry",
     "postalCode": "schema:postalCode",
@@ -19,6 +21,17 @@
     "jisMunicipalityCode": "common:jisMunicipalityCode",
     "localGovernmentCode": "common:localGovernmentCode",
     "abrMachiazaId": "common:abrMachiazaId",
-    "addressText": "common:addressText"
+    "addressText": "common:addressText",
+    "contactPoint": "schema:contactPoint",
+    "telephone": "schema:telephone",
+    "telephoneExtension": "common:telephoneExtension",
+    "faxNumber": "schema:faxNumber",
+    "email": "schema:email",
+    "url": "schema:url",
+    "otherChannels": "common:otherChannels",
+    "openingHoursSpecification": "schema:openingHoursSpecification",
+    "dayOfWeek": "schema:dayOfWeek",
+    "opens": "schema:opens",
+    "closes": "schema:closes"
   }
 }

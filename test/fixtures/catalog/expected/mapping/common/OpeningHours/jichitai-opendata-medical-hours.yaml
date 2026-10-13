@@ -1,0 +1,24 @@
+# Correspondence between OpeningHours and the consultation-hours columns of
+# dataset 10 (医療機関一覧) of the Digital Agency's 自治体標準オープンデータセット.
+standard:
+  name:
+    ja: 自治体標準オープンデータセット・データ項目定義書A（20260801版）シート「10.医療機関一覧」の診療曜日・時間の項目（デジタル庁）
+    en: "Municipal standard open dataset, data item definition sheet A (2026-08-01), sheet '10. medical institutions', consultation days and hours (Digital Agency)"
+  url: https://www.digital.go.jp/resources/open_data/municipal-standard-data-set-test
+  license:
+    ja: "公共データ利用規約（第1.0版）（PDL1.0、CC BY 4.0 と互換）"
+    en: "Public Data License (Version 1.0) (PDL1.0), compatible with CC BY 4.0"
+  note:
+    ja: "医療機関の診療日と診療時間。英語名はほかのデータセットと同じ（serviceDay、startTime、endTime、dateTimeRemarks）で、日本語名だけが違う。"
+    en: "The consultation days and hours of a medical institution. The English item names are those of the other datasets (serviceDay, startTime, endTime, dateTimeRemarks); only the Japanese names differ."
+fields:
+  dayOfWeek:
+    to: 診療曜日 (serviceDay)
+    note:
+      ja: "火水木金土日（または 234567）を曜日の名前の配列にする"
+      en: "turn 火水木金土日 (or 234567) into the array of day names"
+    column: 診療曜日
+    transform: weekdays
+  opens: { to: 診療開始時間 (startTime), column: 診療開始時間, transform: time }
+  closes: { to: 診療終了時間 (endTime), column: 診療終了時間, transform: time }
+  description: { to: 診療日時特記事項 (dateTimeRemarks), column: 診療日時特記事項 }

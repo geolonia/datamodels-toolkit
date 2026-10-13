@@ -1,0 +1,456 @@
+{
+  "$schema": "https://datapackage.org/profiles/2.0/tableschema.json",
+  "title": "タスク",
+  "description": "追跡の対象となる作業の単位です。課題管理システムの「チケット」や「Issue」、カレンダーの ToDo、自治体の作業指示などにあたります。状態と優先度の値は RFC 8984（JSCalendar）に合わせ、元のシステム固有の状態名や種別は statusLabel と subtype に残します。位置には任意のジオメトリを使えます。progress、statusLabel のどれか 1 つは必須です。",
+  "x-type": "Task",
+  "x-typeIri": "https://datamodels.jp/ns/task/Task",
+  "x-version": "1.0.0",
+  "x-schema": "https://datamodels.jp/schema/task/Task/v1.0.0.json",
+  "x-context": "https://datamodels.jp/context/task/v1.jsonld",
+  "x-translations": {
+    "en": {
+      "title": "Task",
+      "description": "A tracked unit of work: a ticket or issue in a tracker, a calendar to-do, a municipal work order. State and priority follow RFC 8984 (JSCalendar); the source system's own status name and kind are kept in statusLabel and subtype. Location may be any geometry. At least one of progress, statusLabel is needed."
+    }
+  },
+  "fields": [
+    {
+      "name": "id",
+      "title": "エンティティの ID",
+      "description": "エンティティの ID（URI。例：urn:ngsi-ld:Task:001）",
+      "type": "string",
+      "constraints": {
+        "required": true,
+        "unique": true
+      },
+      "x-translations": {
+        "en": {
+          "title": "Entity id",
+          "description": "Entity id: a URI, for example urn:ngsi-ld:Task:001"
+        }
+      }
+    },
+    {
+      "name": "name",
+      "title": "名称・件名",
+      "description": "名称・件名",
+      "type": "string",
+      "x-iri": "https://uri.etsi.org/ngsi-ld/name",
+      "constraints": {
+        "required": true
+      },
+      "x-translations": {
+        "en": {
+          "title": "Name or subject",
+          "description": "Name or subject"
+        }
+      }
+    },
+    {
+      "name": "description",
+      "title": "説明",
+      "description": "説明",
+      "type": "string",
+      "x-iri": "http://purl.org/dc/terms/description",
+      "x-translations": {
+        "en": {
+          "title": "Description",
+          "description": "Description"
+        }
+      }
+    },
+    {
+      "name": "project",
+      "title": "所属するプロジェクト",
+      "description": "所属するプロジェクト（元のシステムにプロジェクトの概念があるとき）",
+      "type": "string",
+      "format": "uri",
+      "x-iri": "https://datamodels.jp/ns/task/project",
+      "x-translations": {
+        "en": {
+          "description": "The project this belongs to, when the source system has projects"
+        }
+      }
+    },
+    {
+      "name": "milestone",
+      "title": "予定しているマイルストーン",
+      "description": "予定しているマイルストーン（バージョン、リリース）",
+      "type": "string",
+      "format": "uri",
+      "x-iri": "https://datamodels.jp/ns/task/milestone",
+      "x-translations": {
+        "en": {
+          "title": "The milestone",
+          "description": "The milestone (version, release) this is planned for"
+        }
+      }
+    },
+    {
+      "name": "parent",
+      "title": "親タスク",
+      "description": "親タスク（RFC 8984 relatedTo parent）",
+      "type": "string",
+      "format": "uri",
+      "x-iri": "https://datamodels.jp/ns/task/parent",
+      "x-translations": {
+        "en": {
+          "title": "Parent task",
+          "description": "Parent task (RFC 8984 relatedTo parent)"
+        }
+      }
+    },
+    {
+      "name": "relatedTo",
+      "title": "関連するタスク",
+      "description": "関連するタスク。key-values の形では、対象が 1 つでも配列です。関係の種類（blocks、precedes、duplicates など）は拡張で表します。複数の値は ; で区切ります。",
+      "type": "list",
+      "itemType": "string",
+      "delimiter": ";",
+      "x-iri": "https://datamodels.jp/ns/task/relatedTo",
+      "constraints": {
+        "minLength": 1
+      },
+      "x-translations": {
+        "en": {
+          "title": "Related tasks",
+          "description": "Related tasks. Always an array in the key-values form, even with one target. The kind of relation (blocks, precedes, duplicates) is left to extensions. Several values separated by ;."
+        }
+      }
+    },
+    {
+      "name": "refersTo",
+      "title": "このタスクが対象とするエンティティ",
+      "description": "このタスクが対象とするエンティティ（通報、設備、道路など）",
+      "type": "string",
+      "format": "uri",
+      "x-iri": "https://datamodels.jp/ns/task/refersTo",
+      "x-translations": {
+        "en": {
+          "title": "The entity this task is about",
+          "description": "The entity this task is about (a report, an asset, a road)"
+        }
+      }
+    },
+    {
+      "name": "progress",
+      "title": "正規化した進行状態",
+      "description": "正規化した進行状態（RFC 8984 progress）：needs-action（未着手）、in-process（対応中）、completed（完了）、failed（失敗）、cancelled（取消）。合う値がないときは省き、statusLabel に元の呼び方を書きます。",
+      "type": "string",
+      "x-iri": "https://datamodels.jp/ns/task/progress",
+      "constraints": {
+        "enum": [
+          "needs-action",
+          "in-process",
+          "completed",
+          "failed",
+          "cancelled"
+        ]
+      },
+      "x-translations": {
+        "en": {
+          "title": "Normalised state",
+          "description": "Normalised state (RFC 8984 progress): needs-action = not started, in-process = in progress, completed = done, failed = failed, cancelled = cancelled. When no value fits, leave it out and give the local wording in statusLabel."
+        }
+      }
+    },
+    {
+      "name": "statusLabel",
+      "title": "元のシステムの状態名をそのまま",
+      "description": "元のシステムの状態名をそのまま（「対応中」「解決」など）。progress を省いたときは必須です。",
+      "type": "string",
+      "x-iri": "https://datamodels.jp/ns/task/statusLabel",
+      "constraints": {
+        "minLength": 1
+      },
+      "x-translations": {
+        "en": {
+          "description": "The source system's own status name, unchanged (for example \"In progress\", \"Resolved\"). Required when progress is left out"
+        }
+      }
+    },
+    {
+      "name": "subtype",
+      "title": "元のシステムでの種別",
+      "description": "元のシステムでの種別（トラッカー、Issue のタイプ、カテゴリなど）",
+      "type": "string",
+      "x-iri": "https://datamodels.jp/ns/task/subtype",
+      "x-translations": {
+        "en": {
+          "description": "The source system's kind, for example a tracker, an issue type or a category"
+        }
+      }
+    },
+    {
+      "name": "priority",
+      "title": "優先度 0〜9",
+      "description": "優先度 0〜9。1 が最高、9 が最低で、0 は未定義です（RFC 8984）。",
+      "type": "integer",
+      "x-iri": "https://datamodels.jp/ns/task/priority",
+      "constraints": {
+        "minimum": 0,
+        "maximum": 9
+      },
+      "x-translations": {
+        "en": {
+          "title": "Priority 0 to 9",
+          "description": "Priority 0 to 9: 1 highest, 9 lowest, 0 undefined (RFC 8984)"
+        }
+      }
+    },
+    {
+      "name": "assignee",
+      "title": "担当する人、組織、チーム",
+      "description": "担当する人、組織、チーム（そのエンティティ。この分野の外の URN でも構いません）。key-values の形では、対象が 1 つでも配列です。複数の値は ; で区切ります。",
+      "type": "list",
+      "itemType": "string",
+      "delimiter": ";",
+      "x-iri": "https://datamodels.jp/ns/task/assignee",
+      "constraints": {
+        "minLength": 1
+      },
+      "x-translations": {
+        "en": {
+          "title": "Assignees",
+          "description": "Assignees: person, organisation or team entities, possibly outside this subject. Always an array in the key-values form, even with one target. Several values separated by ;."
+        }
+      }
+    },
+    {
+      "name": "author",
+      "title": "作成者",
+      "description": "作成者（人、組織、チームのエンティティ）",
+      "type": "string",
+      "format": "uri",
+      "x-iri": "https://schema.org/author",
+      "x-translations": {
+        "en": {
+          "title": "Creator",
+          "description": "Creator (a person, organisation or team entity)"
+        }
+      }
+    },
+    {
+      "name": "start",
+      "title": "開始の予定",
+      "description": "開始の予定。日付か日時（RFC 8984 start）",
+      "type": "string",
+      "x-iri": "https://datamodels.jp/ns/task/start",
+      "constraints": {
+        "pattern": "\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?"
+      },
+      "x-translations": {
+        "en": {
+          "title": "Planned start",
+          "description": "Planned start: a date, or a date and time (RFC 8984 start)"
+        }
+      }
+    },
+    {
+      "name": "due",
+      "title": "期限",
+      "description": "期限。日付か日時（RFC 8984 due）",
+      "type": "string",
+      "x-iri": "https://datamodels.jp/ns/task/due",
+      "constraints": {
+        "pattern": "\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?"
+      },
+      "x-translations": {
+        "en": {
+          "title": "Due",
+          "description": "Due: a date, or a date and time (RFC 8984 due)"
+        }
+      }
+    },
+    {
+      "name": "completedAt",
+      "title": "progress が completed になった日時",
+      "description": "progress が completed になった日時",
+      "type": "datetime",
+      "x-iri": "https://datamodels.jp/ns/task/completedAt",
+      "x-translations": {
+        "en": {
+          "title": "When progress became completed",
+          "description": "When progress became completed"
+        }
+      }
+    },
+    {
+      "name": "estimatedDuration",
+      "title": "見積もった作業時間",
+      "description": "見積もった作業時間。ISO 8601 の期間（例：PT1H30M）で書きます（RFC 8984 estimatedDuration）。",
+      "type": "string",
+      "x-pattern": "^P(?!$)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$",
+      "x-iri": "https://datamodels.jp/ns/task/estimatedDuration",
+      "x-translations": {
+        "en": {
+          "description": "Estimated effort as an ISO 8601 duration, e.g. PT1H30M (RFC 8984 estimatedDuration)"
+        }
+      }
+    },
+    {
+      "name": "percentComplete",
+      "title": "進捗率 0〜100",
+      "description": "進捗率 0〜100（RFC 8984 percentComplete）",
+      "type": "integer",
+      "x-iri": "https://datamodels.jp/ns/task/percentComplete",
+      "constraints": {
+        "minimum": 0,
+        "maximum": 100
+      },
+      "x-translations": {
+        "en": {
+          "title": "Completion 0 to 100",
+          "description": "Completion 0 to 100 (RFC 8984 percentComplete)"
+        }
+      }
+    },
+    {
+      "name": "keywords",
+      "title": "キーワード、ラベル",
+      "description": "キーワード、ラベル。複数の値は ; で区切ります。",
+      "type": "list",
+      "itemType": "string",
+      "delimiter": ";",
+      "x-iri": "https://schema.org/keywords",
+      "x-translations": {
+        "en": {
+          "title": "Keywords or labels",
+          "description": "Keywords or labels. Several values separated by ;."
+        }
+      }
+    },
+    {
+      "name": "longitude",
+      "title": "location の経度",
+      "description": "location の経度（WGS 84、十進の度）。点なら経度と緯度を入れます。点以外の形は、GeoJSON のジオメトリを location に入れ、経度と緯度は空にします。",
+      "type": "number",
+      "x-iri": "https://uri.etsi.org/ngsi-ld/location",
+      "constraints": {
+        "minimum": -180,
+        "maximum": 180
+      },
+      "x-translations": {
+        "en": {
+          "title": "Longitude of location in WGS 84",
+          "description": "Longitude of location in WGS 84 (decimal degrees). For a point, fill longitude and latitude. For any other shape, put the GeoJSON geometry in location and leave them empty."
+        }
+      }
+    },
+    {
+      "name": "latitude",
+      "title": "location の緯度",
+      "description": "location の緯度（WGS 84、十進の度）。点なら経度と緯度を入れます。点以外の形は、GeoJSON のジオメトリを location に入れ、経度と緯度は空にします。",
+      "type": "number",
+      "x-iri": "https://uri.etsi.org/ngsi-ld/location",
+      "constraints": {
+        "minimum": -90,
+        "maximum": 90
+      },
+      "x-translations": {
+        "en": {
+          "title": "Latitude of location in WGS 84",
+          "description": "Latitude of location in WGS 84 (decimal degrees). For a point, fill longitude and latitude. For any other shape, put the GeoJSON geometry in location and leave them empty."
+        }
+      }
+    },
+    {
+      "name": "location",
+      "title": "位置",
+      "description": "位置。点、線、面、それらの集まりなど、任意の GeoJSON ジオメトリ。location の GeoJSON ジオメトリ（Point、LineString、Polygon、MultiPoint、MultiLineString、MultiPolygon、GeometryCollection）。点以外の形のときに使います。",
+      "type": "geojson",
+      "x-iri": "https://uri.etsi.org/ngsi-ld/location",
+      "x-translations": {
+        "en": {
+          "title": "Location as any GeoJSON geometry",
+          "description": "Location as any GeoJSON geometry: point, line, polygon or a collection. location as a GeoJSON geometry (Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection), for a shape that is not a point."
+        }
+      }
+    },
+    {
+      "name": "spatialId",
+      "title": "タスクの範囲を覆う空間 ID",
+      "description": "タスクの範囲を覆う空間 ID（ZFXY）。任意です。複数の値は ; で区切ります。",
+      "type": "list",
+      "itemType": "string",
+      "delimiter": ";",
+      "x-iri": "https://datamodels.jp/ns/task/spatialId",
+      "x-translations": {
+        "en": {
+          "title": "Spatial IDs",
+          "description": "Spatial IDs (ZFXY) covering the task. Optional. Several values separated by ;."
+        }
+      }
+    },
+    {
+      "name": "isPrivate",
+      "title": "非公開なら true",
+      "description": "非公開なら true。既定は false です。",
+      "type": "boolean",
+      "x-iri": "https://datamodels.jp/ns/task/isPrivate",
+      "x-translations": {
+        "en": {
+          "title": "true when private",
+          "description": "true when private; default false"
+        }
+      }
+    },
+    {
+      "name": "source",
+      "title": "元のシステムでのこのタスクの URL",
+      "description": "元のシステムでのこのタスクの URL",
+      "type": "string",
+      "format": "uri",
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/source",
+      "x-translations": {
+        "en": {
+          "description": "URL of this object in the system of record"
+        }
+      }
+    },
+    {
+      "name": "externalId",
+      "title": "元のシステムでの識別子",
+      "description": "元のシステムでの識別子",
+      "type": "string",
+      "x-iri": "https://datamodels.jp/ns/task/externalId",
+      "x-translations": {
+        "en": {
+          "title": "Identifier in the system of record",
+          "description": "Identifier in the system of record"
+        }
+      }
+    },
+    {
+      "name": "dateCreated",
+      "title": "元のシステムでの作成日時",
+      "description": "元のシステムでの作成日時（ブローカーの createdAt とは別）",
+      "type": "datetime",
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateCreated",
+      "x-translations": {
+        "en": {
+          "title": "Creation time in the system of record",
+          "description": "Creation time in the system of record (distinct from the broker attribute createdAt)"
+        }
+      }
+    },
+    {
+      "name": "dateModified",
+      "title": "元のシステムでの更新日時",
+      "description": "元のシステムでの更新日時",
+      "type": "datetime",
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateModified",
+      "x-translations": {
+        "en": {
+          "description": "Last modification time in the system of record"
+        }
+      }
+    }
+  ],
+  "primaryKey": [
+    "id"
+  ],
+  "missingValues": [
+    ""
+  ]
+}

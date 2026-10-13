@@ -1,0 +1,288 @@
+{
+  "$schema": "https://datapackage.org/profiles/2.0/tableschema.json",
+  "title": "プロジェクト",
+  "description": "タスクをまとめる単位です。案件、災害対応の 1 つのオペレーション、キャンペーンなど、用途によって呼び方は変わっても、共通の属性を持ちます。",
+  "x-type": "Project",
+  "x-typeIri": "https://datamodels.jp/ns/task/Project",
+  "x-version": "1.0.0",
+  "x-schema": "https://datamodels.jp/schema/task/Project/v1.0.0.json",
+  "x-context": "https://datamodels.jp/context/task/v1.jsonld",
+  "x-translations": {
+    "en": {
+      "title": "Project",
+      "description": "A grouping of tasks: a project in a tracker, one disaster-response operation, a campaign. Called differently in different settings, with the same common attributes."
+    }
+  },
+  "fields": [
+    {
+      "name": "id",
+      "title": "エンティティの ID",
+      "description": "エンティティの ID（URI。例：urn:ngsi-ld:Project:001）",
+      "type": "string",
+      "constraints": {
+        "required": true,
+        "unique": true
+      },
+      "x-translations": {
+        "en": {
+          "title": "Entity id",
+          "description": "Entity id: a URI, for example urn:ngsi-ld:Project:001"
+        }
+      }
+    },
+    {
+      "name": "name",
+      "title": "名称・件名",
+      "description": "名称・件名",
+      "type": "string",
+      "x-iri": "https://uri.etsi.org/ngsi-ld/name",
+      "constraints": {
+        "required": true
+      },
+      "x-translations": {
+        "en": {
+          "title": "Name or subject",
+          "description": "Name or subject"
+        }
+      }
+    },
+    {
+      "name": "description",
+      "title": "説明",
+      "description": "説明",
+      "type": "string",
+      "x-iri": "http://purl.org/dc/terms/description",
+      "x-translations": {
+        "en": {
+          "title": "Description",
+          "description": "Description"
+        }
+      }
+    },
+    {
+      "name": "identifier",
+      "title": "短い識別子",
+      "description": "短い識別子（スラッグやコード。元のシステムの中で一意）",
+      "type": "string",
+      "x-iri": "https://schema.org/identifier",
+      "x-translations": {
+        "en": {
+          "title": "Short handle",
+          "description": "Short handle: a slug or code, unique within the source system"
+        }
+      }
+    },
+    {
+      "name": "parent",
+      "title": "親プロジェクト",
+      "description": "親プロジェクト",
+      "type": "string",
+      "format": "uri",
+      "x-iri": "https://datamodels.jp/ns/task/parent",
+      "x-translations": {
+        "en": {
+          "title": "Parent project",
+          "description": "Parent project"
+        }
+      }
+    },
+    {
+      "name": "projectStatus",
+      "title": "状態",
+      "description": "状態：active（進行中）、closed（終了）、archived（アーカイブ済み。使わなくなったが残している）。status は core context の予約語なので、projectStatus という名前にしています。",
+      "type": "string",
+      "x-iri": "https://datamodels.jp/ns/task/projectStatus",
+      "constraints": {
+        "enum": [
+          "active",
+          "closed",
+          "archived"
+        ]
+      },
+      "x-translations": {
+        "en": {
+          "title": "State",
+          "description": "State: active = in progress, closed = finished, archived = no longer used but kept; status is protected in the core context, hence projectStatus"
+        }
+      }
+    },
+    {
+      "name": "isPublic",
+      "title": "公開プロジェクトなら true",
+      "description": "公開プロジェクトなら true",
+      "type": "boolean",
+      "x-iri": "https://datamodels.jp/ns/task/isPublic",
+      "x-translations": {
+        "en": {
+          "title": "true when public",
+          "description": "true when public"
+        }
+      }
+    },
+    {
+      "name": "homepage",
+      "title": "ホームページ",
+      "description": "ホームページ",
+      "type": "string",
+      "format": "uri",
+      "x-iri": "https://schema.org/url",
+      "x-translations": {
+        "en": {
+          "title": "Homepage",
+          "description": "Homepage"
+        }
+      }
+    },
+    {
+      "name": "start",
+      "title": "予定期間の開始",
+      "description": "予定期間の開始。日付か日時",
+      "type": "string",
+      "x-iri": "https://datamodels.jp/ns/task/start",
+      "constraints": {
+        "pattern": "\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?"
+      },
+      "x-translations": {
+        "en": {
+          "title": "Planned start",
+          "description": "Planned start: a date, or a date and time"
+        }
+      }
+    },
+    {
+      "name": "end",
+      "title": "予定期間の終了",
+      "description": "予定期間の終了。日付か日時",
+      "type": "string",
+      "x-iri": "https://datamodels.jp/ns/task/end",
+      "constraints": {
+        "pattern": "\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?"
+      },
+      "x-translations": {
+        "en": {
+          "title": "Planned end",
+          "description": "Planned end: a date, or a date and time"
+        }
+      }
+    },
+    {
+      "name": "longitude",
+      "title": "location の経度",
+      "description": "location の経度（WGS 84、十進の度）。点なら経度と緯度を入れます。点以外の形は、GeoJSON のジオメトリを location に入れ、経度と緯度は空にします。",
+      "type": "number",
+      "x-iri": "https://uri.etsi.org/ngsi-ld/location",
+      "constraints": {
+        "minimum": -180,
+        "maximum": 180
+      },
+      "x-translations": {
+        "en": {
+          "title": "Longitude of location in WGS 84",
+          "description": "Longitude of location in WGS 84 (decimal degrees). For a point, fill longitude and latitude. For any other shape, put the GeoJSON geometry in location and leave them empty."
+        }
+      }
+    },
+    {
+      "name": "latitude",
+      "title": "location の緯度",
+      "description": "location の緯度（WGS 84、十進の度）。点なら経度と緯度を入れます。点以外の形は、GeoJSON のジオメトリを location に入れ、経度と緯度は空にします。",
+      "type": "number",
+      "x-iri": "https://uri.etsi.org/ngsi-ld/location",
+      "constraints": {
+        "minimum": -90,
+        "maximum": 90
+      },
+      "x-translations": {
+        "en": {
+          "title": "Latitude of location in WGS 84",
+          "description": "Latitude of location in WGS 84 (decimal degrees). For a point, fill longitude and latitude. For any other shape, put the GeoJSON geometry in location and leave them empty."
+        }
+      }
+    },
+    {
+      "name": "location",
+      "title": "位置",
+      "description": "位置。点、線、面、それらの集まりなど、任意の GeoJSON ジオメトリ。location の GeoJSON ジオメトリ（Point、LineString、Polygon、MultiPoint、MultiLineString、MultiPolygon、GeometryCollection）。点以外の形のときに使います。",
+      "type": "geojson",
+      "x-iri": "https://uri.etsi.org/ngsi-ld/location",
+      "x-translations": {
+        "en": {
+          "title": "Location as any GeoJSON geometry",
+          "description": "Location as any GeoJSON geometry: point, line, polygon or a collection. location as a GeoJSON geometry (Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection), for a shape that is not a point."
+        }
+      }
+    },
+    {
+      "name": "keywords",
+      "title": "キーワード、ラベル",
+      "description": "キーワード、ラベル。複数の値は ; で区切ります。",
+      "type": "list",
+      "itemType": "string",
+      "delimiter": ";",
+      "x-iri": "https://schema.org/keywords",
+      "x-translations": {
+        "en": {
+          "title": "Keywords or labels",
+          "description": "Keywords or labels. Several values separated by ;."
+        }
+      }
+    },
+    {
+      "name": "source",
+      "title": "元のシステムでのこのプロジェクトの URL",
+      "description": "元のシステムでのこのプロジェクトの URL",
+      "type": "string",
+      "format": "uri",
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/source",
+      "x-translations": {
+        "en": {
+          "description": "URL of this object in the system of record"
+        }
+      }
+    },
+    {
+      "name": "externalId",
+      "title": "元のシステムでの識別子",
+      "description": "元のシステムでの識別子",
+      "type": "string",
+      "x-iri": "https://datamodels.jp/ns/task/externalId",
+      "x-translations": {
+        "en": {
+          "title": "Identifier in the system of record",
+          "description": "Identifier in the system of record"
+        }
+      }
+    },
+    {
+      "name": "dateCreated",
+      "title": "元のシステムでの作成日時",
+      "description": "元のシステムでの作成日時（ブローカーの createdAt とは別）",
+      "type": "datetime",
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateCreated",
+      "x-translations": {
+        "en": {
+          "title": "Creation time in the system of record",
+          "description": "Creation time in the system of record (distinct from the broker attribute createdAt)"
+        }
+      }
+    },
+    {
+      "name": "dateModified",
+      "title": "元のシステムでの更新日時",
+      "description": "元のシステムでの更新日時",
+      "type": "datetime",
+      "x-iri": "https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/dateModified",
+      "x-translations": {
+        "en": {
+          "description": "Last modification time in the system of record"
+        }
+      }
+    }
+  ],
+  "primaryKey": [
+    "id"
+  ],
+  "missingValues": [
+    ""
+  ]
+}

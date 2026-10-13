@@ -1,0 +1,19 @@
+# Correspondence between OpeningHours and the hours items of the Digital
+# Agency's GIF core data model 施設 (facility), as defined in
+# 438_コアデータモデル_DMD.xlsx (extended items).
+standard:
+  name:
+    ja: デジタル庁 GIF コアデータモデル「施設」の利用可能曜日・時刻（拡張項目）
+    en: Digital Agency GIF core data model "Facility", available days and times (extended items)
+  url: https://github.com/digital-go-jp/GIF/tree/main/430_%E3%82%B3%E3%82%A2%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB
+  license:
+    ja: "スキーマは CC BY 4.0、リポジトリは CC0 1.0"
+    en: "CC BY 4.0 (schema), CC0 1.0 (repository)"
+  note:
+    ja: GIF の施設は、利用時間を拡張項目として施設そのものに持つ。定型で表せない日時は「利用可能日時説明」に書き、「利用可能日時式」で GIF の日付時刻の表記でも書ける。
+    en: "GIF's facility holds its hours as extended items of the facility itself. Times that do not fit the pattern go into 利用可能日時説明; 利用可能日時式 can also give them in GIF's date-time notation."
+fields:
+  dayOfWeek: { to: 利用可能曜日 (availableDay), note: { ja: 月火水木金のような文字列, en: "a string such as 月火水木金" } }
+  opens: { to: 開始時刻 (startTime) }
+  closes: { to: 終了時刻 (endTime) }
+  description: { to: 利用可能日時説明 (availabileDateTimeDescription), note: { ja: 英語名の綴りは GIF のまま, en: "the English name is spelled as in GIF" } }

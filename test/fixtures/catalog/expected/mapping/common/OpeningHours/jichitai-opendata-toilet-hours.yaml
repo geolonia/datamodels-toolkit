@@ -1,0 +1,18 @@
+# Correspondence between OpeningHours and the hours columns of dataset 13
+# (公衆トイレ一覧) of the Digital Agency's 自治体標準オープンデータセット.
+standard:
+  name:
+    ja: 自治体標準オープンデータセット・データ項目定義書A（20260801版）シート「13.公衆トイレ一覧」の利用時間の項目（デジタル庁）
+    en: "Municipal standard open dataset, data item definition sheet A (2026-08-01), sheet '13. public toilets', hours columns (Digital Agency)"
+  url: https://www.digital.go.jp/resources/open_data/municipal-standard-data-set-test
+  license:
+    ja: "公共データ利用規約（第1.0版）（PDL1.0、CC BY 4.0 と互換）"
+    en: "Public Data License (Version 1.0) (PDL1.0), compatible with CC BY 4.0"
+  note:
+    ja: "公衆トイレの一覧には曜日の列が無く、利用開始時間と利用終了時間だけがある。"
+    en: "The public toilet list has no weekday column, only the start and end of the hours."
+fields:
+  dayOfWeek: { to: null, note: { ja: このデータセットには無い。曜日による違いは特記事項に書かれる, en: "not in this dataset; differences by weekday are in the remarks" } }
+  opens: { to: 利用開始時間 (startTime), column: 利用開始時間, transform: time }
+  closes: { to: 利用終了時間 (endTime), column: 利用終了時間, transform: time }
+  description: { to: 利用可能時間特記事項 (dateTimeRemarks), column: 利用可能時間特記事項 }

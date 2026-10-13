@@ -1,0 +1,21 @@
+# Correspondence between ContactPoint and the Digital Agency's GIF core data
+# model 連絡先 (contact point), as defined in 438_コアデータモデル_DMD.xlsx.
+standard:
+  name:
+    ja: デジタル庁 GIF コアデータモデル「連絡先」
+    en: Digital Agency GIF core data model "Contact point"
+  url: https://github.com/digital-go-jp/GIF/tree/main/430_%E3%82%B3%E3%82%A2%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB
+  license:
+    ja: "スキーマは CC BY 4.0、リポジトリは CC0 1.0"
+    en: "CC BY 4.0 (schema), CC0 1.0 (repository)"
+  note:
+    ja: GIF の連絡先は、名称、用途、電話番号（複数可、内線を含む）、メールアドレス（複数可）、URL、SNS（複数可）、住所、備考を持つ。GIF のコアデータモデル「施設」は、これを連絡先情報（contactPointInformation）として持つ。
+    en: "GIF's contact point has a name, a purpose, telephone numbers (several, extensions included), e-mail addresses (several), a URL, social media (several), an address and a remark. GIF's core data model 施設 (facility) holds it as contactPointInformation."
+fields:
+  telephone: { to: 連絡先電話番号 (contactPointPhoneNumber) }
+  telephoneExtension: { to: 連絡先電話番号 (contactPointPhoneNumber), note: { ja: GIF は内線番号も電話番号に含める, en: GIF counts extensions as telephone numbers } }
+  faxNumber: { to: null, note: { ja: GIF の連絡先には無い。データセットの FAX番号（contactPointFaxNumber）にあたる, en: not in GIF's contact point; the datasets' FAX番号 (contactPointFaxNumber) } }
+  email: { to: 連絡先メールアドレス (contactPointEmailAddress) }
+  url: { to: 連絡先URL (contactPointUrl) }
+  otherChannels: { to: "連絡先SNS (contactPointSocialMedia), 連絡先備考 (contactPointRemark)", note: { ja: "GIF は SNS（「サービス名: ID」）と備考を分ける。ここでは 1 つの文章にまとめる", en: "GIF keeps social media ('service: ID') and remarks apart; here they are one text" } }
+  postalCode: { to: 連絡先住所 (contactPointAddress), note: { ja: GIF の住所（JapaneseAddress の対応表 gif-address）の郵便番号, en: the postal code of GIF's address (see JapaneseAddress's gif-address table) } }

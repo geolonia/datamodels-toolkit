@@ -1,0 +1,26 @@
+# Correspondence between ContactPoint and the contact columns of the Digital
+# Agency's 自治体標準オープンデータセット (data item definition sheet A).
+standard:
+  name:
+    ja: 自治体標準オープンデータセット・データ項目定義書A（20260801版）の連絡先の項目（デジタル庁）
+    en: "Municipal standard open dataset, data item definition sheet A (2026-08-01), contact columns (Digital Agency)"
+  url: https://www.digital.go.jp/resources/open_data/municipal-standard-data-set-test
+  license:
+    ja: "公共データ利用規約（第1.0版）（PDL1.0、CC BY 4.0 と互換）"
+    en: "Public Data License (Version 1.0) (PDL1.0), compatible with CC BY 4.0"
+  note:
+    ja: "定義書Aのうち、01 公共施設、05 子育て施設、08 AED、09 介護サービス事業所、10 医療機関が、この名前の連絡先の列を持つ（FAX番号は 05、09、10 だけ）。11 観光施設は「連絡先電話番号」「連絡先内線番号」と名前が違う。13 公衆トイレには連絡先が無い。項目名は日本語名（英語名）で示す。"
+    en: "Of definition sheet A, datasets 01 public facilities, 05 childcare facilities, 08 AEDs, 09 care service providers and 10 medical institutions have the contact columns under these names (FAX番号 only 05, 09 and 10). Dataset 11 tourist facilities names two of them differently (連絡先電話番号, 連絡先内線番号); 13 public toilets has no contact. Columns are given as the Japanese name (English item name)."
+fields:
+  telephone: { to: 電話番号 (contactPointPhoneNumber), note: { ja: "GIF の電話番号の表記。複数あるときは「 / 」で区切る", en: "GIF's telephone notation; several numbers separated by ' / '" }, column: 電話番号 }
+  telephoneExtension: { to: 内線番号 (contactPointExtension), column: 内線番号 }
+  faxNumber: { to: FAX番号 (contactPointFaxNumber), note: { ja: 05、09、10 だけ, en: "only datasets 05, 09 and 10" }, column: FAX番号 }
+  email: { to: 連絡先メールアドレス (contactPointEmailAddress), column: 連絡先メールアドレス }
+  url: { to: 連絡先FormURL (contactPointFormUrl), column: 連絡先FormURL }
+  otherChannels: { to: 連絡先備考（その他、SNSなど） (contactPointRemarks), column: 連絡先備考（その他、SNSなど） }
+  postalCode:
+    to: 郵便番号 (contactPointPostalCode)
+    note:
+      ja: 定義上は連絡先の郵便番号。データセットの記入例はハイフンなし（1234567）で、どちらの形も受け付ける
+      en: "by definition the contact's postal code. The dataset's example has no hyphen (1234567); both forms are accepted"
+    column: 郵便番号

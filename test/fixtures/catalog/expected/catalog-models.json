@@ -1,5 +1,135 @@
 [
   {
+    "type": "ContactPoint",
+    "kind": "value",
+    "typeIri": "https://datamodels.jp/ns/common/ContactPoint",
+    "subject": "common",
+    "domain": "common",
+    "source": "minted",
+    "contextUrl": "https://datamodels.jp/context/common/v1.0.0.jsonld",
+    "contextAliasUrl": "https://datamodels.jp/context/common/v1.jsonld",
+    "schemaUrl": "https://datamodels.jp/schema/common/ContactPoint/v1.0.0.json",
+    "vocabularyUrl": "https://datamodels.jp/vocab/common/v1.0.0.jsonld",
+    "version": "1.0.0",
+    "status": "draft",
+    "title": {
+      "ja": "連絡先",
+      "en": "Contact point"
+    },
+    "description": {
+      "ja": "施設や組織への連絡の方法です。contactPoint 属性の値として使います。電話番号、内線番号、FAX 番号、メールアドレス、問い合わせフォームの URL、そのほかの連絡手段、郵便番号を持ちます。項目は、自治体標準オープンデータセットの連絡先の列と、GIF のコアデータモデル「連絡先」に合わせています。意味が同じ項目には、schema.org の ContactPoint の語を使います。どの項目も任意です。",
+      "en": "How to get in touch with a facility or an organisation, as the value of a contactPoint Property: telephone, extension, fax, e-mail, web form, other channels and the postal code. The fields follow the contact columns of the 自治体標準オープンデータセット (municipal standard open datasets) and GIF's core data model 連絡先 (contact point); schema.org ContactPoint terms are used where the meaning matches. Every field is optional."
+    },
+    "sampleProperties": [
+      "telephone",
+      "telephoneExtension",
+      "faxNumber",
+      "email",
+      "url",
+      "otherChannels",
+      "postalCode"
+    ],
+    "pageUrl": "https://datamodels.jp/models/common/ContactPoint/",
+    "pageUrlEn": "https://datamodels.jp/en/models/common/ContactPoint/",
+    "exampleUrls": [
+      "https://datamodels.jp/examples/common/ContactPoint/example.json"
+    ],
+    "mappingUrls": [
+      "https://datamodels.jp/mapping/common/ContactPoint/gif-contact-point.yaml",
+      "https://datamodels.jp/mapping/common/ContactPoint/jichitai-opendata-contact.yaml"
+    ],
+    "mappings": [
+      {
+        "url": "https://datamodels.jp/mapping/common/ContactPoint/gif-contact-point.yaml",
+        "standard": {
+          "ja": "デジタル庁 GIF コアデータモデル「連絡先」",
+          "en": "Digital Agency GIF core data model \"Contact point\""
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/common/ContactPoint/jichitai-opendata-contact.yaml",
+        "standard": {
+          "ja": "自治体標準オープンデータセット・データ項目定義書A（20260801版）の連絡先の項目（デジタル庁）",
+          "en": "Municipal standard open dataset, data item definition sheet A (2026-08-01), contact columns (Digital Agency)"
+        }
+      }
+    ],
+    "attributes": [
+      {
+        "name": "telephone",
+        "iri": "https://schema.org/telephone",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "電話番号。公開者が書いたとおりの表記です（例：03-3264-2111）。複数あるときは「 / 」で区切ります。",
+          "en": "Telephone number as written by the publisher, for example 03-3264-2111. Several numbers are separated by ' / '"
+        }
+      },
+      {
+        "name": "telephoneExtension",
+        "iri": "https://datamodels.jp/ns/common/telephoneExtension",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "内線番号",
+          "en": "Extension of the telephone number"
+        }
+      },
+      {
+        "name": "faxNumber",
+        "iri": "https://schema.org/faxNumber",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "FAX 番号",
+          "en": "Fax number"
+        }
+      },
+      {
+        "name": "email",
+        "iri": "https://schema.org/email",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "メールアドレス",
+          "en": "E-mail address"
+        }
+      },
+      {
+        "name": "url",
+        "iri": "https://schema.org/url",
+        "type": "string",
+        "format": "uri",
+        "required": false,
+        "description": {
+          "ja": "連絡に使うウェブページや問い合わせフォームの URL",
+          "en": "Web page or web form for getting in touch"
+        }
+      },
+      {
+        "name": "otherChannels",
+        "iri": "https://datamodels.jp/ns/common/otherChannels",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "SNS のアカウントなど、そのほかの連絡手段と、連絡先についての備考（自由記述）",
+          "en": "Other ways to get in touch, such as social media accounts, and remarks on the contact, as free text"
+        }
+      },
+      {
+        "name": "postalCode",
+        "iri": "https://schema.org/postalCode",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "連絡先の郵便番号（7 桁。ハイフンの有無は問いません）。施設の所在地の郵便番号と違うことがあります。",
+          "en": "Postal code of the contact, 7 digits with or without hyphen. It can differ from the postal code of the facility's address"
+        }
+      }
+    ],
+    "subClassOf": "https://schema.org/ContactPoint"
+  },
+  {
     "type": "Geometry",
     "kind": "value",
     "typeIri": "https://datamodels.jp/ns/common/Geometry",
@@ -17,7 +147,7 @@
       "en": "Geometry"
     },
     "description": {
-      "ja": "location などの GeoProperty の値として使う GeoJSON ジオメトリ（RFC 7946）。点（Point）、線（LineString）、面（Polygon）、それぞれの複数形（MultiPoint、MultiLineString、MultiPolygon）、およびそれらをまとめた GeometryCollection。座標は経度・緯度（・高さ）の順で WGS 84。モデルごとに種類を絞ってよい（例 点だけ）。",
+      "ja": "location などの GeoProperty の値として使う GeoJSON ジオメトリ（RFC 7946）です。点（Point）、線（LineString）、面（Polygon）、それぞれの複数形（MultiPoint、MultiLineString、MultiPolygon）、それらをまとめた GeometryCollection を表します。座標は WGS 84 で、経度、緯度（、高さ）の順です。使える種類は、モデルごとに絞れます（例：点だけ）。",
       "en": "A GeoJSON geometry (RFC 7946) as the value of a GeoProperty such as location: Point, LineString, Polygon, their multi forms (MultiPoint, MultiLineString, MultiPolygon), or a GeometryCollection of these. Positions are longitude, latitude and optional altitude, in WGS 84. A model may narrow the allowed types, for example to Point only."
     },
     "sampleProperties": [],
@@ -58,7 +188,7 @@
       "en": "Japanese address"
     },
     "description": {
-      "ja": "address 属性の値として使う日本の住所。意味が同じ項目は schema.org の PostalAddress の語を使い、日本固有の構造（町字・丁目・番地・号）、JIS コードと全国地方公共団体コード、アドレス・ベース・レジストリの町字ID、住居表示フラグを追加したもの。どの項目も任意。構造化できない場合は addressText だけでもよい。",
+      "ja": "address 属性の値として使う、日本の住所です。意味が同じ項目には、schema.org の PostalAddress の語を使っています。そのうえで、日本固有の構造（町字、丁目、番地、号）、JIS コードと全国地方公共団体コード、アドレス・ベース・レジストリの町字 ID、住居表示かどうかを加えています。どの項目も任意です。構造化できないときは、addressText だけでも構いません。",
       "en": "A Japanese postal address as the value of an address Property. schema.org PostalAddress terms where the meaning matches, plus the Japanese structure (machiaza, chome, banchi, go), JIS and local-government codes, the Address Base Registry town id and the residential-indication flag. Every field is optional; addressText alone is acceptable when the address cannot be structured."
     },
     "sampleProperties": [
@@ -118,7 +248,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "国。常に JP",
+          "ja": "国。常に JP です。",
           "en": "Country. Always JP"
         }
       },
@@ -128,7 +258,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "郵便番号（7桁、ハイフンあり・なしどちらも可）",
+          "ja": "郵便番号（7 桁。ハイフンの有無は問いません）",
           "en": "Postal code, 7 digits with or without hyphen"
         }
       },
@@ -148,7 +278,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "市区町村名。政令指定都市は市名と区名を含む（例: 横浜市中区）",
+          "ja": "市区町村名。政令指定都市は、市名と区名を含みます（例：横浜市中区）。",
           "en": "Municipality name. For designated cities includes the ward (e.g. 横浜市中区)"
         }
       },
@@ -158,7 +288,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "町字（町名・大字・字）。丁目は含めない",
+          "ja": "町字（町名、大字、字）。丁目は含めません。",
           "en": "Town or district name (町字: 町名, 大字, 字), without chome"
         }
       },
@@ -168,7 +298,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "丁目。数字のみ（「一丁目」→ \"1\"）",
+          "ja": "丁目。数字だけで書きます（「一丁目」なら \"1\"）。",
           "en": "Chome (丁目), digits only (\"一丁目\" → \"1\")"
         }
       },
@@ -178,7 +308,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "番地。住居表示実施区域では街区符号。それ以外では枝番を含む地番全体（例 4638-1）",
+          "ja": "番地。住居表示を実施している区域では街区符号、それ以外では枝番を含む地番全体です（例：4638-1）。",
           "en": "Banchi (番地): in a residential-indication area the block number (街区符号); elsewhere the whole lot number (地番), branch number included, for example 4638-1"
         }
       },
@@ -188,7 +318,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "号。住居表示実施区域では住居番号。地番の区域では空（枝番は banchi に含める）",
+          "ja": "号。住居表示を実施している区域では住居番号です。地番の区域では空にします（枝番は banchi に含めます）。",
           "en": "Go (号): in a residential-indication area the residence number (住居番号). Empty for a lot number (地番): its branch number stays in banchi"
         }
       },
@@ -198,7 +328,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "建物名・部屋番号など、号より下の表記",
+          "ja": "建物名、部屋番号など、号より下の表記",
           "en": "Building name, room number and anything below go"
         }
       },
@@ -208,7 +338,7 @@
         "type": "boolean",
         "required": false,
         "description": {
-          "ja": "住居表示実施区域なら true（banchi/go は街区符号/住居番号）、地番なら false",
+          "ja": "住居表示を実施している区域なら true（banchi と go は街区符号と住居番号）、地番なら false",
           "en": "true in a residential-indication area (banchi/go are block and residence numbers), false for lot numbers (地番)"
         }
       },
@@ -218,7 +348,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "都道府県コード（JIS X 0401、2桁）",
+          "ja": "都道府県コード（JIS X 0401、2 桁）",
           "en": "Prefecture code (JIS X 0401, 2 digits)"
         }
       },
@@ -228,7 +358,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "市区町村コード（JIS X 0402、都道府県コードを含む5桁）",
+          "ja": "市区町村コード（JIS X 0402、都道府県コードを含む 5 桁）",
           "en": "Municipality code (JIS X 0402, 5 digits including the prefecture code)"
         }
       },
@@ -238,7 +368,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "全国地方公共団体コード（JIS X 0402 の5桁 + 検査数字1桁）",
+          "ja": "全国地方公共団体コード（JIS X 0402 の 5 桁と検査数字 1 桁）",
           "en": "Local government code (全国地方公共団体コード: JIS X 0402 plus a check digit, 6 digits)"
         }
       },
@@ -248,7 +378,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "アドレス・ベース・レジストリの町字ID（7桁）。全国地方公共団体コードと組み合わせて町字を一意に識別する",
+          "ja": "アドレス・ベース・レジストリの町字 ID（7 桁）。全国地方公共団体コードと組み合わせると、町字を一意に識別できます。",
           "en": "Address Base Registry town id (町字ID, 7 digits). Unique together with localGovernmentCode"
         }
       },
@@ -258,11 +388,137 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "住所の全文（正規化済みの一行表記）。構造化フィールドが揃わない場合の受け皿でもある",
+          "ja": "住所の全文（正規化した 1 行の表記）。構造化した項目がそろわないときの受け皿でもあります。",
           "en": "Full address as one normalised line. Also the fallback when structured fields are unavailable"
         }
       }
-    ]
+    ],
+    "subClassOf": "https://schema.org/PostalAddress"
+  },
+  {
+    "type": "OpeningHours",
+    "kind": "value",
+    "typeIri": "https://datamodels.jp/ns/common/OpeningHours",
+    "subject": "common",
+    "domain": "common",
+    "source": "minted",
+    "contextUrl": "https://datamodels.jp/context/common/v1.0.0.jsonld",
+    "contextAliasUrl": "https://datamodels.jp/context/common/v1.jsonld",
+    "schemaUrl": "https://datamodels.jp/schema/common/OpeningHours/v1.0.0.json",
+    "vocabularyUrl": "https://datamodels.jp/vocab/common/v1.0.0.jsonld",
+    "version": "1.0.0",
+    "status": "draft",
+    "title": {
+      "ja": "利用できる時間",
+      "en": "Opening hours"
+    },
+    "description": {
+      "ja": "施設を利用できる曜日と時間です。openingHoursSpecification 属性の値として使います。曜日、開始時刻、終了時刻と、祝日などの例外を書いた特記事項を持ちます。項目は、自治体標準オープンデータセットの「利用可能曜日」「開始時間」「終了時間」「特記事項」の列に合わせ、schema.org の OpeningHoursSpecification の語を使います。どの項目も任意です。",
+      "en": "When a facility can be used, as the value of an openingHoursSpecification Property: the days of the week, the opening and closing time, and remarks on exceptions such as holidays. The fields follow the 利用可能曜日, 開始時間, 終了時間 and 特記事項 columns of the 自治体標準オープンデータセット (municipal standard open datasets) and use schema.org OpeningHoursSpecification terms. Every field is optional."
+    },
+    "sampleProperties": [
+      "dayOfWeek",
+      "opens",
+      "closes",
+      "description"
+    ],
+    "pageUrl": "https://datamodels.jp/models/common/OpeningHours/",
+    "pageUrlEn": "https://datamodels.jp/en/models/common/OpeningHours/",
+    "exampleUrls": [
+      "https://datamodels.jp/examples/common/OpeningHours/example.json"
+    ],
+    "mappingUrls": [
+      "https://datamodels.jp/mapping/common/OpeningHours/gif-facility-hours.yaml",
+      "https://datamodels.jp/mapping/common/OpeningHours/jichitai-opendata-hours.yaml",
+      "https://datamodels.jp/mapping/common/OpeningHours/jichitai-opendata-medical-hours.yaml",
+      "https://datamodels.jp/mapping/common/OpeningHours/jichitai-opendata-toilet-hours.yaml"
+    ],
+    "mappings": [
+      {
+        "url": "https://datamodels.jp/mapping/common/OpeningHours/gif-facility-hours.yaml",
+        "standard": {
+          "ja": "デジタル庁 GIF コアデータモデル「施設」の利用可能曜日・時刻（拡張項目）",
+          "en": "Digital Agency GIF core data model \"Facility\", available days and times (extended items)"
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/common/OpeningHours/jichitai-opendata-hours.yaml",
+        "standard": {
+          "ja": "自治体標準オープンデータセット・データ項目定義書A（20260801版）の利用可能曜日・時間の項目（デジタル庁）",
+          "en": "Municipal standard open dataset, data item definition sheet A (2026-08-01), weekday and hours columns (Digital Agency)"
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/common/OpeningHours/jichitai-opendata-medical-hours.yaml",
+        "standard": {
+          "ja": "自治体標準オープンデータセット・データ項目定義書A（20260801版）シート「10.医療機関一覧」の診療曜日・時間の項目（デジタル庁）",
+          "en": "Municipal standard open dataset, data item definition sheet A (2026-08-01), sheet '10. medical institutions', consultation days and hours (Digital Agency)"
+        }
+      },
+      {
+        "url": "https://datamodels.jp/mapping/common/OpeningHours/jichitai-opendata-toilet-hours.yaml",
+        "standard": {
+          "ja": "自治体標準オープンデータセット・データ項目定義書A（20260801版）シート「13.公衆トイレ一覧」の利用時間の項目（デジタル庁）",
+          "en": "Municipal standard open dataset, data item definition sheet A (2026-08-01), sheet '13. public toilets', hours columns (Digital Agency)"
+        }
+      }
+    ],
+    "attributes": [
+      {
+        "name": "dayOfWeek",
+        "iri": "https://schema.org/dayOfWeek",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+            "PublicHolidays"
+          ]
+        },
+        "required": false,
+        "description": {
+          "ja": "この時間が当てはまる曜日。schema.org の曜日の名前で書きます。データセットでは GIF の曜日の表記（月火水木金、または 12345）で書かれていて、月または 1 が Monday、日または 7 が Sunday です。祝日は PublicHolidays（schema.org）で表します。",
+          "en": "Days on which the hours apply, as schema.org DayOfWeek names. The datasets write them in GIF's weekday notation, 月火水木金 or 12345: 月 or 1 is Monday, 日 or 7 is Sunday. PublicHolidays (schema.org) marks public holidays"
+        }
+      },
+      {
+        "name": "opens",
+        "iri": "https://schema.org/opens",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "開始時刻。日本時間で、HH:MM または HH:MM:SS（GIF の時刻の表記）です。",
+          "en": "Opening time, local time in Japan, HH:MM or HH:MM:SS as in GIF's time notation"
+        }
+      },
+      {
+        "name": "closes",
+        "iri": "https://schema.org/closes",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "終了時刻。日本時間で、HH:MM または HH:MM:SS です。24:00 はその日の終わりを表します。",
+          "en": "Closing time, local time in Japan, HH:MM or HH:MM:SS; 24:00 is the end of the day"
+        }
+      },
+      {
+        "name": "description",
+        "iri": "http://purl.org/dc/terms/description",
+        "type": "string",
+        "required": false,
+        "description": {
+          "ja": "祝日や年末年始などの例外と、そのほかの特記事項（文章）",
+          "en": "Remarks and exceptions in words, such as holidays or the New Year break"
+        }
+      }
+    ],
+    "subClassOf": "https://schema.org/OpeningHoursSpecification"
   },
   {
     "type": "Milestone",
@@ -282,7 +538,7 @@
       "en": "Milestone"
     },
     "description": {
-      "ja": "プロジェクトの中でタスクをまとめる予定の目標。Redmine のバージョン、GitHub や GitLab のマイルストーン、Jira の修正バージョンなど。名前、期限、状態を持つ。",
+      "ja": "プロジェクトの中でタスクをまとめる、予定の目標です。Redmine のバージョン、GitHub や GitLab のマイルストーン、Jira の修正バージョンなどにあたります。名前、期限、状態を持ちます。",
       "en": "A planned target that groups tasks within a project: a version in Redmine, a milestone in GitHub or GitLab, a fix version in Jira. It has a name, a due date and a state."
     },
     "sampleProperties": [
@@ -355,7 +611,7 @@
         "target": "https://datamodels.jp/ns/task/Project",
         "required": false,
         "description": {
-          "ja": "所属プロジェクト",
+          "ja": "所属するプロジェクト",
           "en": "The project this belongs to"
         }
       },
@@ -370,7 +626,7 @@
         ],
         "required": false,
         "description": {
-          "ja": "予定期間の開始。日付、または日時",
+          "ja": "予定期間の開始。日付か日時",
           "en": "Planned start: a date, or a date and time"
         }
       },
@@ -385,7 +641,7 @@
         ],
         "required": false,
         "description": {
-          "ja": "期限（予定したリリース・完了）。日付、または日時",
+          "ja": "期限（予定しているリリースや完了）。日付か日時",
           "en": "Due: the planned release or completion, a date or a date and time"
         }
       },
@@ -401,7 +657,7 @@
         ],
         "required": false,
         "description": {
-          "ja": "状態。open=受付中、locked=ロック中（新しいタスクを追加できない）、closed=完了。core context の status は予約語のため milestoneStatus",
+          "ja": "状態：open（受付中）、locked（ロック中。新しいタスクを追加できない）、closed（完了）。status は core context の予約語なので、milestoneStatus という名前にしています。",
           "en": "State: open = accepting tasks, locked = no new tasks may be added, closed = done; status is protected in the core context, hence milestoneStatus"
         }
       },
@@ -413,7 +669,7 @@
         "format": "uri",
         "required": false,
         "description": {
-          "ja": "元システムにおけるこのオブジェクトの URL",
+          "ja": "元のシステムでのこのマイルストーンの URL",
           "en": "URL of this object in the system of record"
         }
       },
@@ -424,7 +680,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "元システムにおける識別子",
+          "ja": "元のシステムでの識別子",
           "en": "Identifier in the system of record"
         }
       },
@@ -436,7 +692,7 @@
         "format": "date-time",
         "required": false,
         "description": {
-          "ja": "元システムでの作成日時（ブローカーの createdAt とは別）",
+          "ja": "元のシステムでの作成日時（ブローカーの createdAt とは別）",
           "en": "Creation time in the system of record (distinct from the broker attribute createdAt)"
         }
       },
@@ -448,13 +704,17 @@
         "format": "date-time",
         "required": false,
         "description": {
-          "ja": "元システムでの更新日時",
+          "ja": "元のシステムでの更新日時",
           "en": "Last modification time in the system of record"
         }
       }
     ],
     "adapters": {
-      "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Milestone.json"
+      "ai": "https://datamodels.jp/adapters/ai/task/Milestone.ai.json",
+      "csv": "https://datamodels.jp/adapters/csv/task/Milestone.csv",
+      "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Milestone.json",
+      "postgis": "https://datamodels.jp/adapters/postgis/task/Milestone.sql",
+      "table-schema": "https://datamodels.jp/adapters/table-schema/task/Milestone.tableschema.json"
     }
   },
   {
@@ -475,7 +735,7 @@
       "en": "Project"
     },
     "description": {
-      "ja": "タスクをまとめる単位。案件、災害対応の 1 オペレーション、キャンペーンなど、名前は用途によって変わっても共通の属性を持つ。",
+      "ja": "タスクをまとめる単位です。案件、災害対応の 1 つのオペレーション、キャンペーンなど、用途によって呼び方は変わっても、共通の属性を持ちます。",
       "en": "A grouping of tasks: a project in a tracker, one disaster-response operation, a campaign. Called differently in different settings, with the same common attributes."
     },
     "sampleProperties": [
@@ -551,7 +811,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "短い識別子（スラッグやコード。元システム内で一意）",
+          "ja": "短い識別子（スラッグやコード。元のシステムの中で一意）",
           "en": "Short handle: a slug or code, unique within the source system"
         }
       },
@@ -580,7 +840,7 @@
         ],
         "required": false,
         "description": {
-          "ja": "状態。active=進行中、closed=終了、archived=アーカイブ済み（使わなくなったが残している）。core context の status は予約語のため projectStatus",
+          "ja": "状態：active（進行中）、closed（終了）、archived（アーカイブ済み。使わなくなったが残している）。status は core context の予約語なので、projectStatus という名前にしています。",
           "en": "State: active = in progress, closed = finished, archived = no longer used but kept; status is protected in the core context, hence projectStatus"
         }
       },
@@ -618,7 +878,7 @@
         ],
         "required": false,
         "description": {
-          "ja": "予定期間の開始。日付、または日時",
+          "ja": "予定期間の開始。日付か日時",
           "en": "Planned start: a date, or a date and time"
         }
       },
@@ -633,7 +893,7 @@
         ],
         "required": false,
         "description": {
-          "ja": "予定期間の終了。日付、または日時",
+          "ja": "予定期間の終了。日付か日時",
           "en": "Planned end: a date, or a date and time"
         }
       },
@@ -645,7 +905,7 @@
         "valueModel": "https://datamodels.jp/ns/common/Geometry",
         "required": false,
         "description": {
-          "ja": "位置。点・線・面・それらの集合など任意の GeoJSON ジオメトリ",
+          "ja": "位置。点、線、面、それらの集まりなど、任意の GeoJSON ジオメトリ",
           "en": "Location as any GeoJSON geometry: point, line, polygon or a collection"
         }
       },
@@ -659,7 +919,7 @@
         },
         "required": false,
         "description": {
-          "ja": "キーワード・ラベル",
+          "ja": "キーワード、ラベル",
           "en": "Keywords or labels"
         }
       },
@@ -671,7 +931,7 @@
         "format": "uri",
         "required": false,
         "description": {
-          "ja": "元システムにおけるこのオブジェクトの URL",
+          "ja": "元のシステムでのこのプロジェクトの URL",
           "en": "URL of this object in the system of record"
         }
       },
@@ -682,7 +942,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "元システムにおける識別子",
+          "ja": "元のシステムでの識別子",
           "en": "Identifier in the system of record"
         }
       },
@@ -694,7 +954,7 @@
         "format": "date-time",
         "required": false,
         "description": {
-          "ja": "元システムでの作成日時（ブローカーの createdAt とは別）",
+          "ja": "元のシステムでの作成日時（ブローカーの createdAt とは別）",
           "en": "Creation time in the system of record (distinct from the broker attribute createdAt)"
         }
       },
@@ -706,13 +966,17 @@
         "format": "date-time",
         "required": false,
         "description": {
-          "ja": "元システムでの更新日時",
+          "ja": "元のシステムでの更新日時",
           "en": "Last modification time in the system of record"
         }
       }
     ],
     "adapters": {
-      "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Project.json"
+      "ai": "https://datamodels.jp/adapters/ai/task/Project.ai.json",
+      "csv": "https://datamodels.jp/adapters/csv/task/Project.csv",
+      "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Project.json",
+      "postgis": "https://datamodels.jp/adapters/postgis/task/Project.sql",
+      "table-schema": "https://datamodels.jp/adapters/table-schema/task/Project.tableschema.json"
     }
   },
   {
@@ -733,7 +997,7 @@
       "en": "Task"
     },
     "description": {
-      "ja": "追跡される作業単位。課題管理システムの「チケット」「Issue」、カレンダーの ToDo、自治体の作業指示など。状態と優先度の値域は RFC 8984（JSCalendar）に合わせ、元システム固有の状態名や種別は statusLabel と subtype に保持する。位置は任意のジオメトリ。",
+      "ja": "追跡の対象となる作業の単位です。課題管理システムの「チケット」や「Issue」、カレンダーの ToDo、自治体の作業指示などにあたります。状態と優先度の値は RFC 8984（JSCalendar）に合わせ、元のシステム固有の状態名や種別は statusLabel と subtype に残します。位置には任意のジオメトリを使えます。",
       "en": "A tracked unit of work: a ticket or issue in a tracker, a calendar to-do, a municipal work order. State and priority follow RFC 8984 (JSCalendar); the source system's own status name and kind are kept in statusLabel and subtype. Location may be any geometry."
     },
     "sampleProperties": [
@@ -846,7 +1110,7 @@
         "target": "https://datamodels.jp/ns/task/Project",
         "required": false,
         "description": {
-          "ja": "所属プロジェクト（元システムにプロジェクトの概念がある場合）",
+          "ja": "所属するプロジェクト（元のシステムにプロジェクトの概念があるとき）",
           "en": "The project this belongs to, when the source system has projects"
         }
       },
@@ -889,7 +1153,7 @@
         "multi": true,
         "required": false,
         "description": {
-          "ja": "関連するタスク（key-values 形式では対象が 1 つでも配列）。関係の種類（blocks, precedes, duplicates など）は拡張で表す",
+          "ja": "関連するタスク。key-values の形では、対象が 1 つでも配列です。関係の種類（blocks、precedes、duplicates など）は拡張で表します。",
           "en": "Related tasks. Always an array in the key-values form, even with one target. The kind of relation (blocks, precedes, duplicates) is left to extensions"
         }
       },
@@ -920,7 +1184,7 @@
         ],
         "required": false,
         "description": {
-          "ja": "正規化した進行状態（RFC 8984 progress）。needs-action=未着手、in-process=対応中、completed=完了、failed=失敗、cancelled=取消。値域に合う値がないときは省き、statusLabel に元の呼び方を書く。",
+          "ja": "正規化した進行状態（RFC 8984 progress）：needs-action（未着手）、in-process（対応中）、completed（完了）、failed（失敗）、cancelled（取消）。合う値がないときは省き、statusLabel に元の呼び方を書きます。",
           "en": "Normalised state (RFC 8984 progress): needs-action = not started, in-process = in progress, completed = done, failed = failed, cancelled = cancelled. When no value fits, leave it out and give the local wording in statusLabel."
         }
       },
@@ -931,7 +1195,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "元システムの状態名そのまま（「対応中」「解決」など）。progress を省いたときは必須",
+          "ja": "元のシステムの状態名をそのまま（「対応中」「解決」など）。progress を省いたときは必須です。",
           "en": "The source system's own status name, unchanged (for example \"In progress\", \"Resolved\"). Required when progress is left out"
         }
       },
@@ -942,7 +1206,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "元システムの種別（トラッカー、Issue タイプ、カテゴリなど）",
+          "ja": "元のシステムでの種別（トラッカー、Issue のタイプ、カテゴリなど）",
           "en": "The source system's kind, for example a tracker, an issue type or a category"
         }
       },
@@ -953,7 +1217,7 @@
         "type": "integer",
         "required": false,
         "description": {
-          "ja": "優先度 0〜9。1 が最高、9 が最低、0 は未定義（RFC 8984）",
+          "ja": "優先度 0〜9。1 が最高、9 が最低で、0 は未定義です（RFC 8984）。",
           "en": "Priority 0 to 9: 1 highest, 9 lowest, 0 undefined (RFC 8984)"
         }
       },
@@ -970,7 +1234,7 @@
         "multi": true,
         "required": false,
         "description": {
-          "ja": "担当者・担当チーム（人・組織・チームのエンティティ。このサブジェクト外の URN でもよい）。key-values 形式では対象が 1 つでも配列",
+          "ja": "担当する人、組織、チーム（そのエンティティ。この分野の外の URN でも構いません）。key-values の形では、対象が 1 つでも配列です。",
           "en": "Assignees: person, organisation or team entities, possibly outside this subject. Always an array in the key-values form, even with one target"
         }
       },
@@ -983,7 +1247,7 @@
         "target": "agent",
         "required": false,
         "description": {
-          "ja": "作成者（人・組織・チームのエンティティ）",
+          "ja": "作成者（人、組織、チームのエンティティ）",
           "en": "Creator (a person, organisation or team entity)"
         }
       },
@@ -998,7 +1262,7 @@
         ],
         "required": false,
         "description": {
-          "ja": "開始の予定。日付、または日時（RFC 8984 start）",
+          "ja": "開始の予定。日付か日時（RFC 8984 start）",
           "en": "Planned start: a date, or a date and time (RFC 8984 start)"
         }
       },
@@ -1013,7 +1277,7 @@
         ],
         "required": false,
         "description": {
-          "ja": "期限。日付、または日時（RFC 8984 due）",
+          "ja": "期限。日付か日時（RFC 8984 due）",
           "en": "Due: a date, or a date and time (RFC 8984 due)"
         }
       },
@@ -1036,7 +1300,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "見積時間。ISO 8601 期間（例: PT1H30M）（RFC 8984 estimatedDuration）",
+          "ja": "見積もった作業時間。ISO 8601 の期間（例：PT1H30M）で書きます（RFC 8984 estimatedDuration）。",
           "en": "Estimated effort as an ISO 8601 duration, e.g. PT1H30M (RFC 8984 estimatedDuration)"
         }
       },
@@ -1061,7 +1325,7 @@
         },
         "required": false,
         "description": {
-          "ja": "キーワード・ラベル",
+          "ja": "キーワード、ラベル",
           "en": "Keywords or labels"
         }
       },
@@ -1073,7 +1337,7 @@
         "valueModel": "https://datamodels.jp/ns/common/Geometry",
         "required": false,
         "description": {
-          "ja": "位置。点・線・面・それらの集合など任意の GeoJSON ジオメトリ",
+          "ja": "位置。点、線、面、それらの集まりなど、任意の GeoJSON ジオメトリ",
           "en": "Location as any GeoJSON geometry: point, line, polygon or a collection"
         }
       },
@@ -1087,7 +1351,7 @@
         },
         "required": false,
         "description": {
-          "ja": "タスクの範囲を覆う空間ID（ZFXY）。任意",
+          "ja": "タスクの範囲を覆う空間 ID（ZFXY）。任意です。",
           "en": "Spatial IDs (ZFXY) covering the task. Optional"
         }
       },
@@ -1098,7 +1362,7 @@
         "type": "boolean",
         "required": false,
         "description": {
-          "ja": "非公開なら true。既定は false",
+          "ja": "非公開なら true。既定は false です。",
           "en": "true when private; default false"
         }
       },
@@ -1110,7 +1374,7 @@
         "format": "uri",
         "required": false,
         "description": {
-          "ja": "元システムにおけるこのオブジェクトの URL",
+          "ja": "元のシステムでのこのタスクの URL",
           "en": "URL of this object in the system of record"
         }
       },
@@ -1121,7 +1385,7 @@
         "type": "string",
         "required": false,
         "description": {
-          "ja": "元システムにおける識別子",
+          "ja": "元のシステムでの識別子",
           "en": "Identifier in the system of record"
         }
       },
@@ -1133,7 +1397,7 @@
         "format": "date-time",
         "required": false,
         "description": {
-          "ja": "元システムでの作成日時（ブローカーの createdAt とは別）",
+          "ja": "元のシステムでの作成日時（ブローカーの createdAt とは別）",
           "en": "Creation time in the system of record (distinct from the broker attribute createdAt)"
         }
       },
@@ -1145,36 +1409,17 @@
         "format": "date-time",
         "required": false,
         "description": {
-          "ja": "元システムでの更新日時",
+          "ja": "元のシステムでの更新日時",
           "en": "Last modification time in the system of record"
         }
       }
     ],
-    "extensions": [
-      {
-        "id": "gtt-project",
-        "organization": {
-          "ja": "GTT プロジェクト",
-          "en": "GTT Project"
-        },
-        "url": "https://gtt-project.org/ns/fiware.html#task-profile",
-        "version": "1.0.0",
-        "contextUrl": "https://gtt-project.org/ns/fiware-task.jsonld",
-        "terms": [
-          {
-            "name": "category",
-            "iri": "https://gtt-project.org/ns/fiware#category",
-            "description": {
-              "ja": "課題のカテゴリー名",
-              "en": "The issue category name"
-            }
-          }
-        ],
-        "since": "2026-10"
-      }
-    ],
     "adapters": {
-      "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Task.json"
+      "ai": "https://datamodels.jp/adapters/ai/task/Task.ai.json",
+      "csv": "https://datamodels.jp/adapters/csv/task/Task.csv",
+      "geonicdb": "https://datamodels.jp/adapters/geonicdb/task/Task.json",
+      "postgis": "https://datamodels.jp/adapters/postgis/task/Task.sql",
+      "table-schema": "https://datamodels.jp/adapters/table-schema/task/Task.tableschema.json"
     }
   }
 ]

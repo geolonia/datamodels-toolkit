@@ -2,7 +2,7 @@ title:
   ja: "タスク"
   en: "Task"
 description:
-  ja: "追跡される作業単位。課題管理システムの「チケット」「Issue」、カレンダーの ToDo、自治体の作業指示など。状態と優先度の値域は RFC 8984（JSCalendar）に合わせ、元システム固有の状態名や種別は statusLabel と subtype に保持する。位置は任意のジオメトリ。"
+  ja: "追跡の対象となる作業の単位です。課題管理システムの「チケット」や「Issue」、カレンダーの ToDo、自治体の作業指示などにあたります。状態と優先度の値は RFC 8984（JSCalendar）に合わせ、元のシステム固有の状態名や種別は statusLabel と subtype に残します。位置には任意のジオメトリを使えます。"
   en: "A tracked unit of work: a ticket or issue in a tracker, a calendar to-do, a municipal work order. State and priority follow RFC 8984 (JSCalendar); the source system's own status name and kind are kept in statusLabel and subtype. Location may be any geometry."
 status: draft
 tags: [task-management, rfc8984]
@@ -14,7 +14,7 @@ attributes:
     ja: "説明"
     en: "Description"
   project:
-    ja: "所属プロジェクト（元システムにプロジェクトの概念がある場合）"
+    ja: "所属するプロジェクト（元のシステムにプロジェクトの概念があるとき）"
     en: "The project this belongs to, when the source system has projects"
   milestone:
     ja: "予定しているマイルストーン（バージョン、リリース）"
@@ -23,65 +23,65 @@ attributes:
     ja: "親タスク（RFC 8984 relatedTo parent）"
     en: "Parent task (RFC 8984 relatedTo parent)"
   relatedTo:
-    ja: "関連するタスク（key-values 形式では対象が 1 つでも配列）。関係の種類（blocks, precedes, duplicates など）は拡張で表す"
+    ja: "関連するタスク。key-values の形では、対象が 1 つでも配列です。関係の種類（blocks、precedes、duplicates など）は拡張で表します。"
     en: "Related tasks. Always an array in the key-values form, even with one target. The kind of relation (blocks, precedes, duplicates) is left to extensions"
   refersTo:
     ja: "このタスクが対象とするエンティティ（通報、設備、道路など）"
     en: "The entity this task is about (a report, an asset, a road)"
   progress:
-    ja: "正規化した進行状態（RFC 8984 progress）。needs-action=未着手、in-process=対応中、completed=完了、failed=失敗、cancelled=取消。値域に合う値がないときは省き、statusLabel に元の呼び方を書く。"
+    ja: "正規化した進行状態（RFC 8984 progress）：needs-action（未着手）、in-process（対応中）、completed（完了）、failed（失敗）、cancelled（取消）。合う値がないときは省き、statusLabel に元の呼び方を書きます。"
     en: "Normalised state (RFC 8984 progress): needs-action = not started, in-process = in progress, completed = done, failed = failed, cancelled = cancelled. When no value fits, leave it out and give the local wording in statusLabel."
   statusLabel:
-    ja: "元システムの状態名そのまま（「対応中」「解決」など）。progress を省いたときは必須"
+    ja: "元のシステムの状態名をそのまま（「対応中」「解決」など）。progress を省いたときは必須です。"
     en: "The source system's own status name, unchanged (for example \"In progress\", \"Resolved\"). Required when progress is left out"
   subtype:
-    ja: "元システムの種別（トラッカー、Issue タイプ、カテゴリなど）"
+    ja: "元のシステムでの種別（トラッカー、Issue のタイプ、カテゴリなど）"
     en: "The source system's kind, for example a tracker, an issue type or a category"
   priority:
-    ja: "優先度 0〜9。1 が最高、9 が最低、0 は未定義（RFC 8984）"
+    ja: "優先度 0〜9。1 が最高、9 が最低で、0 は未定義です（RFC 8984）。"
     en: "Priority 0 to 9: 1 highest, 9 lowest, 0 undefined (RFC 8984)"
   assignee:
-    ja: "担当者・担当チーム（人・組織・チームのエンティティ。このサブジェクト外の URN でもよい）。key-values 形式では対象が 1 つでも配列"
+    ja: "担当する人、組織、チーム（そのエンティティ。この分野の外の URN でも構いません）。key-values の形では、対象が 1 つでも配列です。"
     en: "Assignees: person, organisation or team entities, possibly outside this subject. Always an array in the key-values form, even with one target"
   author:
-    ja: "作成者（人・組織・チームのエンティティ）"
+    ja: "作成者（人、組織、チームのエンティティ）"
     en: "Creator (a person, organisation or team entity)"
   start:
-    ja: "開始の予定。日付、または日時（RFC 8984 start）"
+    ja: "開始の予定。日付か日時（RFC 8984 start）"
     en: "Planned start: a date, or a date and time (RFC 8984 start)"
   due:
-    ja: "期限。日付、または日時（RFC 8984 due）"
+    ja: "期限。日付か日時（RFC 8984 due）"
     en: "Due: a date, or a date and time (RFC 8984 due)"
   completedAt:
     ja: "progress が completed になった日時"
     en: "When progress became completed"
   estimatedDuration:
-    ja: "見積時間。ISO 8601 期間（例: PT1H30M）（RFC 8984 estimatedDuration）"
+    ja: "見積もった作業時間。ISO 8601 の期間（例：PT1H30M）で書きます（RFC 8984 estimatedDuration）。"
     en: "Estimated effort as an ISO 8601 duration, e.g. PT1H30M (RFC 8984 estimatedDuration)"
   percentComplete:
     ja: "進捗率 0〜100（RFC 8984 percentComplete）"
     en: "Completion 0 to 100 (RFC 8984 percentComplete)"
   keywords:
-    ja: "キーワード・ラベル"
+    ja: "キーワード、ラベル"
     en: "Keywords or labels"
   location:
-    ja: "位置。点・線・面・それらの集合など任意の GeoJSON ジオメトリ"
+    ja: "位置。点、線、面、それらの集まりなど、任意の GeoJSON ジオメトリ"
     en: "Location as any GeoJSON geometry: point, line, polygon or a collection"
   spatialId:
-    ja: "タスクの範囲を覆う空間ID（ZFXY）。任意"
+    ja: "タスクの範囲を覆う空間 ID（ZFXY）。任意です。"
     en: "Spatial IDs (ZFXY) covering the task. Optional"
   isPrivate:
-    ja: "非公開なら true。既定は false"
+    ja: "非公開なら true。既定は false です。"
     en: "true when private; default false"
   source:
-    ja: "元システムにおけるこのオブジェクトの URL"
+    ja: "元のシステムでのこのタスクの URL"
     en: "URL of this object in the system of record"
   externalId:
-    ja: "元システムにおける識別子"
+    ja: "元のシステムでの識別子"
     en: "Identifier in the system of record"
   dateCreated:
-    ja: "元システムでの作成日時（ブローカーの createdAt とは別）"
+    ja: "元のシステムでの作成日時（ブローカーの createdAt とは別）"
     en: "Creation time in the system of record (distinct from the broker attribute createdAt)"
   dateModified:
-    ja: "元システムでの更新日時"
+    ja: "元のシステムでの更新日時"
     en: "Last modification time in the system of record"

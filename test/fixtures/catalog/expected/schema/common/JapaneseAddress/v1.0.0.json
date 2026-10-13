@@ -4,6 +4,7 @@
   "title": "JapaneseAddress",
   "x-kind": "value",
   "description": "A Japanese postal address as the value of an `address` Property: schema.org PostalAddress fields where the meaning matches, plus the Japanese structure (machiaza, chome, banchi, go), the JIS and local-government codes, the Address Base Registry town id and the residential-indication flag.",
+  "x-subclass-of": "https://schema.org/PostalAddress",
   "x-version": "1.0.0",
   "x-license-url": "https://datamodels.jp/LICENSE-CONTENT",
   "x-model-tags": "address, Japan",

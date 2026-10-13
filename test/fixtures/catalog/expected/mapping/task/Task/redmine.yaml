@@ -2,7 +2,7 @@ standard:
   name: { ja: Redmine の Issue（redmine_gtt_fiware の出力を含む）, en: Redmine issue (including redmine_gtt_fiware output) }
   url: https://www.redmine.org/projects/redmine/wiki/Rest_Issues
   note:
-    ja: Redmine の優先度は順序付きリスト（低・通常・高・緊急・今すぐ）で、1〜9 に写す。ステータスは is_closed で needs-action / completed を、それ以外は運用に応じて in-process を割り当てる。カスタムフィールドは拡張。GTT（redmine_gtt_fiware）は Issue を tm:Task のエイリアスまたはサブクラスとして対応付けられる。
+    ja: Redmine の優先度は順序付きリスト（低・通常・高・緊急・今すぐ）で、1〜9 に写す。ステータスは is_closed で needs-action / completed を、それ以外は運用に応じて in-process を割り当てる。カスタムフィールドは拡張。GTT（redmine_gtt_fiware）は Issue を tm:Task の別名またはサブクラスとして対応付けられる。
     en: Redmine priorities are an ordered list (low, normal, high, urgent, immediate) mapped onto 1 to 9. Status maps through is_closed to needs-action or completed; in-process is assigned by the operator's status configuration. Custom fields are extensions. GTT (redmine_gtt_fiware) can align its frozen Issue vocabulary to Task by alias (Issue → tm:Task) or by declaring Issue a subclass.
 fields:
   name: { to: "subject" }

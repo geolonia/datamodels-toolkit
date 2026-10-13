@@ -34,7 +34,7 @@
         "en": "Task management"
       },
       "comment": {
-        "ja": "作業を管理するためのデータ。何を、誰が、いつまでにするか、どのマイルストーンに向けてか。課題管理システムのチケット、カレンダーの ToDo、自治体の作業指示に共通する部分を扱い、状態と優先度は RFC 8984（JSCalendar）に合わせます。システム固有の呼び方はエイリアスで使えます。",
+        "ja": "作業を管理するためのデータです。何を、誰が、いつまでに、どのマイルストーンに向けてするかを表します。課題管理システムのチケット、カレンダーの ToDo、自治体の作業指示に共通する部分を扱い、状態と優先度は RFC 8984（JSCalendar）に合わせます。システム固有の呼び方は、別名で使えます。",
         "en": "Data for tracking work: what needs to be done, by whom, by when and for which milestone. It covers what issue trackers, calendar to-dos and municipal work orders have in common; status and priority follow RFC 8984 (JSCalendar). System-specific names can be used with aliases."
       },
       "versionInfo": "1.0.0",
@@ -48,7 +48,7 @@
         "en": "Milestone"
       },
       "comment": {
-        "ja": "プロジェクトの中でタスクをまとめる予定の目標。Redmine のバージョン、GitHub や GitLab のマイルストーン、Jira の修正バージョンなど。名前、期限、状態を持つ。",
+        "ja": "プロジェクトの中でタスクをまとめる、予定の目標です。Redmine のバージョン、GitHub や GitLab のマイルストーン、Jira の修正バージョンなどにあたります。名前、期限、状態を持ちます。",
         "en": "A planned target that groups tasks within a project: a version in Redmine, a milestone in GitHub or GitLab, a fix version in Jira. It has a name, a due date and a state."
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -62,7 +62,7 @@
         "en": "Project"
       },
       "comment": {
-        "ja": "タスクをまとめる単位。案件、災害対応の 1 オペレーション、キャンペーンなど、名前は用途によって変わっても共通の属性を持つ。",
+        "ja": "タスクをまとめる単位です。案件、災害対応の 1 つのオペレーション、キャンペーンなど、用途によって呼び方は変わっても、共通の属性を持ちます。",
         "en": "A grouping of tasks: a project in a tracker, one disaster-response operation, a campaign. Called differently in different settings, with the same common attributes."
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -76,7 +76,7 @@
         "en": "Task"
       },
       "comment": {
-        "ja": "追跡される作業単位。課題管理システムの「チケット」「Issue」、カレンダーの ToDo、自治体の作業指示など。状態と優先度の値域は RFC 8984（JSCalendar）に合わせ、元システム固有の状態名や種別は statusLabel と subtype に保持する。位置は任意のジオメトリ。",
+        "ja": "追跡の対象となる作業の単位です。課題管理システムの「チケット」や「Issue」、カレンダーの ToDo、自治体の作業指示などにあたります。状態と優先度の値は RFC 8984（JSCalendar）に合わせ、元のシステム固有の状態名や種別は statusLabel と subtype に残します。位置には任意のジオメトリを使えます。",
         "en": "A tracked unit of work: a ticket or issue in a tracker, a calendar to-do, a municipal work order. State and priority follow RFC 8984 (JSCalendar); the source system's own status name and kind are kept in statusLabel and subtype. Location may be any geometry."
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -89,7 +89,7 @@
         "en": "assignee"
       },
       "comment": {
-        "ja": "担当者・担当チーム（人・組織・チームのエンティティ。このサブジェクト外の URN でもよい）。key-values 形式では対象が 1 つでも配列",
+        "ja": "担当する人、組織、チーム（そのエンティティ。この分野の外の URN でも構いません）。key-values の形では、対象が 1 つでも配列です。",
         "en": "Assignees: person, organisation or team entities, possibly outside this subject. Always an array in the key-values form, even with one target"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -115,7 +115,7 @@
         "en": "due"
       },
       "comment": {
-        "ja": "期限（予定したリリース・完了）。日付、または日時",
+        "ja": "期限（予定しているリリースや完了）。日付か日時",
         "en": "Due: the planned release or completion, a date or a date and time"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -128,7 +128,7 @@
         "en": "end"
       },
       "comment": {
-        "ja": "予定期間の終了。日付、または日時",
+        "ja": "予定期間の終了。日付か日時",
         "en": "Planned end: a date, or a date and time"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -141,7 +141,7 @@
         "en": "estimatedDuration"
       },
       "comment": {
-        "ja": "見積時間。ISO 8601 期間（例: PT1H30M）（RFC 8984 estimatedDuration）",
+        "ja": "見積もった作業時間。ISO 8601 の期間（例：PT1H30M）で書きます（RFC 8984 estimatedDuration）。",
         "en": "Estimated effort as an ISO 8601 duration, e.g. PT1H30M (RFC 8984 estimatedDuration)"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -154,7 +154,7 @@
         "en": "externalId"
       },
       "comment": {
-        "ja": "元システムにおける識別子",
+        "ja": "元のシステムでの識別子",
         "en": "Identifier in the system of record"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -167,7 +167,7 @@
         "en": "isPrivate"
       },
       "comment": {
-        "ja": "非公開なら true。既定は false",
+        "ja": "非公開なら true。既定は false です。",
         "en": "true when private; default false"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -206,7 +206,7 @@
         "en": "milestoneStatus"
       },
       "comment": {
-        "ja": "状態。open=受付中、locked=ロック中（新しいタスクを追加できない）、closed=完了。core context の status は予約語のため milestoneStatus",
+        "ja": "状態：open（受付中）、locked（ロック中。新しいタスクを追加できない）、closed（完了）。status は core context の予約語なので、milestoneStatus という名前にしています。",
         "en": "State: open = accepting tasks, locked = no new tasks may be added, closed = done; status is protected in the core context, hence milestoneStatus"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -245,7 +245,7 @@
         "en": "priority"
       },
       "comment": {
-        "ja": "優先度 0〜9。1 が最高、9 が最低、0 は未定義（RFC 8984）",
+        "ja": "優先度 0〜9。1 が最高、9 が最低で、0 は未定義です（RFC 8984）。",
         "en": "Priority 0 to 9: 1 highest, 9 lowest, 0 undefined (RFC 8984)"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -258,7 +258,7 @@
         "en": "progress"
       },
       "comment": {
-        "ja": "正規化した進行状態（RFC 8984 progress）。needs-action=未着手、in-process=対応中、completed=完了、failed=失敗、cancelled=取消。値域に合う値がないときは省き、statusLabel に元の呼び方を書く。",
+        "ja": "正規化した進行状態（RFC 8984 progress）：needs-action（未着手）、in-process（対応中）、completed（完了）、failed（失敗）、cancelled（取消）。合う値がないときは省き、statusLabel に元の呼び方を書きます。",
         "en": "Normalised state (RFC 8984 progress): needs-action = not started, in-process = in progress, completed = done, failed = failed, cancelled = cancelled. When no value fits, leave it out and give the local wording in statusLabel."
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -271,7 +271,7 @@
         "en": "project"
       },
       "comment": {
-        "ja": "所属プロジェクト",
+        "ja": "所属するプロジェクト",
         "en": "The project this belongs to"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -284,7 +284,7 @@
         "en": "projectStatus"
       },
       "comment": {
-        "ja": "状態。active=進行中、closed=終了、archived=アーカイブ済み（使わなくなったが残している）。core context の status は予約語のため projectStatus",
+        "ja": "状態：active（進行中）、closed（終了）、archived（アーカイブ済み。使わなくなったが残している）。status は core context の予約語なので、projectStatus という名前にしています。",
         "en": "State: active = in progress, closed = finished, archived = no longer used but kept; status is protected in the core context, hence projectStatus"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -310,7 +310,7 @@
         "en": "relatedTo"
       },
       "comment": {
-        "ja": "関連するタスク（key-values 形式では対象が 1 つでも配列）。関係の種類（blocks, precedes, duplicates など）は拡張で表す",
+        "ja": "関連するタスク。key-values の形では、対象が 1 つでも配列です。関係の種類（blocks、precedes、duplicates など）は拡張で表します。",
         "en": "Related tasks. Always an array in the key-values form, even with one target. The kind of relation (blocks, precedes, duplicates) is left to extensions"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -323,7 +323,7 @@
         "en": "spatialId"
       },
       "comment": {
-        "ja": "タスクの範囲を覆う空間ID（ZFXY）。任意",
+        "ja": "タスクの範囲を覆う空間 ID（ZFXY）。任意です。",
         "en": "Spatial IDs (ZFXY) covering the task. Optional"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -336,7 +336,7 @@
         "en": "start"
       },
       "comment": {
-        "ja": "予定期間の開始。日付、または日時",
+        "ja": "予定期間の開始。日付か日時",
         "en": "Planned start: a date, or a date and time"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -349,7 +349,7 @@
         "en": "statusLabel"
       },
       "comment": {
-        "ja": "元システムの状態名そのまま（「対応中」「解決」など）。progress を省いたときは必須",
+        "ja": "元のシステムの状態名をそのまま（「対応中」「解決」など）。progress を省いたときは必須です。",
         "en": "The source system's own status name, unchanged (for example \"In progress\", \"Resolved\"). Required when progress is left out"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",
@@ -362,7 +362,7 @@
         "en": "subtype"
       },
       "comment": {
-        "ja": "元システムの種別（トラッカー、Issue タイプ、カテゴリなど）",
+        "ja": "元のシステムでの種別（トラッカー、Issue のタイプ、カテゴリなど）",
         "en": "The source system's kind, for example a tracker, an issue type or a category"
       },
       "isDefinedBy": "https://datamodels.jp/ns/task/",

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import { catalogUrls, loadSubjects, publishCatalog, verifyRelease, buildVocabulary, snapshotRelease, extensionEntry } from '../src/build/index.mjs';
+import { catalogUrls, loadSubjects, publishCatalog, verifyRelease, buildVocabulary, snapshotRelease, extensionEntry, nodeAdapters } from '../src/build/index.mjs';
 
 const FIXTURES = join(import.meta.dirname, 'fixtures', 'catalog');
 const SITE = 'https://datamodels.jp';
@@ -22,9 +22,10 @@ async function filesUnder(dir) {
 test('the files are byte for byte what datamodels.jp serves for the same sources', async () => {
   const subjects = await loadSubjects(join(FIXTURES, 'models'), { urls: site });
   const outDir = await mkdtemp(join(tmpdir(), 'datamodels-build-'));
-  // datamodels.jp adds one adapter (GeonicDB) for entity models; a stand-in with the same URLs.
+  // The toolkit's adapters, as every node has them, and datamodels.jp's own (GeonicDB): a stand-in with the same URLs.
+  const { adapters } = await nodeAdapters(subjects, { urls: site, languages: ['ja', 'en'], offline: true });
   const geonicdb = { name: 'geonicdb', urlFor: (s, m) => (m.kind === 'entity' ? `${SITE}/adapters/geonicdb/${s.name}/${m.type}.json` : null), content: () => '{}\n' };
-  const { catalog } = await publishCatalog(subjects, { urls: site, outDir, adapters: [geonicdb], head: { license: 'CC0-1.0', licenseUrl: `${SITE}/LICENSE-CONTENT` } });
+  const { catalog } = await publishCatalog(subjects, { urls: site, outDir, adapters: [...adapters, geonicdb], head: { license: 'CC0-1.0', licenseUrl: `${SITE}/LICENSE-CONTENT` } });
   const expectedDir = join(FIXTURES, 'expected');
   const expected = (await filesUnder(expectedDir)).filter((f) => !f.endsWith('catalog-models.json'));
   assert.ok(expected.length > 30, 'the fixtures hold the served files');

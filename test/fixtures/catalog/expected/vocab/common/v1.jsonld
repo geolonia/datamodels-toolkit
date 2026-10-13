@@ -34,11 +34,26 @@
         "en": "Common"
       },
       "comment": {
-        "ja": "他のサブジェクトが属性の値として使う共通の部品（住所、ジオメトリなど）。単独のエンティティではなく、属性の値の中で使う値型です。",
+        "ja": "ほかの分野が属性の値として使う、共通の部品です（住所、ジオメトリなど）。単独のエンティティではなく、属性の値の中で使う値型です。",
         "en": "Building blocks that other subjects use as attribute values, such as addresses and geometries. They are value types: used inside an attribute, not as entities of their own."
       },
       "versionInfo": "1.0.0",
       "seeAlso": "https://datamodels.jp/context/common/v1.0.0.jsonld"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/ContactPoint",
+      "@type": "rdfs:Class",
+      "label": {
+        "ja": "連絡先",
+        "en": "Contact point"
+      },
+      "comment": {
+        "ja": "施設や組織への連絡の方法です。contactPoint 属性の値として使います。電話番号、内線番号、FAX 番号、メールアドレス、問い合わせフォームの URL、そのほかの連絡手段、郵便番号を持ちます。項目は、自治体標準オープンデータセットの連絡先の列と、GIF のコアデータモデル「連絡先」に合わせています。意味が同じ項目には、schema.org の ContactPoint の語を使います。どの項目も任意です。",
+        "en": "How to get in touch with a facility or an organisation, as the value of a contactPoint Property: telephone, extension, fax, e-mail, web form, other channels and the postal code. The fields follow the contact columns of the 自治体標準オープンデータセット (municipal standard open datasets) and GIF's core data model 連絡先 (contact point); schema.org ContactPoint terms are used where the meaning matches. Every field is optional."
+      },
+      "subClassOf": "https://schema.org/ContactPoint",
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/ContactPoint/"
     },
     {
       "@id": "https://datamodels.jp/ns/common/Geometry",
@@ -48,7 +63,7 @@
         "en": "Geometry"
       },
       "comment": {
-        "ja": "location などの GeoProperty の値として使う GeoJSON ジオメトリ（RFC 7946）。点（Point）、線（LineString）、面（Polygon）、それぞれの複数形（MultiPoint、MultiLineString、MultiPolygon）、およびそれらをまとめた GeometryCollection。座標は経度・緯度（・高さ）の順で WGS 84。モデルごとに種類を絞ってよい（例 点だけ）。",
+        "ja": "location などの GeoProperty の値として使う GeoJSON ジオメトリ（RFC 7946）です。点（Point）、線（LineString）、面（Polygon）、それぞれの複数形（MultiPoint、MultiLineString、MultiPolygon）、それらをまとめた GeometryCollection を表します。座標は WGS 84 で、経度、緯度（、高さ）の順です。使える種類は、モデルごとに絞れます（例：点だけ）。",
         "en": "A GeoJSON geometry (RFC 7946) as the value of a GeoProperty such as location: Point, LineString, Polygon, their multi forms (MultiPoint, MultiLineString, MultiPolygon), or a GeometryCollection of these. Positions are longitude, latitude and optional altitude, in WGS 84. A model may narrow the allowed types, for example to Point only."
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
@@ -62,11 +77,27 @@
         "en": "Japanese address"
       },
       "comment": {
-        "ja": "address 属性の値として使う日本の住所。意味が同じ項目は schema.org の PostalAddress の語を使い、日本固有の構造（町字・丁目・番地・号）、JIS コードと全国地方公共団体コード、アドレス・ベース・レジストリの町字ID、住居表示フラグを追加したもの。どの項目も任意。構造化できない場合は addressText だけでもよい。",
+        "ja": "address 属性の値として使う、日本の住所です。意味が同じ項目には、schema.org の PostalAddress の語を使っています。そのうえで、日本固有の構造（町字、丁目、番地、号）、JIS コードと全国地方公共団体コード、アドレス・ベース・レジストリの町字 ID、住居表示かどうかを加えています。どの項目も任意です。構造化できないときは、addressText だけでも構いません。",
         "en": "A Japanese postal address as the value of an address Property. schema.org PostalAddress terms where the meaning matches, plus the Japanese structure (machiaza, chome, banchi, go), JIS and local-government codes, the Address Base Registry town id and the residential-indication flag. Every field is optional; addressText alone is acceptable when the address cannot be structured."
       },
+      "subClassOf": "https://schema.org/PostalAddress",
       "isDefinedBy": "https://datamodels.jp/ns/common/",
       "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/OpeningHours",
+      "@type": "rdfs:Class",
+      "label": {
+        "ja": "利用できる時間",
+        "en": "Opening hours"
+      },
+      "comment": {
+        "ja": "施設を利用できる曜日と時間です。openingHoursSpecification 属性の値として使います。曜日、開始時刻、終了時刻と、祝日などの例外を書いた特記事項を持ちます。項目は、自治体標準オープンデータセットの「利用可能曜日」「開始時間」「終了時間」「特記事項」の列に合わせ、schema.org の OpeningHoursSpecification の語を使います。どの項目も任意です。",
+        "en": "When a facility can be used, as the value of an openingHoursSpecification Property: the days of the week, the opening and closing time, and remarks on exceptions such as holidays. The fields follow the 利用可能曜日, 開始時間, 終了時間 and 特記事項 columns of the 自治体標準オープンデータセット (municipal standard open datasets) and use schema.org OpeningHoursSpecification terms. Every field is optional."
+      },
+      "subClassOf": "https://schema.org/OpeningHoursSpecification",
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/OpeningHours/"
     },
     {
       "@id": "https://datamodels.jp/ns/common/abrMachiazaId",
@@ -75,7 +106,7 @@
         "en": "abrMachiazaId"
       },
       "comment": {
-        "ja": "アドレス・ベース・レジストリの町字ID（7桁）。全国地方公共団体コードと組み合わせて町字を一意に識別する",
+        "ja": "アドレス・ベース・レジストリの町字 ID（7 桁）。全国地方公共団体コードと組み合わせると、町字を一意に識別できます。",
         "en": "Address Base Registry town id (町字ID, 7 digits). Unique together with localGovernmentCode"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
@@ -88,7 +119,7 @@
         "en": "addressText"
       },
       "comment": {
-        "ja": "住所の全文（正規化済みの一行表記）。構造化フィールドが揃わない場合の受け皿でもある",
+        "ja": "住所の全文（正規化した 1 行の表記）。構造化した項目がそろわないときの受け皿でもあります。",
         "en": "Full address as one normalised line. Also the fallback when structured fields are unavailable"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
@@ -101,7 +132,7 @@
         "en": "banchi"
       },
       "comment": {
-        "ja": "番地。住居表示実施区域では街区符号。それ以外では枝番を含む地番全体（例 4638-1）",
+        "ja": "番地。住居表示を実施している区域では街区符号、それ以外では枝番を含む地番全体です（例：4638-1）。",
         "en": "Banchi (番地): in a residential-indication area the block number (街区符号); elsewhere the whole lot number (地番), branch number included, for example 4638-1"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
@@ -114,7 +145,7 @@
         "en": "buildingName"
       },
       "comment": {
-        "ja": "建物名・部屋番号など、号より下の表記",
+        "ja": "建物名、部屋番号など、号より下の表記",
         "en": "Building name, room number and anything below go"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
@@ -127,7 +158,7 @@
         "en": "chome"
       },
       "comment": {
-        "ja": "丁目。数字のみ（「一丁目」→ \"1\"）",
+        "ja": "丁目。数字だけで書きます（「一丁目」なら \"1\"）。",
         "en": "Chome (丁目), digits only (\"一丁目\" → \"1\")"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
@@ -140,7 +171,7 @@
         "en": "go"
       },
       "comment": {
-        "ja": "号。住居表示実施区域では住居番号。地番の区域では空（枝番は banchi に含める）",
+        "ja": "号。住居表示を実施している区域では住居番号です。地番の区域では空にします（枝番は banchi に含めます）。",
         "en": "Go (号): in a residential-indication area the residence number (住居番号). Empty for a lot number (地番): its branch number stays in banchi"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
@@ -153,7 +184,7 @@
         "en": "jisMunicipalityCode"
       },
       "comment": {
-        "ja": "市区町村コード（JIS X 0402、都道府県コードを含む5桁）",
+        "ja": "市区町村コード（JIS X 0402、都道府県コードを含む 5 桁）",
         "en": "Municipality code (JIS X 0402, 5 digits including the prefecture code)"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
@@ -166,7 +197,7 @@
         "en": "jisPrefectureCode"
       },
       "comment": {
-        "ja": "都道府県コード（JIS X 0401、2桁）",
+        "ja": "都道府県コード（JIS X 0401、2 桁）",
         "en": "Prefecture code (JIS X 0401, 2 digits)"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
@@ -179,7 +210,7 @@
         "en": "localGovernmentCode"
       },
       "comment": {
-        "ja": "全国地方公共団体コード（JIS X 0402 の5桁 + 検査数字1桁）",
+        "ja": "全国地方公共団体コード（JIS X 0402 の 5 桁と検査数字 1 桁）",
         "en": "Local government code (全国地方公共団体コード: JIS X 0402 plus a check digit, 6 digits)"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
@@ -192,11 +223,24 @@
         "en": "machiaza"
       },
       "comment": {
-        "ja": "町字（町名・大字・字）。丁目は含めない",
+        "ja": "町字（町名、大字、字）。丁目は含めません。",
         "en": "Town or district name (町字: 町名, 大字, 字), without chome"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
       "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#machiaza"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/otherChannels",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "otherChannels"
+      },
+      "comment": {
+        "ja": "SNS のアカウントなど、そのほかの連絡手段と、連絡先についての備考（自由記述）",
+        "en": "Other ways to get in touch, such as social media accounts, and remarks on the contact, as free text"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/ContactPoint/#otherChannels"
     },
     {
       "@id": "https://datamodels.jp/ns/common/residentialIndication",
@@ -205,11 +249,24 @@
         "en": "residentialIndication"
       },
       "comment": {
-        "ja": "住居表示実施区域なら true（banchi/go は街区符号/住居番号）、地番なら false",
+        "ja": "住居表示を実施している区域なら true（banchi と go は街区符号と住居番号）、地番なら false",
         "en": "true in a residential-indication area (banchi/go are block and residence numbers), false for lot numbers (地番)"
       },
       "isDefinedBy": "https://datamodels.jp/ns/common/",
       "seeAlso": "https://datamodels.jp/models/common/JapaneseAddress/#residentialIndication"
+    },
+    {
+      "@id": "https://datamodels.jp/ns/common/telephoneExtension",
+      "@type": "rdf:Property",
+      "label": {
+        "en": "telephoneExtension"
+      },
+      "comment": {
+        "ja": "内線番号",
+        "en": "Extension of the telephone number"
+      },
+      "isDefinedBy": "https://datamodels.jp/ns/common/",
+      "seeAlso": "https://datamodels.jp/models/common/ContactPoint/#telephoneExtension"
     }
   ]
 }

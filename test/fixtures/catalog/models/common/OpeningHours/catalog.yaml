@@ -1,0 +1,21 @@
+title:
+  ja: "利用できる時間"
+  en: "Opening hours"
+description:
+  ja: "施設を利用できる曜日と時間です。openingHoursSpecification 属性の値として使います。曜日、開始時刻、終了時刻と、祝日などの例外を書いた特記事項を持ちます。項目は、自治体標準オープンデータセットの「利用可能曜日」「開始時間」「終了時間」「特記事項」の列に合わせ、schema.org の OpeningHoursSpecification の語を使います。どの項目も任意です。"
+  en: "When a facility can be used, as the value of an openingHoursSpecification Property: the days of the week, the opening and closing time, and remarks on exceptions such as holidays. The fields follow the 利用可能曜日, 開始時間, 終了時間 and 特記事項 columns of the 自治体標準オープンデータセット (municipal standard open datasets) and use schema.org OpeningHoursSpecification terms. Every field is optional."
+status: draft
+tags: [opening-hours, japan, common]
+attributes:
+  dayOfWeek:
+    ja: "この時間が当てはまる曜日。schema.org の曜日の名前で書きます。データセットでは GIF の曜日の表記（月火水木金、または 12345）で書かれていて、月または 1 が Monday、日または 7 が Sunday です。祝日は PublicHolidays（schema.org）で表します。"
+    en: "Days on which the hours apply, as schema.org DayOfWeek names. The datasets write them in GIF's weekday notation, 月火水木金 or 12345: 月 or 1 is Monday, 日 or 7 is Sunday. PublicHolidays (schema.org) marks public holidays"
+  opens:
+    ja: "開始時刻。日本時間で、HH:MM または HH:MM:SS（GIF の時刻の表記）です。"
+    en: "Opening time, local time in Japan, HH:MM or HH:MM:SS as in GIF's time notation"
+  closes:
+    ja: "終了時刻。日本時間で、HH:MM または HH:MM:SS です。24:00 はその日の終わりを表します。"
+    en: "Closing time, local time in Japan, HH:MM or HH:MM:SS; 24:00 is the end of the day"
+  description:
+    ja: "祝日や年末年始などの例外と、そのほかの特記事項（文章）"
+    en: "Remarks and exceptions in words, such as holidays or the New Year break"

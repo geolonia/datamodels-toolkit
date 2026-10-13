@@ -1,0 +1,30 @@
+title:
+  ja: "連絡先"
+  en: "Contact point"
+description:
+  ja: "施設や組織への連絡の方法です。contactPoint 属性の値として使います。電話番号、内線番号、FAX 番号、メールアドレス、問い合わせフォームの URL、そのほかの連絡手段、郵便番号を持ちます。項目は、自治体標準オープンデータセットの連絡先の列と、GIF のコアデータモデル「連絡先」に合わせています。意味が同じ項目には、schema.org の ContactPoint の語を使います。どの項目も任意です。"
+  en: "How to get in touch with a facility or an organisation, as the value of a contactPoint Property: telephone, extension, fax, e-mail, web form, other channels and the postal code. The fields follow the contact columns of the 自治体標準オープンデータセット (municipal standard open datasets) and GIF's core data model 連絡先 (contact point); schema.org ContactPoint terms are used where the meaning matches. Every field is optional."
+status: draft
+tags: [contact, japan, common]
+attributes:
+  telephone:
+    ja: "電話番号。公開者が書いたとおりの表記です（例：03-3264-2111）。複数あるときは「 / 」で区切ります。"
+    en: "Telephone number as written by the publisher, for example 03-3264-2111. Several numbers are separated by ' / '"
+  telephoneExtension:
+    ja: "内線番号"
+    en: "Extension of the telephone number"
+  faxNumber:
+    ja: "FAX 番号"
+    en: "Fax number"
+  email:
+    ja: "メールアドレス"
+    en: "E-mail address"
+  url:
+    ja: "連絡に使うウェブページや問い合わせフォームの URL"
+    en: "Web page or web form for getting in touch"
+  otherChannels:
+    ja: "SNS のアカウントなど、そのほかの連絡手段と、連絡先についての備考（自由記述）"
+    en: "Other ways to get in touch, such as social media accounts, and remarks on the contact, as free text"
+  postalCode:
+    ja: "連絡先の郵便番号（7 桁。ハイフンの有無は問いません）。施設の所在地の郵便番号と違うことがあります。"
+    en: "Postal code of the contact, 7 digits with or without hyphen. It can differ from the postal code of the facility's address"

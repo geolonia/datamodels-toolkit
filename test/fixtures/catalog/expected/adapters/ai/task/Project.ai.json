@@ -1,0 +1,532 @@
+{
+  "name": "Project",
+  "description": "A grouping of tasks: a project in a tracker, one disaster-response operation, a campaign. Called differently in different settings, with the same common attributes. Type https://datamodels.jp/ns/task/Project; @context https://datamodels.jp/context/task/v1.jsonld.",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name or subject"
+      },
+      "description": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Description"
+      },
+      "identifier": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Short handle: a slug or code, unique within the source system"
+      },
+      "parent": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Parent project (a URI)"
+      },
+      "projectStatus": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "active",
+          "closed",
+          "archived",
+          null
+        ],
+        "description": "State; status is protected in the core context, hence projectStatus"
+      },
+      "isPublic": {
+        "type": [
+          "boolean",
+          "null"
+        ],
+        "description": "true when public"
+      },
+      "homepage": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Homepage (a URI)"
+      },
+      "start": {
+        "anyOf": [
+          {
+            "type": "string",
+            "format": "date"
+          },
+          {
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Planned start: a date, or a date and time"
+      },
+      "end": {
+        "anyOf": [
+          {
+            "type": "string",
+            "format": "date"
+          },
+          {
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Planned end: a date, or a date and time"
+      },
+      "location": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Point"
+                ]
+              },
+              "coordinates": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+              }
+            },
+            "required": [
+              "type",
+              "coordinates"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "LineString"
+                ]
+              },
+              "coordinates": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                },
+                "description": "At least 2 positions"
+              }
+            },
+            "required": [
+              "type",
+              "coordinates"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Polygon"
+                ]
+              },
+              "coordinates": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                  },
+                  "description": "A closed ring: at least 4 positions, the last equal to the first"
+                },
+                "description": "The outer ring, then any holes"
+              }
+            },
+            "required": [
+              "type",
+              "coordinates"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "MultiPoint"
+                ]
+              },
+              "coordinates": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                },
+                "description": "Positions"
+              }
+            },
+            "required": [
+              "type",
+              "coordinates"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "MultiLineString"
+                ]
+              },
+              "coordinates": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                  },
+                  "description": "At least 2 positions"
+                },
+                "description": "Lines"
+              }
+            },
+            "required": [
+              "type",
+              "coordinates"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "MultiPolygon"
+                ]
+              },
+              "coordinates": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                    },
+                    "description": "A closed ring: at least 4 positions, the last equal to the first"
+                  },
+                  "description": "The outer ring, then any holes"
+                },
+                "description": "Polygons"
+              }
+            },
+            "required": [
+              "type",
+              "coordinates"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "GeometryCollection"
+                ]
+              },
+              "geometries": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "Point"
+                          ]
+                        },
+                        "coordinates": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "coordinates"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "LineString"
+                          ]
+                        },
+                        "coordinates": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            },
+                            "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                          },
+                          "description": "At least 2 positions"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "coordinates"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "Polygon"
+                          ]
+                        },
+                        "coordinates": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                            },
+                            "description": "A closed ring: at least 4 positions, the last equal to the first"
+                          },
+                          "description": "The outer ring, then any holes"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "coordinates"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "MultiPoint"
+                          ]
+                        },
+                        "coordinates": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            },
+                            "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                          },
+                          "description": "Positions"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "coordinates"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "MultiLineString"
+                          ]
+                        },
+                        "coordinates": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                            },
+                            "description": "At least 2 positions"
+                          },
+                          "description": "Lines"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "coordinates"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "MultiPolygon"
+                          ]
+                        },
+                        "coordinates": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "array",
+                                "items": {
+                                  "type": "number"
+                                },
+                                "description": "[longitude, latitude] in WGS 84, optionally with the altitude as a third number"
+                              },
+                              "description": "A closed ring: at least 4 positions, the last equal to the first"
+                            },
+                            "description": "The outer ring, then any holes"
+                          },
+                          "description": "Polygons"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "coordinates"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "description": "The geometries"
+              }
+            },
+            "required": [
+              "type",
+              "geometries"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Location as any GeoJSON geometry: point, line, polygon or a collection A GeoJSON geometry (Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection)."
+      },
+      "keywords": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": "string"
+        },
+        "description": "Keywords or labels"
+      },
+      "source": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "URL of this object in the system of record (a URI)"
+      },
+      "externalId": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Identifier in the system of record"
+      },
+      "dateCreated": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "date-time",
+        "description": "Creation time in the system of record (distinct from the broker attribute createdAt)"
+      },
+      "dateModified": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "date-time",
+        "description": "Last modification time in the system of record"
+      }
+    },
+    "required": [
+      "name",
+      "description",
+      "identifier",
+      "parent",
+      "projectStatus",
+      "isPublic",
+      "homepage",
+      "start",
+      "end",
+      "location",
+      "keywords",
+      "source",
+      "externalId",
+      "dateCreated",
+      "dateModified"
+    ],
+    "additionalProperties": false
+  }
+}

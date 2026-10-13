@@ -1,0 +1,116 @@
+{
+  "name": "Milestone",
+  "description": "A planned target that groups tasks within a project: a version in Redmine, a milestone in GitHub or GitLab, a fix version in Jira. It has a name, a due date and a state. Type https://datamodels.jp/ns/task/Milestone; @context https://datamodels.jp/context/task/v1.jsonld.",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name"
+      },
+      "description": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Description"
+      },
+      "project": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "The project this belongs to (a URI)"
+      },
+      "start": {
+        "anyOf": [
+          {
+            "type": "string",
+            "format": "date"
+          },
+          {
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Planned start: a date, or a date and time"
+      },
+      "due": {
+        "anyOf": [
+          {
+            "type": "string",
+            "format": "date"
+          },
+          {
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Due: the planned release or completion, a date or a date and time"
+      },
+      "milestoneStatus": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "open",
+          "locked",
+          "closed",
+          null
+        ],
+        "description": "State: open, locked (no new tasks may be added) or closed; status is protected in the core context, hence milestoneStatus"
+      },
+      "source": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "URL of this object in the system of record (a URI)"
+      },
+      "externalId": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Identifier in the system of record"
+      },
+      "dateCreated": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "date-time",
+        "description": "Creation time in the system of record (distinct from the broker attribute createdAt)"
+      },
+      "dateModified": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "date-time",
+        "description": "Last modification time in the system of record"
+      }
+    },
+    "required": [
+      "name",
+      "description",
+      "project",
+      "start",
+      "due",
+      "milestoneStatus",
+      "source",
+      "externalId",
+      "dateCreated",
+      "dateModified"
+    ],
+    "additionalProperties": false
+  }
+}

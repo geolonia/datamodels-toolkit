@@ -43,6 +43,12 @@ for (const s of subjects) {
     for (const url of [mu.schemaExact, mu.schemaAlias, ...Object.keys(m.examples).map((f) => mu.examples + f), ...m.mappings.map((x) => `${mu.mapping}${x.name}.yaml`)]) files.add(url);
   }
 }
+const catalogRes = await fetch(`${SITE}/catalog.json`);
+if (!catalogRes.ok) throw new Error(`${SITE}/catalog.json: ${catalogRes.status}`);
+const catalog = await catalogRes.json();
+const models = catalog.models.filter((m) => SUBJECTS.includes(m.subject));
+// The adapters' files the site lists for them; the GeonicDB adapter is datamodels.jp's own.
+for (const m of models) for (const [name, url] of Object.entries(m.adapters ?? {})) if (name !== 'geonicdb') files.add(url);
 for (const url of files) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: ${res.status}`);
@@ -50,9 +56,5 @@ for (const url of files) {
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, Buffer.from(await res.arrayBuffer()));
 }
-const catalogRes = await fetch(`${SITE}/catalog.json`);
-if (!catalogRes.ok) throw new Error(`${SITE}/catalog.json: ${catalogRes.status}`);
-const catalog = await catalogRes.json();
-const models = catalog.models.filter((m) => SUBJECTS.includes(m.subject));
 await writeFile(join(out, 'expected', 'catalog-models.json'), JSON.stringify(models, null, 2) + '\n');
 console.log(`${SUBJECTS.length} subjects, ${files.size} files and ${models.length} catalog entries in ${out}`);

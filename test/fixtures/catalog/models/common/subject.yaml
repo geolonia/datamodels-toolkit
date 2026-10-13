@@ -9,6 +9,6 @@ summary:
   ja: 住所やジオメトリなど、他の分野が使う共通の値
   en: "Values that other subjects share, such as addresses and geometries"
 description:
-  ja: 他のサブジェクトが属性の値として使う共通の部品（住所、ジオメトリなど）。単独のエンティティではなく、属性の値の中で使う値型です。
+  ja: "ほかの分野が属性の値として使う、共通の部品です（住所、ジオメトリなど）。単独のエンティティではなく、属性の値の中で使う値型です。"
   en: "Building blocks that other subjects use as attribute values, such as addresses and geometries. They are value types: used inside an attribute, not as entities of their own."
 source: minted
