@@ -2,7 +2,7 @@
 // (geolonia/datamodels#183).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dateFormats, typedDate, toNormalized } from '../src/ngsi.mjs';
+import { dateFormats, typedDate, toNormalized, toKeyValues, wrapKeyValues, unwrapKeyValues } from '../src/ngsi.mjs';
 
 const either = { anyOf: [{ type: 'string', format: 'date' }, { type: 'string', format: 'date-time' }] };
 const schema = {
@@ -46,3 +46,31 @@ test('toNormalized types each date as its schema says, also inside arrays', () =
   assert.deepEqual(out.holidays.value, ['2026-05-03', '2026-05-04'], 'a list value stays a list');
   assert.equal(out.name.value, '2026-07-11', 'a text that looks like a date stays text');
 });
+
+const wrapped = {
+  properties: {
+    details: { type: 'object', 'x-ngsi': { type: 'JsonProperty' } },
+    category: { type: 'string', 'x-ngsi': { type: 'VocabProperty' } },
+    tags: { type: 'array', 'x-ngsi': { type: 'VocabProperty', multi: true } },
+    name: { type: 'string' },
+  },
+};
+
+test('a JsonProperty or VocabProperty: key-values keeps the wrapper, the normalized form takes its content', () => {
+  const plain = { id: 'urn:ngsi-ld:Decision:1', type: 'Decision', details: { a: 1 }, category: 'approved', tags: ['x', 'y'], name: 'n' };
+  const kv = wrapKeyValues(plain, wrapped);
+  assert.deepEqual(kv, { ...plain, details: { json: { a: 1 } }, category: { vocab: 'approved' }, tags: [{ vocab: 'x' }, { vocab: 'y' }] });
+  assert.deepEqual(unwrapKeyValues(kv, wrapped), plain);
+  const normalized = toNormalized(kv, wrapped);
+  assert.deepEqual(normalized.details, { type: 'JsonProperty', json: { a: 1 } });
+  assert.deepEqual(normalized.category, { type: 'VocabProperty', vocab: 'approved' });
+  assert.deepEqual(normalized.tags, [
+    { type: 'VocabProperty', vocab: 'x', datasetId: 'urn:ngsi-ld:dataset:tags:1' },
+    { type: 'VocabProperty', vocab: 'y', datasetId: 'urn:ngsi-ld:dataset:tags:2' },
+  ]);
+  assert.deepEqual(normalized.name, { type: 'Property', value: 'n' });
+  assert.deepEqual(toKeyValues(normalized, { multi: new Set(['tags']) }), kv);
+  // Without its wrapper the value is not key-values.
+  assert.throws(() => toNormalized({ ...kv, details: { a: 1 } }, wrapped), /attribute details: a JsonProperty is \{"json": \.\.\.\} in key-values form/);
+});
+

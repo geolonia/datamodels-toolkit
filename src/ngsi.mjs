@@ -46,6 +46,23 @@ export function unwrapKeyValues(keyValues, schema) {
 }
 
 /**
+ * The other way: an entity as the model's JSON Schema describes it, with the
+ * json and vocab wrappers that its key-values form needs (convert's output).
+ */
+export function wrapKeyValues(entity, schema) {
+  if (!isObject(entity)) throw new Error(`must be a JSON object, got ${kindOf(entity)}`);
+  const out = { ...entity };
+  for (const [k, prop] of Object.entries(schema.properties ?? {})) {
+    const type = prop?.['x-ngsi']?.type;
+    const member = Object.hasOwn(WRAPPED, type ?? '') ? WRAPPED[type] : undefined;
+    if (!member || !Object.hasOwn(out, k)) continue;
+    const wrap = (v) => ({ [member]: v });
+    out[k] = prop['x-ngsi'].multi && Array.isArray(out[k]) ? out[k].map(wrap) : wrap(out[k]);
+  }
+  return out;
+}
+
+/**
  * Key-values projection of an NGSI-LD normalized entity.
  *
  * `multi` names the attributes the schema declares `x-ngsi.multi`: their
@@ -119,7 +136,8 @@ export function typedDate(value, formats) {
  * Normalized form of a key-values entity, for a model's JSON Schema: each
  * attribute takes the NGSI-LD type the schema declares (x-ngsi.type),
  * date and date-time Properties become typed Date and DateTime values
- * (typedDate), and each instance of a
+ * (typedDate), a JsonProperty or VocabProperty takes the content of its
+ * {"json": ...} or {"vocab": ...} wrapper, and each instance of a
  * multi-valued attribute gets a datasetId (urn:ngsi-ld:dataset:<attribute>:<n>,
  * the form the catalog's examples use). An attribute the schema does not
  * declare becomes a Property.
@@ -135,6 +153,8 @@ export function toNormalized(keyValues, schema, context) {
     const one = (value) => {
       if (ngsi.type === 'Relationship') return { type: 'Relationship', object: value };
       if (ngsi.type === 'GeoProperty') return { type: 'GeoProperty', value };
+      // Key-values carries the wrapper ({"json": ...}); take its content.
+      if (Object.hasOwn(WRAPPED, ngsi.type ?? '')) return { type: ngsi.type, [WRAPPED[ngsi.type]]: unwrapOne(k, ngsi.type, value) };
       return { type: 'Property', value: typedDate(value, dateFormats(prop)) };
     };
     if (ngsi.multi && Array.isArray(v)) out[k] = v.map((item, i) => ({ ...one(item), datasetId: `urn:ngsi-ld:dataset:${k}:${i + 1}` }));

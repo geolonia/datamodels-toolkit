@@ -41,6 +41,21 @@ test('--normalized writes NGSI-LD normalized entities with the alias context and
   assert.deepEqual(e.name, { type: 'Property', value: '番町小学校' });
 });
 
+test('convert: a VocabProperty keeps its wrapper in key-values and becomes a VocabProperty when normalized', async () => {
+  // The fixtures' EvacuationSite with name as a VocabProperty, in a copy of the site.
+  const site = join(dir, 'vocab-site');
+  await cp(SITE_DIR, site, { recursive: true });
+  const file = join(site, 'schema', 'disaster', 'EvacuationSite', 'v1.0.0.json');
+  const schema = JSON.parse(await readFile(file, 'utf8'));
+  schema.properties.name['x-ngsi'] = { type: 'VocabProperty' };
+  await writeFile(file, JSON.stringify(schema));
+  const args = ['convert', 'disaster/EvacuationSite', 'gsi-emergency-site', gsi, '--set', 'localGovernmentCode=13101', '--site', site];
+  const kv = await datamodels(...args);
+  assert.deepEqual(JSON.parse(kv.stdout)[0].name, { vocab: '番町小学校' });
+  const normalized = await datamodels(...args, '--normalized');
+  assert.deepEqual(JSON.parse(normalized.stdout)[0].name, { type: 'VocabProperty', vocab: '番町小学校' });
+});
+
 test('--help lists the commands', async () => {
   const r = await datamodels('--help');
   assert.equal(r.code, 0);

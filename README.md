@@ -131,7 +131,7 @@ const subjects = await loadSubjects('models', { urls, languages: ['en'], subject
 await publishCatalog(subjects, { urls, outDir: 'dist', languages: ['en'], head: { license: 'CC0-1.0' } });
 ```
 
-`@geolonia/datamodels/ngsi` converts entities between the normalized form and key-values (`toNormalized`, `toKeyValues`), as `convert` does.
+`@geolonia/datamodels/ngsi` converts entities between the normalized form and key-values (`toNormalized`, `toKeyValues`). It has no Node.js imports, so it also runs in a browser.
 
 
 ## Agent skill

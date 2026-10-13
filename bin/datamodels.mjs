@@ -74,7 +74,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
 import { decodeCsv, parseCsv, convertRows, mappingProblems, mappedColumns, unknownFields, LINE } from '../src/convert.mjs';
-import { toNormalized } from '../src/ngsi.mjs';
+import { toNormalized, wrapKeyValues } from '../src/ngsi.mjs';
 import { siteReader, loadTarget, isMappingFile, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
 import { TEMPLATE, siteModel, templateMapping, catalogMappings, startMapping } from '../src/mapping.mjs';
 import { buildNode, readNode } from '../src/build/node.mjs';
@@ -333,7 +333,8 @@ async function convert(target, mappingName, file, { set: sets = [], normalized, 
     for (const f of r.fixes) { const k = `${f.field}: ${f.repair}`; const e = repairs.get(k) ?? { n: 0, example: f.detail }; e.n++; repairs.set(k, e); }
     if (r.problems.length || !validate(r.entity)) { invalidIndex.add(i); invalid.push({ line: rows[i][LINE], problems: [...r.problems, ...(r.problems.length ? [] : [schemaErrors(validate.errors)])] }); }
   }
-  const entities = results.filter((_, i) => !invalidIndex.has(i)).map((r) => r.entity);
+  // Valid as the schema describes them; in key-values form a JsonProperty or VocabProperty keeps its wrapper.
+  const entities = results.filter((_, i) => !invalidIndex.has(i)).map((r) => wrapKeyValues(r.entity, schema));
   if (!check) {
     const context = [entry.contextAliasUrl, CORE_CONTEXT_URL];
     const json = `${JSON.stringify(normalized ? entities.map((e) => toNormalized(e, schema, context)) : entities, null, 2)}\n`;
