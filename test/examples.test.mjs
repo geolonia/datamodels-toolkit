@@ -177,7 +177,11 @@ test('a subject that imports another subject of the node reads it from the build
 });
 
 test('the vocabulary must be valid JSON-LD', async () => {
-  assert.deepEqual(await problemsOf((f) => ({ ...f, catalog: `title: { en: { text: Road patrol } }\ndescription: { en: A run. }\n${ATTRIBUTES}` })), ['road: vocabulary: JSON-LD processing failed: Invalid JSON-LD syntax; language map values must be strings.']);
+  // A title that is not a text: catalog.yaml says why, the vocabulary what it breaks.
+  assert.deepEqual(await problemsOf((f) => ({ ...f, catalog: `title: { en: { text: Road patrol } }\ndescription: { en: A run. }\n${ATTRIBUTES}` })), [
+    'road/RoadPatrol/catalog.yaml: title needs a non-empty en text',
+    'road: vocabulary: JSON-LD processing failed: Invalid JSON-LD syntax; language map values must be strings.',
+  ]);
 });
 
 test('the rules of schema.json that the schema cannot state', () => {

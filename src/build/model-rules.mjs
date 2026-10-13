@@ -1,0 +1,157 @@
+// Rules for the models of a node that their files cannot state on their own:
+// aliases and subclasses against the models they name, one model per type IRI,
+// complete texts in catalog.yaml, the status, and the shape of notes.yaml.
+// Moved from datamodels.jp's validate-models (geolonia/datamodels#226); the
+// catalog's own process rules (ADOPTERS.yaml, TODO markers, known namespaces,
+// an explicit x-ngsi.type where a node may leave Property out) stay there.
+import { attributesOf } from './urls.mjs';
+import { LANGUAGE_TAG } from './node.mjs';
+
+const STATUSES = ['draft', 'experimental', 'stable', 'deprecated'];
+
+const isObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+const nonEmpty = (v) => typeof v === 'string' && v.trim() !== '';
+// JSON values compared by content, whatever the order of their keys.
+const canonical = (v) => (Array.isArray(v) ? v.map(canonical) : isObject(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical(v[k])])) : v);
+const same = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+const sameSet = (a = [], b = []) => same([...new Set(a)].sort(), [...new Set(b)].sort());
+
+// An attribute of an entity without x-ngsi.type is a Property, everywhere in the toolkit.
+const ngsiType = (prop) => prop?.['x-ngsi']?.type ?? 'Property';
+/** An attribute as the toolkit reads it: of an entity model, with its NGSI-LD type filled in. */
+const asRead = (prop, kind) => (kind === 'entity' && isObject(prop) ? { ...prop, 'x-ngsi': { ...prop['x-ngsi'], type: ngsiType(prop) } } : prop);
+
+/** An absolute http(s) IRI with a host, written as a URL parser writes it. */
+function httpIri(iri) {
+  try {
+    const u = new URL(iri);
+    // No user name or password: the IRI goes into catalog.json and the pages.
+    return ['http:', 'https:'].includes(u.protocol) && u.hostname !== '' && !u.username && !u.password && u.href === iri;
+  } catch { return false; }
+}
+
+/** An http(s) URL with a host. */
+function httpUrl(url) {
+  try {
+    const u = new URL(url);
+    return typeof url === 'string' && ['http:', 'https:'].includes(u.protocol) && u.hostname !== '' && !u.username && !u.password;
+  } catch { return false; }
+}
+
+/** A text in every language of the node, and nothing but language tags. */
+function textsProblem(v, languages) {
+  if (!isObject(v)) return `must be { ${languages.join(', ')} }`;
+  const missing = languages.filter((l) => !nonEmpty(v[l]));
+  if (missing.length) return `needs a non-empty ${missing.join(' and ')} text`;
+  const other = Object.keys(v).filter((k) => !LANGUAGE_TAG.test(k) || !nonEmpty(v[k]));
+  if (other.length) return `has ${other.map((k) => JSON.stringify(k)).join(', ')}, which is not a language with a text`;
+  return null;
+}
+
+/**
+ * The problems of the models in `subjects` (from loadSubjects), as
+ * "<subject>/<Type>/<file>: <problem>" lines. `urls` from catalogUrls(),
+ * `languages` the node's languages.
+ */
+export function modelRuleProblems(subjects, { urls, languages }) {
+  const out = [];
+  const all = subjects.flatMap((s) => s.models.map((m) => ({ s, m, where: `${s.name}/${m.type}`, iri: urls.modelUrls(s, m).typeIri })));
+  // The models that own their type IRI: an alias has the IRI of the type it names.
+  const owners = new Map();
+  for (const x of all) {
+    if (x.m.schema['x-alias-of'] !== undefined) continue;
+    const prev = owners.get(x.iri);
+    if (prev) out.push(`${x.where}/schema.json: the type IRI ${x.iri} is also the type of ${prev.where}`);
+    else owners.set(x.iri, x);
+  }
+
+  for (const { s, m, where } of all) {
+    const { schema, catalog } = m;
+    const at = `${where}/schema.json`;
+    const aliasOf = schema['x-alias-of'];
+    const subclassOf = schema['x-subclass-of'];
+
+    // An alias is the same type under another name: the same attributes and the same requirements.
+    if (aliasOf !== undefined) {
+      if (subclassOf !== undefined) out.push(`${at}: x-alias-of and x-subclass-of cannot both be set; an alias is the same type, a subclass a narrower one`);
+      const target = owners.get(aliasOf);
+      if (target) {
+        const t = target.m.schema;
+        const names = [...new Set([...attributesOf(m), ...attributesOf(target.m)].map(([k]) => k))];
+        const differing = names.filter((k) => !same(asRead(schema.properties?.[k], m.kind), asRead(t.properties?.[k], target.m.kind)));
+        if (differing.length) out.push(`${at}: an alias of ${target.where} has the same attributes, these differ: ${differing.join(', ')} (a narrower type sets x-subclass-of)`);
+        if (!sameSet(schema.required, t.required)) out.push(`${at}: an alias of ${target.where} has the same required attributes`);
+        if (!same(schema.anyOf ?? null, t.anyOf ?? null)) out.push(`${at}: an alias of ${target.where} has the same anyOf`);
+        if (m.kind !== target.m.kind) out.push(`${at}: an alias of ${target.where} is of the same kind (${target.m.kind}, not ${m.kind})`);
+        if ((schema.additionalProperties ?? true) !== (t.additionalProperties ?? true)) out.push(`${at}: an alias of ${target.where} has the same additionalProperties`);
+      } else if (typeof aliasOf === 'string' && aliasOf.startsWith(`${urls.baseUrl}/`)) out.push(`${at}: x-alias-of ${aliasOf} is not a type of this node`);
+      else if (!httpIri(aliasOf)) out.push(`${at}: x-alias-of must be the full http(s) IRI of a type, got ${JSON.stringify(aliasOf)}`);
+    }
+
+    // A subclass keeps its own type IRI, uses its parent's attribute IRIs and NGSI-LD types, and stays as strict.
+    if (subclassOf !== undefined) {
+      const target = owners.get(subclassOf);
+      if (target) {
+        const t = target.m.schema;
+        for (const [name, prop] of attributesOf(m)) {
+          const pp = t.properties?.[name];
+          if (!pp) continue;
+          if (pp['x-iri'] !== prop?.['x-iri']) out.push(`${at}: ${name}: a subclass of ${target.where} uses its IRI ${pp['x-iri']}, not ${prop?.['x-iri'] ?? '(no x-iri)'}`);
+          if (ngsiType(pp) !== ngsiType(prop)) out.push(`${at}: ${name}: a subclass of ${target.where} keeps its NGSI-LD type ${ngsiType(pp)}`);
+        }
+        const own = schema.required ?? [];
+        for (const r of t.required ?? []) if (!own.includes(r)) out.push(`${at}: a subclass of ${target.where} keeps "${r}" required`);
+        // An either/or requirement stays too: the same anyOf, or stricter by requiring one alternative outright.
+        const alts = t.anyOf;
+        if (Array.isArray(alts) && !same(schema.anyOf ?? null, alts) && !alts.some((a) => (a?.required ?? []).every((r) => own.includes(r)))) {
+          out.push(`${at}: a subclass of ${target.where} keeps its anyOf (${alts.map((a) => (a?.required ?? []).join('+')).join(' or ')}) or requires one of them`);
+        }
+      } else if (typeof subclassOf === 'string' && subclassOf.startsWith(`${urls.baseUrl}/`)) out.push(`${at}: x-subclass-of ${subclassOf} is not a type of this node`);
+      else if (!httpIri(subclassOf)) out.push(`${at}: x-subclass-of must be the full http(s) IRI of a class, got ${JSON.stringify(subclassOf)}`);
+      // Only the form: a misspelled class name passes, so open the IRI before using it.
+      else if (!/^[A-Z]/.test(new URL(subclassOf).pathname.split('/').pop() ?? '')) out.push(`${at}: x-subclass-of ${subclassOf} does not name a class (a class name starts with a capital letter)`);
+    }
+
+    for (const [name, prop] of attributesOf(m)) {
+      if (isObject(prop) && Object.hasOwn(prop, 'x-personal-data') && prop['x-personal-data'] !== true) out.push(`${at}: ${name}: x-personal-data is true or left out`);
+    }
+
+    // catalog.yaml: the texts of every page and of catalog.json, in every language of the node.
+    const cat = `${where}/catalog.yaml`;
+    if (!isObject(catalog)) { out.push(`${cat}: must be a mapping with title, description and attributes`); continue; }
+    for (const field of ['title', 'description']) {
+      const p = textsProblem(catalog[field], languages);
+      if (p) out.push(`${cat}: ${field} ${p}`);
+    }
+    const described = isObject(catalog.attributes) ? catalog.attributes : {};
+    if (catalog.attributes !== undefined && !isObject(catalog.attributes)) out.push(`${cat}: attributes must be a mapping of attribute names to texts`);
+    for (const [name] of attributesOf(m)) {
+      const p = textsProblem(described[name], languages);
+      if (p) out.push(`${cat}: attributes.${name} ${described[name] === undefined ? 'is missing' : p}`);
+    }
+    // id, type and @context are not attributes, so they have no text here either.
+    const attributeNames = new Set(attributesOf(m).map(([k]) => k));
+    for (const name of Object.keys(described)) if (!attributeNames.has(name)) out.push(`${cat}: attributes.${name}: not an attribute in schema.json`);
+
+    // Only a missing status means draft; null or another word is a mistake.
+    const status = catalog.status === undefined ? 'draft' : catalog.status;
+    if (!STATUSES.includes(status)) out.push(`${cat}: status must be ${STATUSES.slice(0, -1).join(', ')} or ${STATUSES.at(-1)}, got ${JSON.stringify(status)}`);
+    if (catalog.supersededBy !== undefined) {
+      if (status !== 'deprecated') out.push(`${cat}: supersededBy is only for status deprecated, the status is ${status}`);
+      if (!httpUrl(catalog.supersededBy)) out.push(`${cat}: supersededBy must be an http(s) URL (the replacement's type IRI or page), got ${JSON.stringify(catalog.supersededBy)}`);
+    }
+
+    // notes.yaml: the design notes and the dated changes, each a text in every language.
+    if (m.notes == null) continue;
+    const nf = `${where}/notes.yaml`;
+    if (!isObject(m.notes)) { out.push(`${nf}: must be a mapping with notes, history and license`); continue; }
+    for (const key of ['notes', 'history']) {
+      const list = m.notes[key];
+      if (list === undefined) continue;
+      if (!Array.isArray(list)) { out.push(`${nf}: ${key} must be a list`); continue; }
+      list.forEach((n, i) => { const p = textsProblem(n, languages); if (p) out.push(`${nf}: ${key}[${i}] ${p} (quote a text that contains ": " or a comma)`); });
+    }
+    if (m.notes.license !== undefined && typeof m.notes.license !== 'string') out.push(`${nf}: license must be a string`);
+  }
+  return out;
+}

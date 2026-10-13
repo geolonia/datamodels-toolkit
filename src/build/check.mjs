@@ -13,7 +13,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
-import { buildNode } from './node.mjs';
+import { buildNode, loadNode } from './node.mjs';
+import { modelRuleProblems } from './model-rules.mjs';
 import { catalogUrls, attributesOf } from './urls.mjs';
 import { schemaRuleProblems, exampleProblems, contextLoader, jsonldProblems, vocabularyProblems } from './examples.mjs';
 import { mappingFileProblems, viaCycles } from './mapping-check.mjs';
@@ -181,9 +182,20 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
   const notes = [];
   const out = await mkdtemp(join(tmpdir(), 'datamodels-check-'));
   try {
+    // The rules of the models first, all of them: the build stops at the first text missing in catalog.yaml.
+    let rules;
+    try {
+      const loaded = await loadNode(dir);
+      rules = modelRuleProblems(loaded.subjects, { urls: loaded.urls, languages: loaded.node.languages });
+    } catch (e) { return { problems: [e.message], notes }; }
     // The build also stops on a release snapshot (models/<subject>/releases/vX.Y.Z/) that differs from the sources.
+    // A missing attribute text stops it too; the rules list that one already, with all the others.
     let built;
-    try { built = await buildNode(dir, { out, pages: false, offline, fetch: fetchUrl, timeout }); } catch (e) { return { problems: [e.message], notes }; }
+    try { built = await buildNode(dir, { out, pages: false, offline, fetch: fetchUrl, timeout }); } catch (e) {
+      const listed = rules.length && /: catalog\.yaml needs an? .* description for catalog\.json$/.test(e.message);
+      return { problems: [...rules, ...(listed ? [] : [e.message])], notes };
+    }
+    problems.push(...rules);
     const { node, subjects, exactPaths } = built;
 
     // Published versions: the release snapshots against the base branch, and one for every current version.
