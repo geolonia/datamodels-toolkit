@@ -6,6 +6,29 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.3.12] - 2026-10-13
+
+`datamodels check` has the model checks of datamodels.jp's validator, the Action's pull-request check catches a removed release, and the library exports what datamodels.jp needs to build with the toolkit (geolonia/datamodels#226).
+
+### Added
+
+- `datamodels check` checks more rules of the models (geolonia/datamodels#226): an alias (`x-alias-of`) has the attributes, requirements and kind of its type; a subclass (`x-subclass-of`) uses its parent's IRIs and NGSI-LD types and stays as strict; one model per type IRI; `x-personal-data` is `true` or left out; `catalog.yaml` has the title, description and every attribute in every language of the node, and no attribute that the schema lacks; `status` and `supersededBy`; the shape of `notes.yaml`. It lists every missing text at once.
+- `datamodels check`: the id of an example entity is `urn:ngsi-ld:<Type>:<local id>`, and a Relationship in an example references an entity of the type that its schema declares (`x-ngsi.target`), the example of that type when the node has one. The normalized example references the same targets as `example.json` (geolonia/datamodels#226).
+- `@geolonia/datamodels/ngsi`: the NGSI-LD helpers (`toNormalized`, `toKeyValues`, …) for other programs, such as the datamodels.jp build (geolonia/datamodels#226).
+- `@geolonia/datamodels/build` exports the NGSI-LD core context (`CORE_CONTEXT`, `CORE_CONTEXT_URL`), for programs that list its terms, such as datamodels.jp (geolonia/datamodels#226).
+- A model's page shows its change history (`history` in `notes.yaml`) below the notes, folded away, as datamodels.jp does (geolonia/datamodels#226).
+
+### Changed
+
+- Commands start faster: Eleventy is loaded only when pages are written, also for programs that import `@geolonia/datamodels/build`.
+- `datamodels init` writes a workflow pinned to the v0.3.11 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.3.11`. The README uses 0.3.11 too.
+- The README shows badges for the npm version, the tests, the GitHub Marketplace listing and the licence.
+
+### Fixed
+
+- The Action's pull-request check compares the release snapshots with the pull request's base branch, so removing a whole published release folder fails the check (#93).
+- `convert` writes a JsonProperty or VocabProperty attribute as the catalog's key-values form has it, `{"json": …}` or `{"vocab": …}`, and with `--normalized` as a JsonProperty or VocabProperty, not as a Property.
+
 ## [0.3.11] - 2026-10-13
 
 The README is short, with the documentation on datamodels.jp, and says what the GitHub Action is for. npmjs.org and the Marketplace listing show it from this release.
@@ -238,7 +261,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.11...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.12...main
+[0.3.12]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.11...v0.3.12
 [0.3.11]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.10...v0.3.11
 [0.3.10]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.9...v0.3.10
 [0.3.9]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.8...v0.3.9
