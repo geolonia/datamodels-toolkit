@@ -174,8 +174,10 @@ export function attributeProblems(entity, attributes) {
       if (isObject(inst) && Object.hasOwn(inst, 'type') && inst.type !== declared) out.push({ attribute: name, rule: 'type', found: inst.type, expected: declared, implicit: !ngsi.type });
     }
     // A date or date-time value carries its NGSI-LD type, and the type fits the value.
+    // An instance of another type has its type problem above; its value is not checked as a date.
     const formats = declared === 'Property' ? dateFormats(prop) : [];
     for (const inst of formats.length ? instances : []) {
+      if (isObject(inst) && Object.hasOwn(inst, 'type') && inst.type !== 'Property') continue;
       const v = inst?.value;
       const value = isObject(v) && Object.hasOwn(v, '@value') ? v['@value'] : v;
       const want = typedDate(value, formats);

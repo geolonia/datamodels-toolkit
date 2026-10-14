@@ -147,6 +147,8 @@ test('attributeProblems: a date or date-time value carries its typed form', () =
   // Not a string (the schema says so), or not a Property: no date rule.
   assert.deepEqual(attributeProblems({ due: { type: 'Property', value: 42 } }, attrs), []);
   assert.deepEqual(attributeProblems({ due: { type: 'Relationship', object: 'urn:x', value: '2026-01-01' } }, [['due', { format: 'date', 'x-ngsi': { type: 'Relationship' } }]]), []);
+  // A Property attribute sent as a Relationship: its type problem only, its value is not checked as a date.
+  assert.deepEqual(attributeProblems({ due: { type: 'Relationship', object: 'urn:x', value: '2026-01-01' } }, [['due', { format: 'date' }]]), [{ attribute: 'due', rule: 'type', found: 'Relationship', expected: 'Property', implicit: true }]);
 });
 
 test('attributeProblems: id, type, @context and names of Object.prototype are not special', () => {
