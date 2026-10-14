@@ -16,10 +16,10 @@ Command-line tools and a GitHub Action for the [datamodels.jp](https://datamodel
 Node.js 24 or later. Run a release of [`@geolonia/datamodels`](https://www.npmjs.com/package/@geolonia/datamodels) with `npx`:
 
 ```bash
-npx @geolonia/datamodels@0.3.13 --help
+npx @geolonia/datamodels@0.3.14 --help
 ```
 
-Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.3.13`) and run `npx datamodels …` there. Releases before 0.3.8 are not on npm; they run from GitHub (`npx github:geolonia/datamodels-toolkit#v0.3.7 …`).
+Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.3.14`) and run `npx datamodels …` there. Releases before 0.3.8 are not on npm; they run from GitHub (`npx github:geolonia/datamodels-toolkit#v0.3.7 …`).
 
 ## Commands
 
@@ -34,10 +34,10 @@ Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.3.13`) an
 | `bump`, `release`, `upgrade` | Change a published model in a new version; move to a newer toolkit | [Versions](https://datamodels.jp/en/toolkit/versions) |
 
 ```bash
-npx @geolonia/datamodels@0.3.13 search 避難
-npx @geolonia/datamodels@0.3.13 convert disaster/EvacuationSite jichitai-opendata-site sites.csv --out sites.json
-npx @geolonia/datamodels@0.3.13 export disaster/EvacuationSite --to csv
-npx @geolonia/datamodels@0.3.13 init my-models
+npx @geolonia/datamodels@0.3.14 search 避難
+npx @geolonia/datamodels@0.3.14 convert disaster/EvacuationSite jichitai-opendata-site sites.csv --out sites.json
+npx @geolonia/datamodels@0.3.14 export disaster/EvacuationSite --to csv
+npx @geolonia/datamodels@0.3.14 init my-models
 ```
 
 ## GitHub Action
@@ -53,7 +53,7 @@ You need it only to publish data models of your own. To use existing models, sta
 
 **Start in three steps** ([Starting a site](https://datamodels.jp/en/toolkit/start), step by step):
 
-1. Run `npx @geolonia/datamodels@0.3.13 init my-models`. It asks a few questions (the web address, who publishes, the first subject) and writes the repository: the settings (`node.yaml`), a folder for your models (`models/`) and the workflow with this Action.
+1. Run `npx @geolonia/datamodels@0.3.14 init my-models`. It asks a few questions (the web address, who publishes, the first subject) and writes the repository: the settings (`node.yaml`), a folder for your models (`models/`) and the workflow with this Action.
 2. Put the folder on GitHub, and in the repository settings set Pages to deploy from GitHub Actions. With the [GitHub CLI](https://cli.github.com/), add `--github my-org/my-models` to the command of step 1, and `init` does both.
 3. Add your models ([Your site's models](https://datamodels.jp/en/toolkit/models)). Each push to `main` updates the site.
 
@@ -62,7 +62,7 @@ Sites that run on it: [models.geolonia.com](https://models.geolonia.com/) ([repo
 **The workflow.** `init` writes it, so you do not need to write it yourself. Its main step:
 
 ```yaml
-- uses: geolonia/datamodels-toolkit@9ede70b4e4cde745cea094d3d62835c3c8da330f # v0.3.13
+- uses: geolonia/datamodels-toolkit@7710cb883b8f495855ceeed023d3ab1ae57d5bf1 # v0.3.14
   with:
     deploy: 'false'   # on pull requests: check and build, publish nothing
 ```
@@ -94,7 +94,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: geolonia/datamodels-toolkit@9ede70b4e4cde745cea094d3d62835c3c8da330f # v0.3.13
+      - uses: geolonia/datamodels-toolkit@7710cb883b8f495855ceeed023d3ab1ae57d5bf1 # v0.3.14
         with:
           deploy: 'false'
 
@@ -117,7 +117,7 @@ jobs:
         with:
           persist-credentials: false
       - id: node
-        uses: geolonia/datamodels-toolkit@9ede70b4e4cde745cea094d3d62835c3c8da330f # v0.3.13
+        uses: geolonia/datamodels-toolkit@7710cb883b8f495855ceeed023d3ab1ae57d5bf1 # v0.3.14
 ```
 
 </details>
