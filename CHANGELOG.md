@@ -6,6 +6,38 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.3.15] - 2026-10-14
+
+`export` and `extend` find a model by its type IRI on the node that made it; other nodes are read only over https. A node can have a title and description.
+
+### Added
+
+- The agent skill (`skills/datamodels`) names the datamodels.jp MCP server (https://datamodels.jp/mcp) and its tools, and tells an agent without them to ask the user to add the server (geolonia/datamodels#223).
+- `node.yaml` takes an optional `title` and `description` of the node, each a text in every language of the node, like `subject.yaml` (geolonia/datamodels#220). `catalog.json` lists them at the top (still `formatVersion: 1`). The pages use the title as the site's name, and the home page shows the description; `llms.txt` uses them too. Without them, every file stays as before. `datamodels check` reports a text that is missing a language of the node, a value that is not a text per language, and a key that is not a language. `datamodels init` writes both, commented out, to fill in.
+- `datamodels nodes` and `datamodels search` show a node by its title when its `catalog.json` has one; `--json` adds `title` to each node and `siteTitle` to each result.
+- `export` and `extend` find a model of another node by its type IRI without `--index`: they first read the index of the node that made the IRI (the part before `/ns/`, plus `catalog.json`), and use it when it lists the model; otherwise they read the usual index (the first node in node.yaml, else datamodels.jp), and its error says why the first one was not used. That first index is read only over https from a public host name, and for at most 5 seconds, redirects included (geolonia/datamodels#222).
+- `indexForIri()` in `@geolonia/datamodels/build`: the index URL of the node that made a type IRI, or null.
+- `extend` says which index it read the model from.
+
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.14 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.3.14`. The README uses 0.3.14 too.
+- `export` and `extend` now read the model from the node that made the IRI, even when the first node in node.yaml (else datamodels.jp) lists an alias with the same IRI. To get the alias, give `--index` with the alias's node, or give the alias as `<subject>/<Type>` when that node is the first one in node.yaml. `extend` records the node it used in `extends[].index` and, when it is new, in node.yaml (geolonia/datamodels#222).
+- `node.yaml`: `nodes[].url`, `nodes[].index` and `extends[].index` in catalog.yaml must be https URLs, as the toolkit reads other nodes only over https. The error says to change `http://` to `https://`.
+
+### Fixed
+
+- `datamodels nodes` and `datamodels search` skip an empty or non-text publisher name in another language: a node whose `catalog.json` has `name: { en: " ", ja: X }` is named X, no longer by its host.
+
+### Security
+
+- `extend` reads the other node's index, schema and example only over https from a public host name, checking every redirect, as `export` does. It reads a schema only under the node's `schema/` and an example only under its `examples/`, and checks the `@context` first. URLs are checked after `..` and `%2e%2e` are resolved, and the resolved `@context` URL is the one written. An index at an `http://` address is no longer read.
+- `extend`, `export` and the build follow a redirect of another node's schema or example only when it stays under that node's `schema/` or `examples/`.
+- `extend` and `export` take a model from a catalog only when its type name is UpperCamelCase and its version is x.y.z, so a catalog cannot add lines to the files they write.
+- `check` reads the indexes, `@context`s and schemas of other nodes only over https from a public host name, checking every redirect. It is a problem when an address this node wrote may not be read as written: an `extends` index in catalog.yaml, a `@context` imported in context.jsonld, or a schema `$ref` (not https, an IP address, localhost). When the network side refuses a read (a redirect to such an address, or a host name that resolves to a private address), it is a note, as for a node that is down, and so is an address that comes from another node's files.
+- The build checks a `@context` imported by URL after `..` and `%2e%2e` are resolved, and compares it with the node's and the listed nodes' addresses written the same way (lower-case host, no default port).
+- A read of another node's file has one time limit for the whole read, redirects included; a read that takes too long says "timed out after N s".
+
 ## [0.3.14] - 2026-10-14
 
 Errors name the JSON or YAML file in models/ that does not parse.
@@ -286,7 +318,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.14...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.15...main
+[0.3.15]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.14...v0.3.15
 [0.3.14]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.13...v0.3.14
 [0.3.13]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.12...v0.3.13
 [0.3.12]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.11...v0.3.12
