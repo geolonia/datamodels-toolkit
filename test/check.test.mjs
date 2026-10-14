@@ -413,7 +413,7 @@ test('extends: an index whose address in catalog.yaml may not be read is a probl
   const where = `road/RoadPatrol: extends ${TASK} v1.0.0`;
   // http:// in catalog.yaml: refused when the node is read, with how to fix it.
   let r = await checkNode(await withIndex('http://evil.example/catalog.json'), { fetch: record({}) });
-  assert.match(r.problems.join('\n'), /extends must be a list of .* index an https URL \(other nodes are read only over https\)/);
+  assert.match(r.problems.join('\n'), /extends must be a list of .* index an https URL \(other nodes are read only over https: change http:\/\/ to https:\/\/\)/);
   // An IP address or localhost as written: a problem, and not read.
   for (const index of ['https://127.0.0.1/catalog.json', 'https://localhost/catalog.json']) {
     seen.length = 0;
@@ -458,6 +458,45 @@ test('a schema $ref this node wrote that may not be read is a problem; a refusal
   r = await checkNode(dir, { fetch: dnsSays('10.0.0.1') });
   assert.ok(!r.problems.some((p) => p.includes('schema.json')), r.problems.join('\n'));
   assert.ok(r.notes.includes('road/RoadPatrol/schema.json: not validated, https://datamodels.jp/schema/common/Route/v1.0.0.json is not read: datamodels.jp resolves to 10.0.0.1, not a public address'), r.notes.join('\n'));
+});
+
+test('an import this node wrote that may not be read is a problem; one in another node\'s context is a note', async () => {
+  const ctx = (imports) => JSON.stringify({ '@context': [imports, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' }] });
+  // In this node's own context.jsonld: a problem, and not read.
+  const own = await node();
+  await listNodes(own, [{ url: 'https://localhost/', index: 'https://localhost/catalog.json' }]);
+  await writeFile(join(own, 'models', 'road', 'context.jsonld'), ctx('https://localhost/context/x/v1.0.0.jsonld'));
+  const seen = [];
+  const f = fakeFetch(datamodelsJp());
+  let r = await checkNode(own, { fetch: (url, o) => { seen.push(String(url)); return f(url, o); } });
+  assert.ok(r.problems.includes('road/context.jsonld: https://localhost/context/x/v1.0.0.jsonld is not read: only https on a public host name'), r.problems.join('\n'));
+  assert.ok(!seen.some((u) => u.startsWith('https://localhost/')), seen.join('\n'));
+  // In a context read from another node: that node wrote it, so a note, as for a node that is down.
+  const theirs = await node();
+  await listNodes(theirs, [{ url: 'https://datamodels.jp/', index: INDEX }]);
+  await writeFile(join(theirs, 'models', 'road', 'context.jsonld'), ctx(TASK_CONTEXT));
+  const files = datamodelsJp();
+  files[TASK_CONTEXT] = { '@context': ['https://127.0.0.1/evil.jsonld', files[TASK_CONTEXT]['@context']] };
+  r = await checkNode(theirs, { fetch: fakeFetch(files) });
+  assert.deepEqual(r.problems, []);
+  assert.ok(r.notes.some((n) => n.startsWith('road/context.jsonld') && n.includes('https://127.0.0.1/evil.jsonld is not read')), r.notes.join('\n'));
+});
+
+test('a schema $ref this node wrote is compared as requested; one in another node\'s schema is a note', async () => {
+  const dir = await node();
+  const file = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const schema = JSON.parse(await readFile(file, 'utf8'));
+  const withRef = async (ref) => writeFile(file, JSON.stringify({ ...schema, properties: { ...schema.properties, route: { $ref: ref, 'x-iri': `${BASE}/ns/road#route` } } }));
+  // An upper-case host is the same address: still this node's $ref, so a problem.
+  await withRef('https://LOCALHOST/schema/common/Route/v1.0.0.json');
+  let r = await checkNode(dir, { fetch: fakeFetch(datamodelsJp()) });
+  assert.ok(r.problems.some((p) => p.startsWith('road/RoadPatrol/schema.json: https://localhost/schema/common/Route/v1.0.0.json is not read')), r.problems.join('\n'));
+  // A $ref inside a schema from another node: a note.
+  const ROUTE = 'https://datamodels.jp/schema/common/Route/v1.0.0.json';
+  await withRef(ROUTE);
+  r = await checkNode(dir, { fetch: fakeFetch({ ...datamodelsJp(), [ROUTE]: { $id: ROUTE, $ref: 'https://127.0.0.1/schema/x.json' } }) });
+  assert.ok(!r.problems.some((p) => p.includes('schema.json')), r.problems.join('\n'));
+  assert.ok(r.notes.some((n) => n.startsWith('road/RoadPatrol/schema.json') && n.includes('https://127.0.0.1/schema/x.json is not read')), r.notes.join('\n'));
 });
 
 test('node.yaml: other nodes only at https addresses; compared as URLs are requested', async () => {

@@ -19,7 +19,7 @@ import { catalogUrls, attributesOf } from './urls.mjs';
 import { schemaRuleProblems, exampleProblems, contextLoader, jsonldProblems, vocabularyProblems } from './examples.mjs';
 import { mappingFileProblems, viaCycles } from './mapping-check.mjs';
 import { compareWithBase } from './published.mjs';
-import { getter } from '../adapters/index.mjs';
+import { getter, normalUrl } from '../adapters/index.mjs';
 import { verifyRelease } from './releases.mjs';
 
 // A schema on another site that could not be read: noted and skipped, never a problem of this node.
@@ -61,17 +61,20 @@ const FULL_IRI = /^(https?|urn):/;
 /**
  * A read that failed, in a few words: the getter's message when it already says
  * that the URL could not be read; otherwise the URL, with the error's code when it
- * has one (ENOTFOUND) or its message.
+ * has one (ENOTFOUND) or its message, without the URL when it starts with it.
  */
-const unread = (url, e) => ([`${url} could not be read`, `${url} is not read`].some((s) => String(e?.message).startsWith(s)) ? e.message
-  : `${url} could not be read (${typeof e?.cause?.code === 'string' ? e.cause.code : e?.message})`);
+const unread = (url, e) => {
+  const msg = String(e?.message);
+  if ([`${url} could not be read`, `${url} is not read`].some((s) => msg.startsWith(s))) return msg;
+  return `${url} could not be read (${typeof e?.cause?.code === 'string' ? e.cause.code : msg.startsWith(`${url}: `) ? msg.slice(url.length + 2) : msg})`;
+};
 
-/** The absolute $refs in a schema, without their #fragment: the schemas it reads from other sites. */
+/** The absolute $refs in a schema, without their #fragment and as requested (normalUrl): the schemas it reads from other sites. */
 function absoluteRefs(schema, out = new Set()) {
   if (Array.isArray(schema)) for (const x of schema) absoluteRefs(x, out);
   else if (schema && typeof schema === 'object') {
     for (const [k, v] of Object.entries(schema)) {
-      if (k === '$ref' && typeof v === 'string' && /^[a-z][a-z0-9+.-]*:/i.test(v)) out.add(v.split('#')[0]);
+      if (k === '$ref' && typeof v === 'string' && /^[a-z][a-z0-9+.-]*:/i.test(v)) out.add(normalUrl(v.split('#')[0]));
       else absoluteRefs(v, out);
     }
   }
@@ -90,7 +93,8 @@ function absoluteRefs(schema, out = new Set()) {
  * too: the parsed document, or undefined for a URL of another site.
  * `written`: the context is this node's own, so an import whose URL as written
  * may not be read (error.refused 'url', from the adapters' getter) is an error,
- * not a note.
+ * not a note. This holds for imports in this node's own files only, not for
+ * those in a context read from another node.
  *
  * An import that cannot be read (or is not read: `offline`) leaves the
  * outcome open: what came before may be overridden, and any term may come
@@ -104,7 +108,7 @@ function absoluteRefs(schema, out = new Set()) {
 export async function resolveContext(context, getJson, { offline = false, local = async () => undefined, written = false } = {}) {
   const state = { iris: new Map(), uncertain: new Set(), open: false, notes: [] };
   const docs = new Map();
-  const walk = async (ctx, stack) => {
+  const walk = async (ctx, stack, mine) => {
     for (const part of [ctx].flat()) {
       if (part === null) { state.iris.clear(); state.uncertain.clear(); state.open = false; continue; }
       if (typeof part === 'object') {
@@ -129,7 +133,7 @@ export async function resolveContext(context, getJson, { offline = false, local 
       if (own !== undefined) {
         theirs = own?.['@context'];
         if (theirs === undefined) throw new Error(`${part} has no @context`);
-        await walk(theirs, [...stack, part]);
+        await walk(theirs, [...stack, part], mine);
         continue;
       }
       if (!offline) {
@@ -138,8 +142,8 @@ export async function resolveContext(context, getJson, { offline = false, local 
           theirs = (await docs.get(part))?.['@context'];
           if (theirs === undefined) throw new Error('no @context');
         } catch (e) {
-          // The URL as this node wrote it may not be read (not https, a private address): an error for the caller.
-          if (written && e.refused === 'url') throw e;
+          // The URL as this node wrote it (in its own files) may not be read (not https, a private address): an error for the caller.
+          if (mine && e.refused === 'url') throw e;
           state.notes.push(unread(part, e)); theirs = undefined;
         }
       }
@@ -149,10 +153,11 @@ export async function resolveContext(context, getJson, { offline = false, local 
         state.open = true;
         continue;
       }
-      await walk(theirs, [...stack, part]);
+      // Another node's context: what it imports, this node did not write.
+      await walk(theirs, [...stack, part], false);
     }
   };
-  await walk(context, []);
+  await walk(context, [], written);
   return state;
 }
 
@@ -272,7 +277,7 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
       if (uri.startsWith(`${urls.baseUrl}/`)) return JSON.parse(await readFile(join(out, uri.slice(urls.baseUrl.length + 1)), 'utf8'));
       if (offline) throw new Unavailable(`${uri} is on another site, not read with --offline`);
       try { return await getJson(uri); } catch (e) {
-        if (e.refused === 'url' && ownRefs.has(uri)) throw new Error(e.message);
+        if (e.refused === 'url' && ownRefs.has(normalUrl(uri))) throw new Error(e.message);
         throw new Unavailable(unread(uri, e));
       }
     } });

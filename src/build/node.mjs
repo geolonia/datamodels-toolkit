@@ -99,7 +99,7 @@ export async function loadNode(dir) {
     const ext = m.catalog?.extends;
     if (ext === undefined) continue;
     if (!Array.isArray(ext) || !ext.every((e) => httpUrl(e?.typeIri) && typeof e?.version === 'string' && /^\d+\.\d+\.\d+$/.test(e.version) && httpsUrl(e?.index))) {
-      throw new Error(`${s.name}/${m.type}/catalog.yaml: extends must be a list of { typeIri, version: X.Y.Z, index }, typeIri an http(s) URL and index an https URL (other nodes are read only over https)`);
+      throw new Error(`${s.name}/${m.type}/catalog.yaml: extends must be a list of { typeIri, version: X.Y.Z, index }, typeIri an http(s) URL and index an https URL (other nodes are read only over https: change http:// to https://)`);
     }
   }
   return { node, urls, subjects };

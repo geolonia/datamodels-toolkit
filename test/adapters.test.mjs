@@ -355,7 +355,7 @@ test('export by type IRI: the usual index when the IRI\'s own index lists it wit
     assert.equal(r.from, DJ_INDEX, JSON.stringify(bad));
     assert.deepEqual(seen.slice(0, 2), [OTHER_INDEX, DJ_INDEX]);
     // With --index, the same entry is refused.
-    if (bad.schemaUrl === undefined) continue;
+    if ('schemaUrl' in bad) continue;
     await assert.rejects(exportModel(HASH_IRI, ['csv'], { dir: noNode, index: OTHER_INDEX, fetch: twoNodes({ [OTHER_INDEX]: own }, []) }), /has no usable type name \(UpperCamelCase\) and version \(x\.y\.z\)/);
   }
 });
