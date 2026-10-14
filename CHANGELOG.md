@@ -6,6 +6,26 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.3.16] - 2026-10-15
+
+Other tools can use the rules `check` applies to a normalized entity. Reads of other nodes refuse more special-purpose addresses.
+
+### Added
+
+- `attributeProblems()` and `unclosedRings()` in `@geolonia/datamodels/ngsi`: the rules that `datamodels check` applies to a normalized entity, so other tools can use the same rules (#120). `attributeProblems` lists each attribute whose type is not the one in `x-ngsi.type` (Property when there is none), that has several instances without `x-ngsi.multi`, or whose date or date-time value has no typed form. `unclosedRings` lists the polygon rings that do not close, as `$.area.coordinates[0]` paths or, with `{ style: 'pointer' }`, as JSON pointers (`/area/coordinates/0`). Both return data, not messages. The messages of `datamodels check` do not change, except that an attribute sent with the wrong type (a Relationship where the schema has a Property) no longer also gets a date message for its value.
+
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.15 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.3.15`. The README uses 0.3.15 too.
+
+### Fixed
+
+- An attribute named `__proto__` is kept as an attribute by `toKeyValues` and `toNormalized` in `@geolonia/datamodels/ngsi`. Before, they dropped it and changed the prototype of the result instead. `datamodels check` now also reports it in the key-values form of `example-normalized.jsonld` when the schema allows no other properties.
+
+### Security
+
+- Reads of other nodes also refuse IPv6 addresses that carry an IPv4 address (6to4 `2002::/16`, Teredo `2001::/32`) or are not reachable on the internet (discard-only `100::/64`, dummy `100:0:0:1::/64`, benchmarking `2001:2::/48`, documentation `3fff::/20`, SRv6 `5f00::/16`), and the IPv4 documentation ranges `198.51.100.0/24` and `203.0.113.0/24`. A host name that resolves to one of them is refused like a private address.
+
 ## [0.3.15] - 2026-10-14
 
 `export` and `extend` find a model by its type IRI on the node that made it; other nodes are read only over https. A node can have a title and description.
@@ -318,7 +338,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.15...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.16...main
+[0.3.16]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.15...v0.3.16
 [0.3.15]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.14...v0.3.15
 [0.3.14]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.13...v0.3.14
 [0.3.13]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.12...v0.3.13

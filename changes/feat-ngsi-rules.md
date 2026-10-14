@@ -1,4 +1,0 @@
----
-section: Added
----
-- `attributeProblems()` and `unclosedRings()` in `@geolonia/datamodels/ngsi`: the rules that `datamodels check` applies to a normalized entity, so other tools can use the same rules (#120). `attributeProblems` lists each attribute whose type is not the one in `x-ngsi.type` (Property when there is none), that has several instances without `x-ngsi.multi`, or whose date or date-time value has no typed form. `unclosedRings` lists the polygon rings that do not close, as `$.area.coordinates[0]` paths or, with `{ style: 'pointer' }`, as JSON pointers (`/area/coordinates/0`). Both return data, not messages. The messages of `datamodels check` do not change, except that an attribute sent with the wrong type (a Relationship where the schema has a Property) no longer also gets a date message for its value.
