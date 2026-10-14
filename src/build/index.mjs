@@ -1,6 +1,6 @@
 // Building a catalog's machine-readable files from a models folder: the same
 // code for datamodels.jp and for any node (geolonia/datamodels#200, #10).
-export { catalogUrls, attributesOf } from './urls.mjs';
+export { catalogUrls, indexForIri, attributesOf } from './urls.mjs';
 export { loadSubjects } from './load.mjs';
 export { buildVocabulary } from './vocab.mjs';
 export { listReleases, snapshotRelease, verifyRelease, releaseContents } from './releases.mjs';

@@ -6,8 +6,7 @@ import { join } from 'node:path';
 import { loadNode } from './build/node.mjs';
 import { catalogUrls } from './build/urls.mjs';
 import { ADAPTERS, getter, textsOfEntry, readRefs, localRefs, schemaPrefixes, normalUrl } from './adapters/index.mjs';
-
-const DEFAULT_INDEX = 'https://datamodels.jp/catalog.json';
+import { DEFAULT_INDEX, indexForModel, triedFirst } from './discover.mjs';
 
 /** A model of another node, from its catalog.json, shaped as loadSubjects() shapes one. */
 export async function remoteModel(target, from, get) {
@@ -38,7 +37,8 @@ export async function remoteModel(target, from, get) {
  * The files of the adapters `names` for one entity model: { files: [{ adapter, name, content }], from, typeIri }.
  * `target`: <subject>/<Type>, or a type IRI for a model of another node.
  * The model is this node's when `dir` is a node that has it and no `index` is
- * given; otherwise it is read from `index` (default: the first node in
+ * given; otherwise it is read from `index` (default: for a type IRI the index
+ * of the node that minted it, when that index lists it; else the first node in
  * node.yaml, else datamodels.jp).
  */
 export async function exportModel(target, names, { dir = '.', index, fetch: fetchUrl = globalThis.fetch, timeout = 20000 } = {}) {
@@ -61,8 +61,12 @@ export async function exportModel(target, names, { dir = '.', index, fetch: fetc
     context = { urls: local.urls, languages: local.node.languages, refs };
     from = dir;
   } else {
-    from = index ?? local?.node.nodes?.[0]?.index ?? DEFAULT_INDEX;
-    const r = await remoteModel(target, from, getter(fetchUrl, timeout));
+    const get = getter(fetchUrl, timeout);
+    const fallback = index ?? local?.node.nodes?.[0]?.index ?? DEFAULT_INDEX;
+    // A type IRI without --index: the index of the node that minted it first (one read, kept by get).
+    const pick = byIri && !index ? await indexForModel(target, fallback, get) : { from: fallback, tried: null };
+    from = pick.from;
+    const r = await remoteModel(target, from, get).catch((e) => { throw triedFirst(e, pick.tried); });
     ({ subject, model } = r);
     const { refs, problems } = await readRefs([model], { entries: r.entries, fetch: fetchUrl, timeout, trusted: schemaPrefixes(r.nodes) });
     if (problems.length) throw new Error(problems.join('\n'));

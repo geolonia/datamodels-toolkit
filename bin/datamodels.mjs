@@ -58,8 +58,9 @@
 // export writes the files of the adapters (src/adapters/) for one entity
 // model: a CSV template, its Table Schema, a JSON Schema for the structured
 // output of AI models, a PostgreSQL / PostGIS table. The model is the node's
-// in dir when it has one; otherwise it is read from --index (default: the
-// first node in node.yaml, else datamodels.jp).
+// in dir when it has one; otherwise it is read from --index (default: for a
+// type IRI the index of the node that minted it, when that index lists it;
+// else the first node in node.yaml, else datamodels.jp).
 //
 //   datamodels search <words…> [--index URL] [--depth N] [--limit N] [--json]
 //   datamodels nodes [--index URL] [--depth N] [--json]
@@ -212,7 +213,7 @@ function program({ onConvert, onMapping, onBuild, onCheck, onInit, onAdd, onRele
     .argument('[model]', 'the model to extend: <subject>/<Type> as in the index, or its type IRI (asked in a terminal)')
     .argument('[subject/Type]', 'the new model in this node, for example road/RoadTask (asked in a terminal)')
     .argument('[dir]', 'the node: node.yaml and models/', '.')
-    .option('--index <URL>', "the other node's catalog.json (default: the first node in node.yaml, else datamodels.jp)", value('--index'))
+    .option('--index <URL>', "the other node's catalog.json (default: for a type IRI, its own node's index when that lists it; else the first node in node.yaml, else datamodels.jp)", value('--index'))
     .option('--subclass', "a subtype with its own type IRI, instead of the same type with more attributes")
     .action(onExtend);
   cli.command('export')
@@ -222,7 +223,7 @@ function program({ onConvert, onMapping, onBuild, onCheck, onInit, onAdd, onRele
     .argument('[dir]', "the node; its own model if it has one, else the other node's", '.')
     .requiredOption('--to <adapters>', `one or more of ${ADAPTERS.map((a) => a.name).join(', ')}, comma-separated`, value('--to'))
     .option('--out <dir>', 'where to write the files (default: the current directory)', value('--out'))
-    .option('--index <URL>', "another node's catalog.json (default: the first node in node.yaml, else datamodels.jp)", value('--index'))
+    .option('--index <URL>', "another node's catalog.json (default: for a type IRI, its own node's index when that lists it; else the first node in node.yaml, else datamodels.jp)", value('--index'))
     .action(onExport);
   cli.command('search')
     .description('find models by words in their type, title, attributes and description, in datamodels.jp (or another index) and the nodes it links to')
@@ -445,7 +446,7 @@ async function upgrade(dir, { to }) {
 async function extend(model, target, dir, { index, subclass }) {
   if (!model || !target) {
     if (!(process.stdin.isTTY && process.stdout.isTTY)) usage('missing arguments', USAGES.extend);
-    ({ model, target } = await askExtend(model, target, dir, index));
+    ({ model, target, index } = await askExtend(model, target, dir, index));
   }
   let r;
   try { r = await extendModel(dir, model, target, { index, subclass }); } catch (e) { fail(e.message); }
@@ -521,10 +522,12 @@ async function askExtend(model, target, dir, index) {
     let models;
     try { models = await extendableModels(from); } catch (e) { fail(e.message); }
     model = await answer(await p.select({ message: `Model to extend (${from})`, options: models.map((m) => ({ value: m.typeIri, label: `${m.subject}/${m.type}`, hint: m.title?.en ?? m.title?.ja })) }));
+    // The model picked from this index, not from the index of the node that minted its IRI (an alias has another node's IRI).
+    index = from;
   }
   if (!target) target = await answer(await p.text({ message: 'The new model in this node (<subject>/<Type>)', placeholder: 'road/RoadTask', validate: (v) => (/^[a-z][a-z0-9-]*\/[A-Z][A-Za-z0-9]*$/.test(v ?? '') ? undefined : 'subject/Type, for example road/RoadTask') }));
   p.outro('Writing the files.');
-  return { model, target };
+  return { model, target, index };
 }
 
 async function init(dir, options) {

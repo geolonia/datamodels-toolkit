@@ -5,7 +5,9 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { discoverNodes, searchModels, indexUrl, plain, words, MAX_NODES } from '../src/discover.mjs';
+import { discoverNodes, searchModels, indexUrl, indexForIri, indexForModel, triedFirst, plain, words, MAX_NODES, DEFAULT_INDEX } from '../src/discover.mjs';
+import { getter } from '../src/adapters/index.mjs';
+import * as build from '../src/build/index.mjs';
 
 const run = promisify(execFile);
 const BIN = join(import.meta.dirname, '..', 'bin', 'datamodels.mjs');
@@ -202,4 +204,90 @@ test('the command line: usage errors and an index it may not read', async () => 
   r = await datamodels('search', 'shelter', '--index', 'http://models.example.org/');
   assert.equal(r.code, 1);
   assert.match(r.stderr, /^http:\/\/models\.example\.org\/catalog\.json is not read/);
+});
+
+// A model given by its type IRI, without an index (geolonia/datamodels#222):
+// the index of the node that minted the IRI is tried first.
+
+test('indexForIri: no index for an IRI that is not https, has no /ns/ at its place, or is not a URL', () => {
+  for (const iri of [
+    'http://models.example.org/ns/road#RoadTask', // not https: never read
+    'https://models.example.org/vocab/road/RoadTask', // no /ns/
+    'https://models.example.org/ns/road', // a namespace, no type
+    'https://models.example.org/ns/road#', // an empty fragment
+    'https://models.example.org/ns/road/', // a namespace with slash IRIs
+    'https://models.example.org/ns/a/b/Type', // /ns/ not where a node puts it
+    'https://user:secret@models.example.org/ns/road/RoadTask', // credentials
+    'https://models.example.org/ns/road/RoadTask?x=1', // a query
+    'urn:ngsi-ld:ns/road/RoadTask', 'road/RoadTask', '', undefined,
+  ]) assert.equal(indexForIri(iri), null, String(iri));
+});
+
+test('indexForIri: the index of the node that minted a slash or hash IRI', () => {
+  assert.equal(indexForIri('https://datamodels.jp/ns/task/Task'), DEFAULT_INDEX);
+  assert.equal(indexForIri('https://models.geolonia.com/ns/smartmap#HazardArea'), 'https://models.geolonia.com/catalog.json');
+  // A node under a path (a GitHub Pages project site).
+  assert.equal(indexForIri('https://dkastl.github.io/models/ns/activity#Activity'), 'https://dkastl.github.io/models/catalog.json');
+  assert.equal(indexForIri('https://owner.github.io/repo/ns/task/Task'), 'https://owner.github.io/repo/catalog.json');
+  // A subject named ns, and /ns/ twice: the /ns/ a node puts before the subject counts.
+  assert.equal(indexForIri('https://x.example.org/ns/ns/Type'), 'https://x.example.org/catalog.json');
+  assert.equal(indexForIri('https://x.example.org/a/ns/b/ns/c#Type'), 'https://x.example.org/a/ns/b/catalog.json');
+  // The reverse of catalogUrls(): every IRI a node mints leads back to its index.
+  for (const iris of ['slash', 'hash']) for (const base of ['https://models.example.org', 'https://owner.github.io/repo']) {
+    assert.equal(indexForIri(build.catalogUrls(base, { iris }).term('road', 'RoadTask')), `${base}/catalog.json`, `${base} ${iris}`);
+  }
+  // Exported for other tools, such as the datamodels.jp MCP server.
+  assert.equal(build.indexForIri, indexForIri);
+});
+
+const OWN = 'https://models.example.org/catalog.json';
+const IRI = 'https://models.example.org/ns/road#RoadTask';
+const pickFor = async (iri, files, fallback = DEFAULT_INDEX) => {
+  const seen = [];
+  const r = await indexForModel(iri, fallback, getter(stub(files, seen), 1000));
+  return { ...r, seen };
+};
+
+test('indexForModel: the usual index, with nothing read, when the IRI has no index of its own or it is the usual one', async () => {
+  for (const iri of ['http://models.example.org/ns/road#RoadTask', 'https://models.example.org/vocab/road/RoadTask', 'road/RoadTask', 'https://datamodels.jp/ns/task/Task']) {
+    assert.deepEqual(await pickFor(iri, { [OWN]: { models: [] } }), { from: DEFAULT_INDEX, tried: null, seen: [] }, iri);
+  }
+  // The usual index written another way (dot segments) is the same index.
+  assert.deepEqual(await pickFor(IRI, {}, 'https://models.example.org/x/../catalog.json'), { from: 'https://models.example.org/x/../catalog.json', tried: null, seen: [] });
+});
+
+test('indexForModel: never reads an index on a local or private host', async () => {
+  for (const iri of ['https://localhost/ns/road#RoadTask', 'https://127.0.0.1/ns/road/RoadTask', 'https://169.254.169.254/ns/road/RoadTask', 'https://printer.local/ns/road/RoadTask']) {
+    const r = await pickFor(iri, {});
+    assert.equal(r.from, DEFAULT_INDEX, iri);
+    assert.match(r.tried, /is not read: only https on a public host name/, iri);
+    assert.deepEqual(r.seen, [], iri);
+  }
+});
+
+test('indexForModel: the usual index when the IRI\'s own index cannot be read or does not list it', async () => {
+  const cases = [
+    [{}, `${OWN}: HTTP 404`],
+    [{ [OWN]: () => { throw Object.assign(new Error('fetch failed'), { cause: { code: 'ENOTFOUND' } }); } }, `${OWN} could not be read (ENOTFOUND)`],
+    [{ [OWN]: { hello: 'not an index' } }, `${OWN}: no models (is it a catalog.json?)`],
+    [{ [OWN]: { models: [{ type: 'RoadTask', typeIri: 'https://models.example.org/ns/road#Other' }] } }, `${OWN} does not list it`],
+  ];
+  for (const [files, tried] of cases) assert.deepEqual(await pickFor(IRI, files), { from: DEFAULT_INDEX, tried, seen: [OWN] });
+  // Not JSON.
+  const text = async () => new Response('<html>', { status: 200 });
+  assert.deepEqual(await pickFor(IRI, { [OWN]: text }), { from: DEFAULT_INDEX, tried: `${OWN}: not JSON`, seen: [OWN] });
+  // The reason is added to the error of the usual index, once.
+  assert.equal(triedFirst(new Error('X is not a model in Y'), `${OWN}: HTTP 404`).message, `X is not a model in Y (tried first: ${OWN}: HTTP 404)`);
+  const e = new Error('same');
+  assert.equal(triedFirst(e, null), e);
+});
+
+test('indexForModel: the IRI\'s own index when it lists a model with that IRI, an alias included', async () => {
+  const catalog = { models: [{ type: 'RoadTask', typeIri: IRI }] };
+  assert.deepEqual(await pickFor(IRI, { [OWN]: catalog }), { from: OWN, catalog, seen: [OWN] });
+  // A model that is another name (aliasOf) for the type has its IRI too, so it counts, as in a lookup with --index.
+  const alias = { models: [{ type: 'Errand', typeIri: IRI, aliasOf: IRI }] };
+  assert.deepEqual(await pickFor(IRI, { [OWN]: alias }), { from: OWN, catalog: alias, seen: [OWN] });
+  // Whatever the usual index is (here the first node in node.yaml).
+  assert.equal((await pickFor(IRI, { [OWN]: catalog }, 'https://other.example.org/catalog.json')).from, OWN);
 });

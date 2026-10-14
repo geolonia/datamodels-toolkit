@@ -48,6 +48,28 @@ export function catalogUrls(baseUrl, { pageEn = null, iris = 'slash' } = {}) {
   return { baseUrl: base, iris, term, subjectUrls, modelUrls, versionUrls, pageEn: pageEn ?? ((url) => url) };
 }
 
+/**
+ * The index (catalog.json) of the node that minted a type IRI, read from the
+ * IRI itself: the reverse of term() above. A node's IRIs are
+ * <base>/ns/<subject>/<Type> (slash) or <base>/ns/<subject>#<Type> (hash), and
+ * its index is <base>/catalog.json (docs/node.md section 5), for example
+ *   https://models.geolonia.com/ns/smartmap#HazardArea → https://models.geolonia.com/catalog.json
+ *   https://datamodels.jp/ns/task/Task → https://datamodels.jp/catalog.json
+ * Returns null for anything else: not https, a user name or query in the URL,
+ * or no /ns/ at that place. It only builds the URL: whoever reads it still
+ * checks the host (src/adapters/index.mjs, getter).
+ */
+export function indexForIri(iri) {
+  let u;
+  try { u = new URL(iri); } catch { return null; }
+  if (u.protocol !== 'https:' || u.username || u.password || u.search) return null;
+  const parts = u.pathname.split('/');
+  // Hash IRIs end in /ns/<subject>, slash IRIs in /ns/<subject>/<Type>.
+  const tail = u.hash.length > 1 ? 2 : 3;
+  if (parts.length < tail + 1 || parts.at(-tail) !== 'ns' || parts.slice(-tail + 1).some((p) => !p)) return null;
+  return `${u.origin}${parts.slice(0, -tail).join('/')}/catalog.json`;
+}
+
 /** Attributes of a model: every schema property except id, type and @context. */
 export function attributesOf(model) {
   return Object.entries(model.schema.properties ?? {}).filter(([k]) => k !== 'id' && k !== 'type' && k !== '@context');

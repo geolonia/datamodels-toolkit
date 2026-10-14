@@ -8,12 +8,41 @@
 // adapters' getter: https only, a public host name, checked again on every
 // redirect and when connecting (src/adapters/net.mjs). A node that cannot be
 // read is a note, never a failure, except the index the search starts at.
+//
+// Also where export and extend look for a model given by its type IRI: the
+// index of the node that minted the IRI, before the usual one (indexForModel).
 import { getter, normalUrl } from './adapters/index.mjs';
+import { indexForIri } from './build/urls.mjs';
 
+export { indexForIri };
 export const DEFAULT_INDEX = 'https://datamodels.jp/catalog.json';
+
 // Limits, so a long chain of links or a large network cannot keep the command busy.
 export const MAX_DEPTH = 5;
 export const MAX_NODES = 50;
+
+/**
+ * Where to look for a model given by its type IRI, when no index is given
+ * (geolonia/datamodels#222): first the index of the node that minted the IRI
+ * (indexForIri), then `fallback`, the index the command used before. The
+ * IRI's own index is read once with `get` (a getter(): https on a public host
+ * only) and used when it lists a model with that type IRI, an alias included.
+ * Returns { from, catalog } when it is used, else { from: fallback, tried },
+ * with `tried` saying why it was not used (null when nothing was read: the IRI
+ * has no index of its own, or it is the fallback itself).
+ */
+export async function indexForModel(iri, fallback, get) {
+  const own = indexForIri(iri);
+  if (!own || own === normalUrl(fallback)) return { from: fallback, tried: null };
+  let catalog;
+  try { catalog = await get(own); } catch (e) { return { from: fallback, tried: e.message }; }
+  if (!Array.isArray(catalog?.models)) return { from: fallback, tried: `${own}: no models (is it a catalog.json?)` };
+  if (!catalog.models.some((m) => m?.typeIri === iri)) return { from: fallback, tried: `${own} does not list it` };
+  return { from: own, catalog };
+}
+
+/** An error of the lookup in the fallback index, with why the IRI's own index was not used. */
+export const triedFirst = (e, tried) => (tried ? new Error(`${e.message} (tried first: ${tried})`) : e);
 
 /**
  * The index URL for what is given: a catalog.json, or the address of a node

@@ -143,3 +143,65 @@ test('datamodels extend without its arguments outside a terminal is a usage erro
   assert.equal(r.code, 2);
   assert.match(r.stderr, /missing arguments\nusage: datamodels extend <model> <subject>\/<Type> \[dir\] \[--index URL\] \[--subclass\]/);
 });
+
+// A model of another node by its type IRI, without --index (geolonia/datamodels#222):
+// the index of the node that minted the IRI first, then the usual one.
+const GH = 'https://owner.github.io/repo';
+const GH_INDEX = `${GH}/catalog.json`;
+const GH_TASK = `${GH}/ns/task#Task`;
+/** datamodels.jp's files as another node under GH, whose Task has a hash IRI. */
+const ghFiles = JSON.parse(JSON.stringify(files).replaceAll(DJ, GH));
+ghFiles[GH_INDEX].models[0].typeIri = GH_TASK;
+/** datamodels.jp with one more model, Errand: another name (an alias) for GH's Task. */
+const withAlias = structuredClone(files);
+withAlias[INDEX].models.push({ ...files[INDEX].models[0], type: 'Errand', typeIri: GH_TASK, aliasOf: GH_TASK, title: { ja: '用事', en: 'Errand' } });
+/** fakeFetch that writes down every URL it is asked for. */
+const seenFetch = (served, seen) => { const f = fakeFetch(served); return (url, o) => { seen.push(String(url)); return f(url, o); }; };
+
+test('extend by type IRI: the usual index when the IRI\'s own index cannot be read or does not list it; nothing written on an error', async () => {
+  const dir = await node();
+  const before = await read(dir, 'node.yaml');
+  let seen = [];
+  await assert.rejects(extendModel(dir, GH_TASK, 'road/RoadTask', { fetch: seenFetch(files, seen) }),
+    { message: `${GH_TASK} is not an entity type in ${INDEX} (tried first: ${GH_INDEX}: HTTP 404)` });
+  assert.deepEqual(seen, [GH_INDEX, INDEX]);
+  assert.equal(await read(dir, 'node.yaml'), before);
+  // Not https: never read, and no "tried first".
+  seen = [];
+  const plainHttp = GH_TASK.replace('https:', 'http:');
+  await assert.rejects(extendModel(dir, plainHttp, 'road/RoadTask', { fetch: seenFetch({ ...files, ...ghFiles }, seen) }), { message: `${plainHttp} is not an entity type in ${INDEX}` });
+  assert.deepEqual(seen, [INDEX]);
+  // On a local or private host: never read either.
+  seen = [];
+  await assert.rejects(extendModel(dir, 'https://127.0.0.1/ns/task#Task', 'road/RoadTask', { fetch: seenFetch(files, seen) }),
+    /\(tried first: https:\/\/127\.0\.0\.1\/catalog\.json is not read: only https on a public host name\)$/);
+  assert.deepEqual(seen, [INDEX]);
+  // Readable but without the IRI: the usual index, here with an alias of it.
+  seen = [];
+  const without = structuredClone(ghFiles);
+  without[GH_INDEX].models = without[GH_INDEX].models.filter((m) => m.typeIri !== GH_TASK);
+  const r = await extendModel(dir, GH_TASK, 'road/RoadTask', { fetch: seenFetch({ ...withAlias, ...without }, seen) });
+  assert.deepEqual(seen.slice(0, 2), [GH_INDEX, INDEX]);
+  assert.deepEqual(r.extends, { typeIri: GH_TASK, version: '1.0.0', index: INDEX });
+});
+
+test('extend by type IRI: the index of the node that minted it, read once, before the usual one', async () => {
+  const dir = await node();
+  const seen = [];
+  // datamodels.jp has an alias of the type (Errand): the node that minted it is used.
+  const r = await extendModel(dir, GH_TASK, 'road/RoadTask', { fetch: seenFetch({ ...withAlias, ...ghFiles }, seen) });
+  assert.deepEqual(r.extends, { typeIri: GH_TASK, version: '1.0.0', index: GH_INDEX });
+  assert.equal(r.typeIri, GH_TASK);
+  assert.deepEqual(YAML.parse(await read(dir, 'node.yaml')).nodes, [{ url: `${GH}/`, index: GH_INDEX }]);
+  assert.equal(seen.filter((u) => u === GH_INDEX).length, 1);
+  assert.ok(!seen.includes(INDEX));
+  assert.ok(JSON.parse(await read(dir, 'models/road/context.jsonld'))['@context'].includes(`${GH}/context/task/v1.0.0.jsonld`));
+});
+
+test('extend by type IRI with --index: that index only, nothing derived', async () => {
+  const dir = await node();
+  const seen = [];
+  const r = await extendModel(dir, GH_TASK, 'road/RoadTask', { index: INDEX, fetch: seenFetch({ ...withAlias, ...ghFiles }, seen) });
+  assert.deepEqual(r.extends, { typeIri: GH_TASK, version: '1.0.0', index: INDEX });
+  assert.ok(!seen.includes(GH_INDEX));
+});

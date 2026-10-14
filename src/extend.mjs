@@ -16,9 +16,10 @@ import { readNode } from './build/node.mjs';
 import { parseYaml } from './build/load.mjs';
 import { catalogUrls } from './build/urls.mjs';
 import { placeModel } from './add.mjs';
+import { getter } from './adapters/index.mjs';
+import { DEFAULT_INDEX, indexForModel, triedFirst } from './discover.mjs';
 
 const TYPE_NAME = /^[A-Z][A-Za-z0-9]*$/;
-const DEFAULT_INDEX = 'https://datamodels.jp/catalog.json';
 const exists = (p) => stat(p).then(() => true, () => false);
 // Keys of the other catalog's schema that describe it, not the copy.
 const NOT_COPIED = ['$id', 'title', 'x-version', 'x-license-url', 'x-model-tags', 'x-derived-from', 'x-alias-of', 'x-subclass-of'];
@@ -28,14 +29,20 @@ export async function extendableModels(index, { fetch: fetchUrl = globalThis.fet
   const res = await fetchUrl(index, { signal: AbortSignal.timeout(timeout) }).catch((e) => { throw new Error(`${index} could not be read (${e.cause?.code ?? e.message})`); });
   if (!res.ok) throw new Error(`${index}: HTTP ${res.status}`);
   const catalog = await res.json().catch(() => { throw new Error(`${index}: not JSON`); });
+  return entityModels(catalog, index);
+}
+
+/** The models of a catalog that can be extended (extendableModels). */
+function entityModels(catalog, index) {
   if (!Array.isArray(catalog?.models)) throw new Error(`${index}: no models (is it a catalog.json?)`);
   return catalog.models.filter((m) => (m.kind ?? 'entity') === 'entity' && m.typeIri && m.version && m.contextUrl && m.schemaUrl);
 }
 
 /**
  * Extend `source` (a type IRI, or <subject>/<Type> as in the index) as
- * `target` (<subject>/<Type> of this node). Options: `index` (default: the
- * first node in node.yaml, else datamodels.jp), `subclass`, `fetch`, `timeout`.
+ * `target` (<subject>/<Type> of this node). Options: `index` (default: for a
+ * type IRI the index of the node that minted it, when that index lists it;
+ * else the first node in node.yaml, else datamodels.jp), `subclass`, `fetch`, `timeout`.
  * Returns { added, changed, typeIri, extends }.
  */
 export async function extendModel(dir, source, target, { index, subclass = false, fetch: fetchUrl = globalThis.fetch, timeout = 20000 } = {}) {
@@ -46,7 +53,12 @@ export async function extendModel(dir, source, target, { index, subclass = false
   const subjectDir = join(dir, 'models', subjectName);
   if (!(await exists(join(subjectDir, 'subject.yaml')))) throw new Error(`no subject ${subjectName} in ${join(dir, 'models')} (datamodels init writes the first one)`);
   const subject = await parseYaml(join(subjectDir, 'subject.yaml'), join(dir, 'models'));
-  const from = index ?? node.nodes?.[0]?.index ?? DEFAULT_INDEX;
+  const usual = index ?? node.nodes?.[0]?.index ?? DEFAULT_INDEX;
+  // A type IRI without --index: the index of the node that minted it first, read once
+  // through the adapters' getter (https on a public host only).
+  const byIri = /^https?:\/\//.test(source);
+  const where = byIri && !index ? await indexForModel(source, usual, getter(fetchUrl, timeout)) : { from: usual, tried: null };
+  const from = where.from;
   const get = async (url) => {
     let res;
     try { res = await fetchUrl(url, { signal: AbortSignal.timeout(timeout) }); } catch (e) { throw new Error(`${url} could not be read (${e.cause?.code ?? e.message})`); }
@@ -54,9 +66,12 @@ export async function extendModel(dir, source, target, { index, subclass = false
     return res.json();
   };
 
-  const models = await extendableModels(from, { fetch: fetchUrl, timeout });
-  const entry = /^https?:\/\//.test(source) ? models.find((m) => m.typeIri === source) : models.find((m) => `${m.subject}/${m.type}` === source);
-  if (!entry) throw new Error(`${source} is not an entity type in ${from}${/^https?:/.test(source) ? '' : ' (give <subject>/<Type> as listed there, or its type IRI)'}`);
+  const entry = await (async () => {
+    const models = where.catalog ? entityModels(where.catalog, from) : await extendableModels(from, { fetch: fetchUrl, timeout });
+    const found = byIri ? models.find((m) => m.typeIri === source) : models.find((m) => `${m.subject}/${m.type}` === source);
+    if (!found) throw new Error(`${source} is not an entity type in ${from}${byIri ? '' : ' (give <subject>/<Type> as listed there, or its type IRI)'}`);
+    return found;
+  })().catch((e) => { throw triedFirst(e, where.tried); });
   const theirs = await get(entry.schemaUrl);
 
   // This node imports the other node's @context, so it must list that node (node.yaml, nodes).
