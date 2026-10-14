@@ -1,4 +1,4 @@
 ---
 section: Changed
 ---
-- `export` and `extend` with a type IRI and no `--index`: the node that made the IRI now comes before a model with the same IRI (an alias) in the first node of `node.yaml`. For example, datamodels.jp's `Task` IRI now gives datamodels.jp's `Task`, not GTT's `Issue`. `extend` records that node in `extends[].index` and, when it is new, in `node.yaml`. To get the alias, give `--index` with the alias's node, or `<subject>/<Type>` (geolonia/datamodels#222).
+- `export` and `extend` now read the model from the node that made the IRI, even when the first node in node.yaml (else datamodels.jp) lists an alias with the same IRI. To get the alias, give `--index` with the alias's node, or give the alias as `<subject>/<Type>` when that node is the first one in node.yaml. `extend` records the node it used in `extends[].index` and, when it is new, in node.yaml (geolonia/datamodels#222).

@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import YAML from 'yaml';
-import { extendModel } from '../src/extend.mjs';
+import { extendModel, extendChoices, extendMessage } from '../src/extend.mjs';
 import { checkNode } from '../src/build/index.mjs';
 
 const run = promisify(execFile);
@@ -196,7 +196,10 @@ test('extend reads a schema and an example only from the other node\'s schema/ a
     [{ schemaUrl: 'https://elsewhere.example/schema/x/Y/v1.0.0.json' }, /\(https:\/\/elsewhere\.example\/schema\/x\/Y\/v1\.0\.0\.json\) is not under https:\/\/evil\.example\/schema\//],
     // Out of schema/ by dot segments.
     [{ schemaUrl: `${EVIL}/schema/../secret.json` }, /is not under https:\/\/evil\.example\/schema\//],
-    // A schema in place, but the example on a local server.
+    // A schema in place, but the example on a local server, or out of examples/ by dot segments.
+    [{ exampleUrls: [`${EVIL}/examples/../meta-data/example.json`] }, /the example of .* \(https:\/\/evil\.example\/examples\/\.\.\/meta-data\/example\.json\) is not under https:\/\/evil\.example\/examples\/, not read/],
+    // A @context out of context/ by %2e%2e: refused, never written.
+    [{ contextUrl: `${EVIL}/context/%2e%2e/%2e%2e/x.jsonld` }, /context\/%2e%2e\/%2e%2e\/x\.jsonld is not under https:\/\/evil\.example\/context\//],
     [{ exampleUrls: ['http://127.0.0.1:8080/example.json'] }, /the example of .* \(http:\/\/127\.0\.0\.1:8080\/example\.json\) is not under https:\/\/evil\.example\/examples\/, not read/],
     // A @context elsewhere: refused before anything else is read.
     [{ contextUrl: 'https://elsewhere.example/context/x.jsonld', schemaUrl: 'http://169.254.169.254/x.json' }, /x\.jsonld is not under https:\/\/evil\.example\/context\//],
@@ -260,4 +263,55 @@ test('extend by type IRI with --index: that index only, nothing derived', async 
   const r = await extendModel(dir, GH_TASK, 'road/RoadTask', { index: INDEX, fetch: seenFetch({ ...withAlias, ...ghFiles }, seen) });
   assert.deepEqual(r.extends, { typeIri: GH_TASK, version: '1.0.0', index: INDEX });
   assert.ok(!seen.includes(GH_INDEX));
+});
+
+test('extend: a model whose type or version is not plain is not taken; the IRI\'s own index then falls back', async () => {
+  const injected = structuredClone(ghFiles);
+  Object.assign(injected[GH_INDEX].models[0], { version: '1.0.0\nstatus: stable\nfoo: bar' });
+  // With the IRI's own index: the usual one is used (here with an alias of the type).
+  const dir = await node();
+  const r = await extendModel(dir, GH_TASK, 'road/RoadTask', { fetch: fakeFetch({ ...withAlias, ...injected }) });
+  assert.deepEqual(r.extends, { typeIri: GH_TASK, version: '1.0.0', index: INDEX });
+  const written = YAML.parse(await read(dir, 'models/road/RoadTask/catalog.yaml'));
+  assert.equal(written.foo, undefined);
+  assert.equal(written.status, 'draft');
+  // With --index: not an entity type that can be extended there.
+  for (const bad of [{ version: '1.0.0\nfoo: bar' }, { version: 'v1' }, { type: 'Task\nfoo: bar' }, { type: 'task' }, { typeIri: `${GH_TASK}\nfoo: bar` }]) {
+    const served = structuredClone(ghFiles);
+    Object.assign(served[GH_INDEX].models[0], bad);
+    const source = bad.typeIri ?? GH_TASK;
+    await assert.rejects(extendModel(await node(), source, 'road/RoadTask', { index: GH_INDEX, fetch: fakeFetch(served) }), /is not an entity type in https:\/\/owner\.github\.io\/repo\/catalog\.json/, JSON.stringify(bad));
+  }
+});
+
+test('extend: the @context is imported as it is requested', async () => {
+  const dotted = structuredClone(ghFiles);
+  dotted[GH_INDEX].models[0].contextUrl = `${GH}/context/x/%2e%2e/task/v1.0.0.jsonld`;
+  const dir = await node();
+  await extendModel(dir, GH_TASK, 'road/RoadTask', { fetch: fakeFetch(dotted) });
+  assert.deepEqual(JSON.parse(await read(dir, 'models/road/context.jsonld'))['@context'][0], `${GH}/context/task/v1.0.0.jsonld`);
+});
+
+test('extend by type IRI: a host that does not answer holds up the usual index only for the short wait', async () => {
+  // The IRI's own host never answers; the other reads have the usual 20 s.
+  const silent = (url, o) => (url.startsWith(GH) ? new Promise((_, reject) => o.signal.addEventListener('abort', () => reject(o.signal.reason))) : fakeFetch(withAlias)(url, o));
+  const started = Date.now();
+  const r = await extendModel(await node(), GH_TASK, 'road/RoadTask', { fetch: silent, timeout: 20000, guessTimeout: 100 });
+  assert.equal(r.extends.index, INDEX);
+  assert.ok(Date.now() - started < 2000, `${Date.now() - started} ms`);
+});
+
+test('the picker of extend: the models of the index it shows, which the model picked is extended from', async () => {
+  const fetch = fakeFetch({ ...withAlias, ...ghFiles });
+  assert.equal((await extendChoices(await node(), undefined, { fetch })).index, INDEX);
+  const listed = await node(`nodes:\n  - { url: ${GH}/, index: ${GH_INDEX} }\n`);
+  const r = await extendChoices(listed, undefined, { fetch });
+  assert.equal(r.index, GH_INDEX);
+  assert.deepEqual(r.models.map((m) => m.typeIri), [GH_TASK]);
+  assert.equal((await extendChoices(listed, INDEX, { fetch })).index, INDEX);
+});
+
+test('extend says which index the model came from', () => {
+  const line = extendMessage('road/RoadTask', { typeIri: GH_TASK, extends: { typeIri: GH_TASK, version: '1.0.0', index: GH_INDEX } });
+  assert.match(line, new RegExp(`^road/RoadTask: ${GH_TASK}, extends ${GH_TASK} v1\\.0\\.0, from ${GH_INDEX.replaceAll('.', '\\.')}\\. Next:`));
 });

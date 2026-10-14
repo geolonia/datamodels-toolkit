@@ -37,11 +37,16 @@ export function publicUrl(url) {
 
 const REDIRECTS = 5;
 
+/** An error for a URL that is not read because of where it is: `refused` tells it from a host that is down. */
+const refusal = (message) => Object.assign(new Error(message), { refused: true });
+
 /**
  * A reader of JSON URLs that reads each once. The first URL and every redirect
  * must be a publicUrl(); with the global fetch (the default everywhere), it
  * reads through publicFetch, which also refuses a host that resolves to a
  * private address. Tests pass a fetch of their own.
+ * `timeout` (ms) is for the whole read of a URL, its redirects included.
+ * An error for a URL that is not read because of where it is has `refused: true`.
  */
 export const getter = (fetchUrl, timeout) => {
   const read = !fetchUrl || fetchUrl === globalThis.fetch ? publicFetch : fetchUrl;
@@ -51,13 +56,19 @@ export const getter = (fetchUrl, timeout) => {
       cache.set(url, (async () => {
         let res;
         let at = normalUrl(url);
-        if (!publicUrl(at)) throw new Error(`${url} is not read: only https on a public host name`);
+        if (!publicUrl(at)) throw refusal(`${url} is not read: only https on a public host name`);
+        // One deadline for the read, so a chain of redirects cannot make it longer.
+        const signal = AbortSignal.timeout(timeout);
         for (let hop = 0; ; hop++) {
-          try { res = await read(at, { signal: AbortSignal.timeout(timeout), redirect: 'manual' }); } catch (e) { throw new Error(`${url} could not be read (${e.cause?.code ?? e.message})`); }
+          try { res = await read(at, { signal, redirect: 'manual' }); } catch (e) {
+            // A host that resolves to a private address (publicFetch) is refused, not down.
+            // The cause stays, for callers that show only its code (check).
+            throw Object.assign(new Error(`${url} could not be read (${e.cause?.code ?? e.message})`, { cause: e.cause ?? (typeof e?.code === 'string' ? e : undefined) }), e?.code === 'ENOTPUBLIC' ? { refused: true } : {});
+          }
           const location = res.status >= 300 && res.status < 400 ? res.headers?.get?.('location') : null;
           if (!location) break;
           const next = normalUrl(new URL(location, at).href);
-          if (hop >= REDIRECTS || !publicUrl(next)) throw new Error(`${url}: redirects to ${next ?? location}, not followed (only to https on a public host name, at most ${REDIRECTS} times)`);
+          if (hop >= REDIRECTS || !publicUrl(next)) throw refusal(`${url}: redirects to ${next ?? location}, not followed (only to https on a public host name, at most ${REDIRECTS} times)`);
           at = next;
         }
         if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);

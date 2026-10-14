@@ -19,6 +19,7 @@ import { catalogUrls, attributesOf } from './urls.mjs';
 import { schemaRuleProblems, exampleProblems, contextLoader, jsonldProblems, vocabularyProblems } from './examples.mjs';
 import { mappingFileProblems, viaCycles } from './mapping-check.mjs';
 import { compareWithBase } from './published.mjs';
+import { getter } from '../adapters/index.mjs';
 import { verifyRelease } from './releases.mjs';
 
 // A schema on another site that could not be read: noted and skipped, never a problem of this node.
@@ -113,7 +114,11 @@ export async function resolveContext(context, getJson, { offline = false, local 
           if (!docs.has(part)) docs.set(part, getJson(part));
           theirs = (await docs.get(part))?.['@context'];
           if (theirs === undefined) throw new Error('no @context');
-        } catch (e) { state.notes.push(`${part} could not be read (${e.cause?.code ?? e.message})`); theirs = undefined; }
+        } catch (e) {
+          // Refused for where it is (not https, a private host): a problem for the caller, not a note.
+          if (e.refused) throw e;
+          state.notes.push(`${part} could not be read (${e.cause?.code ?? e.message})`); theirs = undefined;
+        }
       }
       if (theirs === undefined) {
         // Anything before may be overridden, and any term may come from it.
@@ -222,11 +227,10 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
     const released = async (s) => stat(join(s.dir, 'releases', `v${s.version}`)).then(() => true, () => false);
     if (allReleased) for (const s of subjects) if (!(await released(s))) problems.push(`${s.name} v${s.version} has no release snapshot: run datamodels release ${s.name} (check --all-released)`);
     const urls = catalogUrls(node.baseUrl, { iris: node.iris });
-    const getJson = async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-      return res.json();
-    };
+    // Other nodes' files (indexes, @contexts, schemas) through the adapters' getter: https on a
+    // public host name only, every redirect checked again. A URL refused for where it is
+    // (error.refused) is a problem; a host that is down is a note.
+    const getJson = getter(fetchUrl, timeout);
 
     // A file of this node is read from the build, offline too: what it is about to publish, not what is online.
     const local = async (url) => {
@@ -240,7 +244,10 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
     const ajv = new Ajv2020({ allErrors: true, strict: false, ownProperties: true, loadSchema: async (uri) => {
       if (uri.startsWith(`${urls.baseUrl}/`)) return JSON.parse(await readFile(join(out, uri.slice(urls.baseUrl.length + 1)), 'utf8'));
       if (offline) throw new Unavailable(`${uri} is on another site, not read with --offline`);
-      try { return await getJson(uri); } catch (e) { throw new Unavailable(`${uri} could not be read (${e.cause?.code ?? e.message})`); }
+      try { return await getJson(uri); } catch (e) {
+        if (e.refused) throw new Error(e.message);
+        throw new Unavailable(`${uri} could not be read (${e.cause?.code ?? e.message})`);
+      }
     } });
     addFormats(ajv);
     for (const s of subjects) for (const m of s.models) {
@@ -358,7 +365,8 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
             if (theirs.has(term) && theirs.get(term) !== iri) problems.push(`${where}: redefines ${term} (${theirs.get(term)} there, ${iri} here)`);
           }
         } catch (e) {
-          notes.push(`${where}: not checked, ${e.cause?.code ?? e.message}`);
+          if (e.refused) problems.push(`${where}: ${e.message}`);
+          else notes.push(`${where}: not checked, ${e.cause?.code ?? e.message}`);
         }
       }
     }

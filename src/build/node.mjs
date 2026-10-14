@@ -89,7 +89,7 @@ export async function loadNode(dir) {
   if (!(await stat(modelsDir).then((s) => s.isDirectory(), () => false))) throw new Error(`${modelsDir}: not found (the models of a node are in models/)`);
   // A context may import the contexts of the nodes this node knows, such as datamodels.jp's.
   const known = (node.nodes ?? []).map((n) => `${n.url.replace(/\/+$/, '')}/context/`);
-  const importable = (url) => known.some((prefix) => url.startsWith(prefix));
+  const importable = (url) => { try { const href = new URL(url).href; return known.some((prefix) => href.startsWith(prefix)); } catch { return false; } };
   const subjects = await loadSubjects(modelsDir, { urls, languages: node.languages, subjectFields: ['title', 'description'], importable });
   // extends goes into catalog.json as written, so it is checked here (docs/node.md, section 3).
   for (const s of subjects) for (const m of s.models) {

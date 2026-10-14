@@ -17,9 +17,8 @@ import { parseYaml } from './build/load.mjs';
 import { catalogUrls } from './build/urls.mjs';
 import { placeModel } from './add.mjs';
 import { getter, normalUrl } from './adapters/index.mjs';
-import { DEFAULT_INDEX, indexForModel, triedFirst } from './discover.mjs';
+import { DEFAULT_INDEX, OWN_INDEX_TIMEOUT, TYPE_NAME, indexForModel, triedFirst, usableEntry } from './discover.mjs';
 
-const TYPE_NAME = /^[A-Z][A-Za-z0-9]*$/;
 const exists = (p) => stat(p).then(() => true, () => false);
 // Keys of the other catalog's schema that describe it, not the copy.
 const NOT_COPIED = ['$id', 'title', 'x-version', 'x-license-url', 'x-model-tags', 'x-derived-from', 'x-alias-of', 'x-subclass-of'];
@@ -32,8 +31,29 @@ export async function extendableModels(index, { fetch: fetchUrl = globalThis.fet
   return entityModels(await getter(fetchUrl, timeout)(index), index);
 }
 
-/** Whether a catalog entry can be extended: an entity, with the URLs extend needs. */
-const extendable = (m) => (m?.kind ?? 'entity') === 'entity' && Boolean(m?.typeIri && m.version && m.contextUrl && m.schemaUrl);
+/**
+ * Whether a catalog entry can be extended: an entity with a plain type name and
+ * x.y.z version (they go into the YAML this writes), a type IRI and the URLs extend needs.
+ */
+const extendable = (m) => (m?.kind ?? 'entity') === 'entity' && usableEntry(m)
+  && typeof m.typeIri === 'string' && /^https?:\/\/\S+$/.test(m.typeIri) && typeof m.contextUrl === 'string';
+
+/** Text from another catalog for a YAML comment: one line, no control characters. */
+const oneLine = (s) => String(s).replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ');
+
+/**
+ * What the picker of `datamodels extend` offers: the models of `index`, else of
+ * the first node in node.yaml, else of datamodels.jp. Returns { index, models }:
+ * the model picked is extended from that index, not from the index of the node
+ * that minted its IRI (an alias has another node's IRI).
+ */
+export async function extendChoices(dir, index, options = {}) {
+  const from = index ?? (await readNode(dir)).nodes?.[0]?.index ?? DEFAULT_INDEX;
+  return { index: from, models: await extendableModels(from, options) };
+}
+
+/** The line extend prints when it is done. */
+export const extendMessage = (target, r) => `${target}: ${r.typeIri}, extends ${r.extends.typeIri} v${r.extends.version}, from ${r.extends.index}. Next: this node's attributes in schema.json (each with x-iri), context.jsonld and catalog.yaml, then datamodels check.`;
 
 /** The models of a catalog that can be extended (extendableModels). */
 function entityModels(catalog, index) {
@@ -45,10 +65,11 @@ function entityModels(catalog, index) {
  * Extend `source` (a type IRI, or <subject>/<Type> as in the index) as
  * `target` (<subject>/<Type> of this node). Options: `index` (default: for a
  * type IRI the index of the node that minted it, when that index lists it;
- * else the first node in node.yaml, else datamodels.jp), `subclass`, `fetch`, `timeout`.
+ * else the first node in node.yaml, else datamodels.jp), `subclass`, `fetch`, `timeout`,
+ * `guessTimeout` (how long that first read may take).
  * Returns { added, changed, typeIri, extends }.
  */
-export async function extendModel(dir, source, target, { index, subclass = false, fetch: fetchUrl = globalThis.fetch, timeout = 20000 } = {}) {
+export async function extendModel(dir, source, target, { index, subclass = false, fetch: fetchUrl = globalThis.fetch, timeout = 20000, guessTimeout = OWN_INDEX_TIMEOUT } = {}) {
   const [subjectName, type, ...rest] = String(target).split('/');
   if (!subjectName || !type || rest.length) throw new Error(`the new model is <subject>/<Type>, for example road/RoadTask; got ${JSON.stringify(target)}`);
   if (!TYPE_NAME.test(type)) throw new Error(`type name "${type}" must be UpperCamelCase ASCII (letters and digits), for example RoadTask`);
@@ -60,7 +81,7 @@ export async function extendModel(dir, source, target, { index, subclass = false
   // A type IRI without --index: the index of the node that minted it first, when it lists
   // the IRI as a model that can be extended.
   const byIri = /^https?:\/\//.test(source);
-  const where = byIri && !index ? await indexForModel(source, usual, { fetch: fetchUrl, timeout, accepts: extendable, what: 'an entity type with a version, @context and schema' }) : { from: usual, tried: null };
+  const where = byIri && !index ? await indexForModel(source, usual, { fetch: fetchUrl, timeout, cap: guessTimeout, accepts: extendable, what: 'an entity type with a version, @context and schema' }) : { from: usual, tried: null };
   const from = where.from;
   // Every read (the index, the schema, the example) goes through the adapters' getter:
   // https on a public host name only, checked again on every redirect.
@@ -78,15 +99,17 @@ export async function extendModel(dir, source, target, { index, subclass = false
   // A node imports contexts from <node>/context/ only (the build checks it), so another place is refused here.
   // Its schema and example are read only from its own schema/ and examples/, as export does
   // (src/export.mjs), and only after these checks.
+  // The URLs as they are requested (dot segments, also %2e%2e, resolved), so a prefix check sees the real path.
   const nodeUrl = new URL('.', from).href;
-  if (!entry.contextUrl.startsWith(`${nodeUrl}context/`)) throw new Error(`${entry.contextUrl} is not under ${nodeUrl}context/, where ${from} publishes its @contexts, so a node cannot import it (docs/node.md)`);
+  const contextUrl = normalUrl(entry.contextUrl);
+  if (!contextUrl?.startsWith(`${nodeUrl}context/`)) throw new Error(`${entry.contextUrl} is not under ${nodeUrl}context/, where ${from} publishes its @contexts, so a node cannot import it (docs/node.md)`);
   const schemaUrl = normalUrl(entry.schemaUrl);
   if (!schemaUrl?.startsWith(`${nodeUrl}schema/`)) throw new Error(`${from}: the schema of ${entry.typeIri} (${entry.schemaUrl}) is not under ${nodeUrl}schema/, not read`);
   const keyValues = (Array.isArray(entry.exampleUrls) ? entry.exampleUrls : []).find((u) => typeof u === 'string' && /\/example\.json$/.test(u));
   const exampleUrl = keyValues === undefined ? null : normalUrl(keyValues);
   if (keyValues !== undefined && !exampleUrl?.startsWith(`${nodeUrl}examples/`)) throw new Error(`${from}: the example of ${entry.typeIri} (${keyValues}) is not under ${nodeUrl}examples/, not read`);
   const theirs = await get(schemaUrl);
-  const listed = (node.nodes ?? []).some((n) => entry.contextUrl.startsWith(`${n.url.replace(/\/+$/, '')}/context/`));
+  const listed = (node.nodes ?? []).some((n) => contextUrl.startsWith(`${n.url.replace(/\/+$/, '')}/context/`));
   let nodeYaml;
   if (!listed) {
     // The document API keeps the comments init wrote. Written once the model is in place.
@@ -114,7 +137,7 @@ export async function extendModel(dir, source, target, { index, subclass = false
   const attributes = Object.fromEntries((entry.attributes ?? []).filter((a) => schema.properties[a.name]).map((a) => [a.name, pick(a.description, a.name)]));
   for (const name of Object.keys(schema.properties)) if (!['id', 'type', '@context'].includes(name) && !attributes[name]) attributes[name] = pick(undefined, schema.properties[name]?.description ?? name);
   const kind = subclass ? `a subtype of ${entry.type}` : `${entry.type} with the attributes of this node`;
-  const catalog = `# ${type}: ${kind}, from ${entry.typeIri} v${entry.version}.
+  const catalog = `# ${type}: ${oneLine(kind)}, from ${oneLine(entry.typeIri)} v${oneLine(entry.version)}.
 # The schema is a copy at that version. Add this node's attributes to schema.json (each with x-iri),
 # to the subject's context.jsonld and here under attributes, in each language.
 ${YAML.stringify({
@@ -136,14 +159,14 @@ ${YAML.stringify({
   }
 
   const notes = `# Notes: the sources, the decisions and their reasons, what is left out. Shown on the model's page.
-# Why this model extends ${entry.typeIri} v${entry.version}, and what it adds. One item per note, in each language of the node:
+# Why this model extends ${oneLine(entry.typeIri)} v${oneLine(entry.version)}, and what it adds. One item per note, in each language of the node:
 #   - { ${node.languages.map((l) => `${l}: …`).join(', ')} }
 notes: []
 `;
   await placeModel(subjectDir, type, { schema, catalog, example, notes }, (context, terms) => {
     // Import the other model's @context at its exact version, first, so this node's terms come after it.
     const parts = Array.isArray(context['@context']) ? context['@context'] : [context['@context']];
-    if (!parts.includes(entry.contextUrl)) context['@context'] = [entry.contextUrl, ...parts];
+    if (!parts.includes(contextUrl)) context['@context'] = [contextUrl, ...parts];
     const namespace = urls.subjectUrls({ name: subjectName, version: subject.version }).namespace;
     const prefix = Object.entries(terms).find(([, v]) => v === namespace)?.[0];
     terms[type] = subclass ? (prefix ? `${prefix}:${type}` : ownIri) : entry.typeIri;

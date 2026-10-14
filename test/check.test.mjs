@@ -394,3 +394,41 @@ test('datamodels check exits with 1 on a problem', async () => {
   assert.equal(r.code, 1);
   assert.match(r.stderr, /example\.json: data must have required property 'type'\n.*1 problem\(s\)/);
 });
+
+test('extends: an index or @context that is not https on a public host is a problem, and not read', async () => {
+  const seen = [];
+  const record = (files) => { const f = fakeFetch(files); return (url, o) => { seen.push(String(url)); return f(url, o); }; };
+  const catalog = join('models', 'road', 'RoadPatrol', 'catalog.yaml');
+  for (const index of ['http://evil.example/catalog.json', 'https://127.0.0.1/catalog.json', 'https://localhost/catalog.json']) {
+    const dir = await node();
+    await writeFile(join(dir, catalog), (await readFile(join(dir, catalog), 'utf8')).replace(`index: ${INDEX}`, `index: ${index}`));
+    seen.length = 0;
+    const r = await checkNode(dir, { fetch: record({}) });
+    assert.deepEqual(r.problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: ${index} is not read: only https on a public host name`], index);
+    assert.ok(!seen.includes(index), index);
+  }
+  // The index is fine, the @context it lists for the model is on a private address, or reached by a redirect there.
+  const dir = await node();
+  for (const contextUrl of ['https://169.254.169.254/context/task/v1.0.0.jsonld', 'http://datamodels.jp/context/task/v1.0.0.jsonld']) {
+    seen.length = 0;
+    const r = await checkNode(dir, { fetch: record({ [INDEX]: { models: [{ typeIri: TASK, version: '1.0.0', contextUrl }] } }) });
+    assert.deepEqual(r.problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: ${contextUrl} is not read: only https on a public host name`], contextUrl);
+    assert.ok(!seen.includes(contextUrl), contextUrl);
+  }
+  const redirecting = async (url) => (url === TASK_CONTEXT ? new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/latest/meta-data/' } }) : fakeFetch(datamodelsJp())(url));
+  const r = await checkNode(dir, { fetch: redirecting });
+  assert.equal(r.problems.length, 1);
+  assert.match(r.problems[0], /extends .*: https:\/\/datamodels\.jp\/context\/task\/v1\.0\.0\.jsonld: redirects to http:\/\/169\.254\.169\.254\/latest\/meta-data\/, not followed/);
+});
+
+test('a context imported by a URL with %2e%2e is checked where it leads', async () => {
+  const dir = await node();
+  await listNodes(dir, [{ url: 'https://datamodels.jp/', index: INDEX }]);
+  // Under datamodels.jp/context/ as written, but outside it once %2e%2e is resolved.
+  // A known node's context/ (node.yaml, nodes) and this node's own context/.
+  for (const sneaky of ['https://datamodels.jp/context/%2e%2e/%2e%2e/evil.jsonld', `${BASE}/context/%2E%2E/schema/evil.jsonld`]) {
+    await writeFile(join(dir, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': [sneaky, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' }] }));
+    const r = await checkNode(dir, { offline: true });
+    assert.ok(r.problems.some((p) => p.endsWith(`only catalog contexts may be imported by URL, got ${sneaky}`)), r.problems.join('\n'));
+  }
+});

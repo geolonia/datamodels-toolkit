@@ -86,7 +86,7 @@ import { initSettings, writeNode, publishToGitHub, askInit, parseLanguages } fro
 import { addModel } from '../src/add.mjs';
 import { releaseSubject } from '../src/release.mjs';
 import { upgradeNode, bumpSubject } from '../src/version.mjs';
-import { extendModel, extendableModels } from '../src/extend.mjs';
+import { extendModel, extendChoices, extendMessage } from '../src/extend.mjs';
 import { exportModel, writeExport } from '../src/export.mjs';
 import { ADAPTERS } from '../src/adapters/index.mjs';
 import { unionCount } from '../src/adapters/ai/index.mjs';
@@ -452,7 +452,7 @@ async function extend(model, target, dir, { index, subclass }) {
   try { r = await extendModel(dir, model, target, { index, subclass }); } catch (e) { fail(e.message); }
   for (const f of r.added) console.error(`  added ${f}`);
   for (const f of r.changed) console.error(`  changed ${f}`);
-  console.error(`${target}: ${r.typeIri}, extends ${r.extends.typeIri} v${r.extends.version}, from ${r.extends.index}. Next: this node's attributes in schema.json (each with x-iri), context.jsonld and catalog.yaml, then datamodels check.`);
+  console.error(extendMessage(target, r));
   return 0;
 }
 
@@ -516,14 +516,10 @@ async function askExtend(model, target, dir, index) {
   const answer = async (v) => { if (p.isCancel(v)) { p.cancel('Nothing written.'); throw new Exit(1, 'extend cancelled'); } return v; };
   p.intro('datamodels extend: a model from another node');
   if (!model) {
-    let from = index;
-    if (!from) { try { from = (await readNode(dir)).nodes?.[0]?.index; } catch (e) { fail(e.message); } }
-    from ??= 'https://datamodels.jp/catalog.json';
+    // The model picked is extended from this index (extendChoices).
     let models;
-    try { models = await extendableModels(from); } catch (e) { fail(e.message); }
-    model = await answer(await p.select({ message: `Model to extend (${from})`, options: models.map((m) => ({ value: m.typeIri, label: `${m.subject}/${m.type}`, hint: m.title?.en ?? m.title?.ja })) }));
-    // The model picked from this index, not from the index of the node that minted its IRI (an alias has another node's IRI).
-    index = from;
+    try { ({ index, models } = await extendChoices(dir, index)); } catch (e) { fail(e.message); }
+    model = await answer(await p.select({ message: `Model to extend (${index})`, options: models.map((m) => ({ value: m.typeIri, label: `${m.subject}/${m.type}`, hint: m.title?.en ?? m.title?.ja })) }));
   }
   if (!target) target = await answer(await p.text({ message: 'The new model in this node (<subject>/<Type>)', placeholder: 'road/RoadTask', validate: (v) => (/^[a-z][a-z0-9-]*\/[A-Z][A-Za-z0-9]*$/.test(v ?? '') ? undefined : 'subject/Type, for example road/RoadTask') }));
   p.outro('Writing the files.');

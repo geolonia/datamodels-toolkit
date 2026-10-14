@@ -346,6 +346,45 @@ test('export by type IRI with --index: that index only, nothing derived', async 
   assert.equal(again.filter((u) => u === DJ_INDEX).length, 1);
 });
 
+test('export by type IRI: the usual index when the IRI\'s own index lists it without a plain type, version or schema', async () => {
+  for (const bad of [{ schemaUrl: undefined }, { version: '1.0.0\nfoo: bar' }, { type: '../x' }]) {
+    const seen = [];
+    const own = structuredClone(otherCatalog);
+    Object.assign(own.models.find((m) => m.typeIri === HASH_IRI), bad);
+    const r = await exportModel(HASH_IRI, ['csv'], { dir: noNode, fetch: twoNodes({ [OTHER_INDEX]: own, [DJ_INDEX]: djListing({}) }, seen) });
+    assert.equal(r.from, DJ_INDEX, JSON.stringify(bad));
+    assert.deepEqual(seen.slice(0, 2), [OTHER_INDEX, DJ_INDEX]);
+    // With --index, the same entry is refused.
+    if (bad.schemaUrl === undefined) continue;
+    await assert.rejects(exportModel(HASH_IRI, ['csv'], { dir: noNode, index: OTHER_INDEX, fetch: twoNodes({ [OTHER_INDEX]: own }, []) }), /has no usable type name \(UpperCamelCase\) and version \(x\.y\.z\)/);
+  }
+});
+
+test('export by type IRI: a host that does not answer holds up the usual index only for the short wait', async () => {
+  const seen = [];
+  const answering = twoNodes({ [DJ_INDEX]: djListing({}) }, seen);
+  const silent = (url, o) => (url.startsWith(OTHER) ? new Promise((_, reject) => o.signal.addEventListener('abort', () => reject(o.signal.reason))) : answering(url, o));
+  const started = Date.now();
+  const r = await exportModel(HASH_IRI, ['csv'], { dir: noNode, fetch: silent, timeout: 20000, guessTimeout: 100 });
+  assert.equal(r.from, DJ_INDEX);
+  assert.ok(Date.now() - started < 2000, `${Date.now() - started} ms`);
+});
+
+test('the time limit of a read covers its redirects', async () => {
+  const { getter } = await import('../src/adapters/index.mjs');
+  // Each hop answers after 40 ms with a redirect to the next one; the limit is 100 ms for the whole read.
+  const hops = [];
+  const slow = (url, { signal }) => new Promise((resolve, reject) => {
+    hops.push(url);
+    const t = setTimeout(() => resolve(new Response(null, { status: 302, headers: { location: `https://w3id.org/hop/${hops.length}` } })), 40);
+    signal.addEventListener('abort', () => { clearTimeout(t); reject(signal.reason); });
+  });
+  const started = Date.now();
+  await assert.rejects(getter(slow, 100)('https://w3id.org/hop/0'), /could not be read/);
+  assert.ok(Date.now() - started < 200, `${Date.now() - started} ms`);
+  assert.ok(hops.length <= 3, hops.join(' '));
+});
+
 test('check --offline reads no schema of another site for the adapters', async () => {
   const { checkNode } = await import('../src/build/index.mjs');
   const dir = await mkdtemp(join(tmpdir(), 'datamodels-adapters-'));
