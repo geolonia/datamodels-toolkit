@@ -6,14 +6,16 @@
 const oneLine = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 
 /**
- * The text of llms.txt. `name`: the catalog's name (the heading); `languages`:
+ * The text of llms.txt. `name`: the catalog's name (the heading); `description`:
+ * what the catalog is about, in one paragraph (optional); `languages`:
  * the catalog's languages; English is used where a text has it, otherwise the
  * first language that does.
  */
-export function llmsTxt(subjects, { urls, name, languages = ['en'] }) {
+export function llmsTxt(subjects, { urls, name, description, languages = ['en'] }) {
   const pick = (o) => o?.en ?? languages.map((l) => o?.[l]).find(Boolean) ?? '';
   let txt = `# ${name}\n\n`;
   txt += `> Data models: JSON Schemas (2020-12), JSON-LD @context files and RDFS vocabularies. Exact versions (v1.0.0) never change; major aliases (v1) follow the latest compatible version.\n\n`;
+  if (oneLine(description)) txt += `${oneLine(description)}\n\n`;
   txt += `Machine-readable list of every model with all its URLs: ${urls.baseUrl}/catalog.json.\n\n`;
   for (const subject of subjects) {
     const su = urls.subjectUrls(subject);

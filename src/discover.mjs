@@ -57,17 +57,22 @@ function linksOf(catalog, base) {
   return out;
 }
 
+/** A text of a catalog in English or else its first language that has one, or null. */
+function textOf(texts) {
+  const text = texts && typeof texts === 'object' ? [texts.en, ...Object.values(texts)].find((v) => typeof v === 'string' && v.trim()) : null;
+  return text ?? null;
+}
+
 /** A node's name: its publisher in English or its first language, else its host. */
 function nameOf(catalog, url) {
-  const names = catalog.publisher?.name;
-  const name = names && typeof names === 'object' ? names.en ?? Object.values(names).find((v) => typeof v === 'string') : null;
-  return typeof name === 'string' && name.trim() ? name : new URL(url).host;
+  return textOf(catalog.publisher?.name) ?? new URL(url).host;
 }
 
 /**
  * The nodes reachable from `index` within `depth` links (0: the index alone).
- * Returns { nodes: [{ name, url, index, license, depth, linkedFrom, catalog }], notes }:
- * nodes in the order they were reached, notes for what could not be read or
+ * Returns { nodes: [{ name, title, url, index, license, depth, linkedFrom, catalog }], notes }:
+ * nodes in the order they were reached (`title`: the node's own title, null when
+ * its catalog.json has none), notes for what could not be read or
  * was left out. Throws when `index` itself cannot be read.
  * Options: `fetch` (tests pass a stub), `timeout` per request in milliseconds.
  */
@@ -85,7 +90,7 @@ export async function discoverNodes(index = DEFAULT_INDEX, { depth = 1, fetch: f
       if (problem && d === 0) throw new Error(problem);
       if (problem) { notes.push(`${problem}; linked from ${r.linkedFrom}, skipped`); continue; }
       const url = r.url ?? new URL('.', r.index).href;
-      nodes.push({ name: nameOf(r.catalog, url), url, index: r.index, license: typeof r.catalog.license === 'string' ? r.catalog.license : null, depth: d, linkedFrom: r.linkedFrom, catalog: r.catalog });
+      nodes.push({ name: nameOf(r.catalog, url), title: textOf(r.catalog.title), url, index: r.index, license: typeof r.catalog.license === 'string' ? r.catalog.license : null, depth: d, linkedFrom: r.linkedFrom, catalog: r.catalog });
       if (d >= depth) continue;
       for (const link of linksOf(r.catalog, r.index)) {
         if (seen.has(link.index)) continue;
@@ -154,7 +159,7 @@ function modelIndex(nodes) {
       model: {
         type: m.type, subject: str(m.subject), kind: str(m.kind) ?? 'entity', title: m.title && typeof m.title === 'object' ? m.title : {},
         typeIri: str(m.typeIri), version: str(m.version), pageUrl: str(m.pageUrl), schemaUrl: str(m.schemaUrl), contextUrl: str(m.contextUrl),
-        site: node.name, nodeUrl: node.url, index: node.index,
+        site: node.name, siteTitle: node.title ?? null, nodeUrl: node.url, index: node.index,
       },
       terms,
     });

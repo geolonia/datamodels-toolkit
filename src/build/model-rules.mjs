@@ -5,13 +5,13 @@
 // catalog's own process rules (ADOPTERS.yaml, TODO markers, known namespaces,
 // an explicit x-ngsi.type where a node may leave Property out) stay there.
 import { attributesOf } from './urls.mjs';
-import { LANGUAGE_TAG } from './node.mjs';
+// textsProblem: a text in every language of the node, and nothing but language tags (node.yaml uses it too).
+import { textsProblem } from './node.mjs';
 import { toKeyValues } from '../ngsi.mjs';
 
 const STATUSES = ['draft', 'experimental', 'stable', 'deprecated'];
 
 const isObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
-const nonEmpty = (v) => typeof v === 'string' && v.trim() !== '';
 // JSON values compared by content, whatever the order of their keys.
 const canonical = (v) => (Array.isArray(v) ? v.map(canonical) : isObject(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical(v[k])])) : v);
 const same = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
@@ -49,16 +49,6 @@ function httpUrl(url) {
     const u = new URL(url);
     return typeof url === 'string' && ['http:', 'https:'].includes(u.protocol) && u.hostname !== '' && !u.username && !u.password;
   } catch { return false; }
-}
-
-/** A text in every language of the node, and nothing but language tags. */
-function textsProblem(v, languages) {
-  if (!isObject(v)) return `must be { ${languages.join(', ')} }`;
-  const missing = languages.filter((l) => !nonEmpty(v[l]));
-  if (missing.length) return `needs a non-empty ${missing.join(' and ')} text`;
-  const other = Object.keys(v).filter((k) => !LANGUAGE_TAG.test(k) || !nonEmpty(v[k]));
-  if (other.length) return `has ${other.map((k) => JSON.stringify(k)).join(', ')}, which is not a language with a text`;
-  return null;
 }
 
 /**

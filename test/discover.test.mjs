@@ -45,6 +45,21 @@ test('--depth: 0 reads the index alone, each further level follows the nodes it 
   assert.deepEqual(all.notes, []);
 });
 
+test('a node\'s own title, when its catalog.json has one: in English, else its first language with a text', async () => {
+  const D = 'https://d.example.org/catalog.json';
+  const files = {
+    [A]: { title: { ja: 'エーのモデル', en: 'Models of A' }, publisher: { name: { en: 'A' } }, nodes: [link(B), link(C), link(D)], models: [model('Shelter')] },
+    [B]: { title: { en: ' ', ja: 'ビーのモデル' }, publisher: { name: { ja: 'ビー' } }, models: [model('Shelter')] },
+    // Not a text per language: no title, as when there is none.
+    [C]: { title: 'Models of C', models: [] },
+    [D]: { title: { en: 1 }, models: [] },
+  };
+  const { nodes } = await discoverNodes(A, { fetch: stub(files) });
+  assert.deepEqual(nodes.map(({ name, title }) => [name, title]), [['A', 'Models of A'], ['ビー', 'ビーのモデル'], ['c.example.org', null], ['d.example.org', null]]);
+  // Search results carry it next to the publisher's name.
+  assert.deepEqual(searchModels('shelter', nodes).results.map((r) => [r.site, r.siteTitle]), [['A', 'Models of A'], ['ビー', 'ビーのモデル']]);
+});
+
 test('the index of an extended model is followed like a listed node', async () => {
   const files = {
     [A]: { models: [model('Road', { extends: [{ typeIri: 'https://b.example.org/ns/Way', version: '1.0.0', index: B }] })] },

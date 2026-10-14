@@ -479,11 +479,11 @@ async function search(query, { index, depth, limit, json }) {
   const { results, total } = searchModels(text, nodes, { limit });
   for (const n of notes) console.error(`  note: ${n}`);
   if (json) {
-    console.log(JSON.stringify({ query: text, index: nodes[0].index, depth, nodes: nodes.map(({ name, url, index: i }) => ({ name, url, index: i })), results, total, notes }, null, 2));
+    console.log(JSON.stringify({ query: text, index: nodes[0].index, depth, nodes: nodes.map(({ name, title, url, index: i }) => ({ name, title, url, index: i })), results, total, notes }, null, 2));
   } else {
     for (const r of results) {
       const title = [...new Set(Object.values(r.title).filter((t) => typeof t === 'string'))].join(' / ');
-      console.log([`${plain(r.subject ? `${r.subject}/${r.type}` : r.type)}${r.kind === 'value' ? ' (value type)' : ''}`, plain(title), plain(r.site, 80), plain(r.pageUrl ?? r.typeIri ?? '', 300)].filter(Boolean).join('  '));
+      console.log([`${plain(r.subject ? `${r.subject}/${r.type}` : r.type)}${r.kind === 'value' ? ' (value type)' : ''}`, plain(title), plain(r.siteTitle ?? r.site, 80), plain(r.pageUrl ?? r.typeIri ?? '', 300)].filter(Boolean).join('  '));
     }
   }
   const models = nodes.reduce((sum, n) => sum + n.catalog.models.length, 0);
@@ -496,12 +496,13 @@ async function listNodes({ index, depth, json }) {
   try { found = await discoverNodes(index, { depth }); } catch (e) { fail(e.message); }
   const { nodes, notes } = found;
   for (const n of notes) console.error(`  note: ${n}`);
-  const rows = nodes.map(({ name, url, index: i, license, depth: d, linkedFrom, catalog }) => ({ name, url, index: i, license, models: catalog.models.length, depth: d, linkedFrom }));
+  const rows = nodes.map(({ name, title, url, index: i, license, depth: d, linkedFrom, catalog }) => ({ name, title, url, index: i, license, models: catalog.models.length, depth: d, linkedFrom }));
   if (json) console.log(JSON.stringify({ index: nodes[0].index, depth, nodes: rows, notes }, null, 2));
   else {
-    const nameOf = new Map(rows.map((r) => [r.index, r.name]));
+    // A node is shown by its own title when its catalog.json has one, else by its publisher.
+    const nameOf = new Map(rows.map((r) => [r.index, r.title ?? r.name]));
     for (const r of rows) {
-      console.log([plain(r.name, 80), plain(r.url, 300), plain(r.license ?? 'no licence given', 80), `${r.models} model${r.models === 1 ? '' : 's'}`, r.linkedFrom ? `(linked from ${plain(nameOf.get(r.linkedFrom) ?? r.linkedFrom, 80)})` : ''].filter(Boolean).join('  '));
+      console.log([plain(r.title ?? r.name, 80), plain(r.url, 300), plain(r.license ?? 'no licence given', 80), `${r.models} model${r.models === 1 ? '' : 's'}`, r.linkedFrom ? `(linked from ${plain(nameOf.get(r.linkedFrom) ?? r.linkedFrom, 80)})` : ''].filter(Boolean).join('  '));
     }
   }
   console.error(`${nodes.length} node(s) within ${depth} link(s) of ${nodes[0].index}`);

@@ -23,10 +23,14 @@ test('init writes a node that passes check and builds', async () => {
   for (const f of ['node.yaml', 'models/road/subject.yaml', 'models/road/context.jsonld', '.github/workflows/publish.yml', '.github/dependabot.yml', 'README.md', 'LICENSE', '.gitignore']) assert.match(r.stderr, new RegExp(`added ${f.replace(/\./g, '\\.')}\\n`), f);
   // An empty subject is a valid node.
   assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
+  // The node's title and description are left to fill in, in each language: commented out, so the node has none yet.
+  const settings = await readFile(join(dir, 'node.yaml'), 'utf8');
+  assert.ok(settings.endsWith('\n# title: { ja: ..., en: ... }\n# description: { ja: ..., en: ... }\n'), settings);
   const b = await datamodels('build', dir);
   assert.equal(b.code, 0, b.stderr);
   const catalog = JSON.parse(await readFile(join(dir, '_site', 'catalog.json'), 'utf8'));
   assert.deepEqual(catalog.publisher, { name: { ja: 'Example' }, url: 'https://example.org/' });
+  assert.equal(catalog.title, undefined);
   assert.equal(JSON.parse(await readFile(join(dir, 'models', 'road', 'context.jsonld'), 'utf8'))['@context'].road, 'https://models.example.org/ns/road#');
   const subject = await readFile(join(dir, 'models', 'road', 'subject.yaml'), 'utf8');
   assert.match(subject, /title:\n {2}ja: road\n {2}en: road\n/);

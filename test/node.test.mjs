@@ -303,6 +303,86 @@ test('node.yaml: a missing file, and every problem at once', async () => {
   assert.deepEqual(await readNode(empty), { baseUrl: BASE, iris: 'hash', languages: ['en'], publisher: { name: { ja: '例' }, url: 'https://example.org/' }, license: 'CC0-1.0' });
 });
 
+test('node.yaml: a title and a description need a text in every language of the node', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'datamodels-node-'));
+  const settings = `baseUrl: ${BASE}\nlanguages: [ja, en]\npublisher: { name: { ja: 例社 }, url: https://example.org/ }\nlicense: CC0-1.0\n`;
+  const problems = async (more) => {
+    await writeFile(join(dir, 'node.yaml'), settings + more);
+    return readNode(dir).then(() => [], (e) => e.message.split('\n').slice(1).map((l) => l.trim()));
+  };
+  // Not a text per language: a plain string, a list, an empty value (null is a mistake, not "no title").
+  assert.deepEqual(await problems('title: Road models\ndescription: [Roads]\n'), ['title must be { ja, en }', 'description must be { ja, en }']);
+  assert.deepEqual(await problems('title:\n'), ['title must be { ja, en }']);
+  // A language of the node missing, or with an empty text.
+  assert.deepEqual(await problems('title: { ja: 道路のモデル }\ndescription: { ja: 道路の維持管理。, en: " " }\n'), ['title needs a non-empty en text', 'description needs a non-empty en text']);
+  assert.deepEqual(await problems('title: { fr: Routes }\n'), ['title needs a non-empty ja and en text']);
+  // A key that is not a language, or a language without a text.
+  assert.deepEqual(await problems('title: { ja: 道路のモデル, en: Road models, name: Roads }\ndescription: { ja: 道路。, en: Roads., fr: 1 }\n'), [
+    'title has "name", which is not a language with a text',
+    'description has "fr", which is not a language with a text',
+  ]);
+  // Listed with the other problems of node.yaml, all at once.
+  await writeFile(join(dir, 'node.yaml'), settings.replace('license: CC0-1.0\n', '') + 'title: { en: Road models }\n');
+  await assert.rejects(readNode(dir), /node\.yaml:\n {2}license is required[^\n]*\n {2}title needs a non-empty ja text$/);
+  // Another language as well is fine, as in catalog.yaml.
+  assert.deepEqual(await problems('title: { ja: 道路のモデル, en: Road models, fr: Modèles routiers }\n'), []);
+  // datamodels check reports it like any other problem of node.yaml.
+  const full = await node();
+  await writeFile(join(full, 'node.yaml'), `${NODE_YAML}title: { ja: 道路のモデル }\n`);
+  const r = await datamodels('check', full, '--offline');
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /node\.yaml:\n {2}title needs a non-empty en text\n.*1 problem\(s\)/);
+});
+
+test('node.yaml: a title and a description go into catalog.json, the pages and llms.txt; without them nothing changes', async () => {
+  const yaml = NODE_YAML.replace('languages: [en]', 'languages: [ja, en]').replace('name: { en: Example Inc. }', 'name: { ja: 例社, en: Example Inc. }');
+  const dir = await node({ yaml });
+  const road = join(dir, 'models', 'road');
+  await writeFile(join(road, 'subject.yaml'), 'name: road\nversion: 0.1.0\nsource: minted\ntitle: { ja: 道路, en: Roads }\ndescription: { ja: 道路の維持管理。, en: Road maintenance. }\n');
+  const cat = join(road, 'RoadPatrol', 'catalog.yaml');
+  await writeFile(cat, (await readFile(cat, 'utf8')).replace('title: { en: Road patrol }', 'title: { ja: 道路パトロール, en: Road patrol }').replace('description: { en: One patrol run. }', 'description: { ja: 1 回の巡回。, en: One patrol run. }').replace('route: { en: The route patrolled }', 'route: { ja: 巡回したルート, en: The route patrolled }'));
+  const now = new Date('2026-10-14T00:00:00Z');
+  const FILES = ['catalog.json', 'llms.txt', 'index.html', 'en/index.html', 'models/road/RoadPatrol/index.html', '404.html'];
+  const read = (p) => readFile(join(dir, '_site', p), 'utf8');
+  const snapshot = async () => Object.fromEntries(await Promise.all(FILES.map(async (f) => [f, await read(f)])));
+
+  await buildNode(dir, { now });
+  const before = await snapshot();
+  assert.match(before['index.html'], /<h1>例社 のデータモデル<\/h1>\n<p>JSON Schema、/, 'the default: the publisher\'s name and the fixed intro');
+
+  const title = { ja: '道路のモデル', en: 'Road models' };
+  const description = { ja: '道路の維持管理のモデルです。', en: 'Models for road maintenance & <b>repair</b>.' };
+  await writeFile(join(dir, 'node.yaml'), `${yaml}title: { ja: 道路のモデル, en: Road models }\ndescription: { ja: 道路の維持管理のモデルです。, en: "Models for road maintenance & <b>repair</b>." }\n`);
+  assert.deepEqual([(await readNode(dir)).title, (await readNode(dir)).description], [title, description]);
+  const { catalog } = await buildNode(dir, { now });
+  // At the top of catalog.json, after the format's own fields; formatVersion stays 1 (an added optional field).
+  assert.deepEqual(Object.keys(catalog), ['formatVersion', 'generatedAt', 'title', 'description', 'publisher', 'license', 'nodes', 'models']);
+  assert.deepEqual([catalog.formatVersion, catalog.title, catalog.description], [1, title, description]);
+  assert.deepEqual(JSON.parse(await read('catalog.json')), catalog);
+
+  // The home page in each language: the title as page title, heading and site name, the description above the intro.
+  const ja = await read('index.html');
+  assert.match(ja, /<title>道路のモデル<\/title>/);
+  assert.match(ja, /<meta name="description" content="道路の維持管理のモデルです。">/);
+  assert.match(ja, /<meta property="og:site_name" content="道路のモデル">/);
+  assert.match(ja, /<header><a href="https:\/\/models\.example\.org\/">道路のモデル<\/a>/);
+  assert.match(ja, /<h1>道路のモデル<\/h1>\n<p>道路の維持管理のモデルです。<\/p>\n<p>JSON Schema、JSON-LD の @context、RDFS の語彙です。/);
+  const en = await read('en/index.html');
+  assert.match(en, /<title>Road models<\/title>/);
+  assert.match(en, /<meta name="description" content="Models for road maintenance &amp; &lt;b&gt;repair&lt;\/b&gt;\.">/, 'escaped once');
+  assert.match(en, /<h1>Road models<\/h1>\n<p>Models for road maintenance &amp; &lt;b&gt;repair&lt;\/b&gt;\.<\/p>\n<p>JSON Schemas, JSON-LD @contexts/);
+  // Every other page names the site by the title too.
+  assert.match(await read('models/road/RoadPatrol/index.html'), /<title>RoadPatrol：道路のモデル<\/title>/);
+  assert.match(await read('404.html'), /<title>ページが見つかりません：道路のモデル<\/title>/);
+  // llms.txt: the English title as its heading, the description after the summary.
+  assert.ok((await read('llms.txt')).startsWith('# Road models\n\n> Data models: JSON Schemas (2020-12), JSON-LD @context files and RDFS vocabularies. Exact versions (v1.0.0) never change; major aliases (v1) follow the latest compatible version.\n\nModels for road maintenance & <b>repair</b>.\n\nMachine-readable list'));
+
+  // Without them again, every file is as before, byte for byte.
+  await writeFile(join(dir, 'node.yaml'), yaml);
+  await buildNode(dir, { now });
+  assert.deepEqual(await snapshot(), before);
+});
+
 test('datamodels build writes the node, and exits with 1 on an invalid one', async () => {
   const dir = await node();
   const out = join(dir, 'public');

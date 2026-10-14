@@ -53,7 +53,7 @@ Rules:
 
 Run the commands with `npx @geolonia/datamodels@<version>` (Node.js 24 or later); use the release the node pins (see its README). A node made before the package was on npm runs it from GitHub, `npx github:geolonia/datamodels-toolkit#v<version>`; `upgrade` changes that to the npm form.
 
-- `init`: `node.yaml`, the first subject, README, LICENSE (CC0-1.0, CC-BY-4.0), the GitHub Pages workflow and Dependabot. **The base URL is in every IRI: choose it once** (your domain, or a w3id.org address that redirects to it: https://datamodels.jp/en/toolkit/start#w3id). Then set Settings → Pages → Source: GitHub Actions.
+- `init`: `node.yaml`, the first subject, README, LICENSE (CC0-1.0, CC-BY-4.0), the GitHub Pages workflow and Dependabot. **The base URL is in every IRI: choose it once** (your domain, or a w3id.org address that redirects to it: https://datamodels.jp/en/toolkit/start#w3id). Then set Settings → Pages → Source: GitHub Actions. Fill in the node's `title` and `description` in `node.yaml` (a text in each language of the node): `catalog.json` and the home page show them.
 - `add <subject>/<Type>`: a new model (schema, catalog.yaml, example, notes.yaml).
 - `extend <model> <subject>/<Type>`: start a model from another node's model (`task/Task` on datamodels.jp, or its type IRI): the same type with more attributes, or a subtype with `--subclass`.
 - `check` before every pull request; `build` writes `_site/`.

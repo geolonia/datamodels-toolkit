@@ -9,6 +9,9 @@ eleventyComputed:
 ---
 {%- from "texts.njk" import texts %}
 <h1>{{ site.title }}</h1>
+{%- if site.about %}
+<p>{{ site.about }}</p>
+{%- endif %}
 <p>{{ t.introBefore }}<a href="{{ site.catalog }}">catalog.json</a>{{ t.introAfter }}</p>
 {%- for s in subjects %}
 <h2><a href="{{ s.page }}">{{ s.name }}</a> v{{ s.version }}</h2>

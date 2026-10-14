@@ -5,6 +5,8 @@
 //   baseUrl: https://models.example.org
 //   iris: hash                      # or slash (needs w3id.org or a server that redirects)
 //   languages: [en]
+//   title: { en: Road models }                       # optional: the node's name, in every language
+//   description: { en: Models for road maintenance. } # optional: what it publishes, in every language
 //   publisher: { name: { en: Example Inc. }, url: https://example.org/ }
 //   license: CC0-1.0
 //   licenseUrl: https://models.example.org/LICENSE   # optional
@@ -27,6 +29,20 @@ export const httpUrl = (s) => { if (typeof s !== 'string') return false; try { c
 // A language tag, as node.yaml lists them: en, ja, pt-BR.
 export const LANGUAGE_TAG = /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/;
 const texts = (o) => !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length > 0 && Object.values(o).every((v) => typeof v === 'string' && v.trim());
+const nonEmpty = (v) => typeof v === 'string' && v.trim() !== '';
+
+/** What is wrong with a text that needs every language of the node and nothing but language tags, or null. */
+export function textsProblem(v, languages) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return `must be { ${languages.join(', ')} }`;
+  const missing = languages.filter((l) => !nonEmpty(v[l]));
+  if (missing.length) return `needs a non-empty ${missing.join(' and ')} text`;
+  const other = Object.keys(v).filter((k) => !LANGUAGE_TAG.test(k) || !nonEmpty(v[k]));
+  if (other.length) return `has ${other.map((k) => JSON.stringify(k)).join(', ')}, which is not a language with a text`;
+  return null;
+}
+
+// The node's own texts: optional, and when given, in every language of the node (catalog.json and the home page show them).
+const NODE_TEXTS = ['title', 'description'];
 
 /** The problems of the settings of a node, as node.yaml holds them (also used by init before it writes). */
 export function settingsProblems(node) {
@@ -41,6 +57,12 @@ export function settingsProblems(node) {
   if (licenseUrl !== undefined && !httpUrl(licenseUrl)) problems.push('licenseUrl must be an http(s) URL');
   if (prerelease !== undefined && typeof prerelease !== 'boolean') problems.push('prerelease must be true or false');
   if (nodes !== undefined && (!Array.isArray(nodes) || !nodes.every((n) => httpUrl(n?.url) && httpUrl(n?.index)))) problems.push('nodes must be a list of { url, index }, both http(s) URLs');
+  // Only a missing title or description means none; null or an empty one is a mistake.
+  const langs = Array.isArray(languages) ? languages.filter((l) => typeof l === 'string') : [];
+  for (const field of NODE_TEXTS) {
+    const p = node[field] === undefined ? null : textsProblem(node[field], langs);
+    if (p) problems.push(`${field} ${p}`);
+  }
   return problems;
 }
 
@@ -52,8 +74,8 @@ export async function readNode(dir) {
   if (!node || typeof node !== 'object' || Array.isArray(node)) throw new Error(`${file}: must be a mapping of settings`);
   const problems = settingsProblems(node);
   if (problems.length) throw new Error(`${file}:\n${problems.map((p) => `  ${p}`).join('\n')}`);
-  const { baseUrl, iris = 'hash', languages = ['en'], publisher, license, licenseUrl, nodes, prerelease } = node;
-  return { baseUrl: baseUrl.replace(/\/+$/, ''), iris, languages, publisher, license, ...(licenseUrl ? { licenseUrl } : {}), ...(nodes?.length ? { nodes } : {}), ...(prerelease !== undefined ? { prerelease } : {}) };
+  const { baseUrl, iris = 'hash', languages = ['en'], title, description, publisher, license, licenseUrl, nodes, prerelease } = node;
+  return { baseUrl: baseUrl.replace(/\/+$/, ''), iris, languages, ...(title ? { title } : {}), ...(description ? { description } : {}), publisher, license, ...(licenseUrl ? { licenseUrl } : {}), ...(nodes?.length ? { nodes } : {}), ...(prerelease !== undefined ? { prerelease } : {}) };
 }
 
 /** The node in `dir`: its settings, URLs and subjects with their models, checked. Returns { node, urls, subjects }. */
@@ -135,13 +157,16 @@ async function removeOldAdaptersPages(out) {
  */
 export async function buildNode(dir, { out = join(dir, '_site'), now, pages: withPages = true, fetch = globalThis.fetch, timeout = 20000, offline = false, verifyReleases = true } = {}) {
   const { node, urls, subjects } = await loadNode(dir);
-  const head = { publisher: node.publisher, license: node.license, ...(node.licenseUrl ? { licenseUrl: node.licenseUrl } : {}), ...(node.nodes ? { nodes: node.nodes } : {}) };
+  // The node's title and description first, when it has them; without them catalog.json is as before.
+  const head = { ...(node.title ? { title: node.title } : {}), ...(node.description ? { description: node.description } : {}), publisher: node.publisher, license: node.license, ...(node.licenseUrl ? { licenseUrl: node.licenseUrl } : {}), ...(node.nodes ? { nodes: node.nodes } : {}) };
   await mkdir(out, { recursive: true });
   await removeOldAdaptersPages(out);
   const { adapters, notes } = await nodeAdapters(subjects, { urls, languages: node.languages, fetch, timeout, offline, nodes: node.nodes });
   const result = await publishCatalog(subjects, { urls, outDir: out, languages: node.languages, head, adapters, verify: verifyReleases, ...(now ? { now } : {}) });
-  const name = node.publisher.name.en ?? node.languages.map((l) => node.publisher.name[l]).find(Boolean) ?? Object.values(node.publisher.name)[0];
-  await writeFile(join(out, 'llms.txt'), llmsTxt(subjects, { urls, name: `Data models by ${name}`, languages: node.languages }));
+  // English where a text has it, as in llms.txt; else the node's first language that does.
+  const pickText = (o) => o?.en ?? node.languages.map((l) => o?.[l]).find(Boolean) ?? Object.values(o ?? {})[0];
+  const name = pickText(node.publisher.name);
+  await writeFile(join(out, 'llms.txt'), llmsTxt(subjects, { urls, name: pickText(node.title) ?? `Data models by ${name}`, description: pickText(node.description), languages: node.languages }));
   const pages = withPages ? await writePages(subjects, { urls, node, out, adapters }) : [];
   await writeFile(join(out, '_headers'), headersFile());
   const redirectRules = redirectsFile(result.redirects);

@@ -47,8 +47,10 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
   // The file a page URL is served from: /x/ is x/index.html, /ns/road is ns/road.html.
   const file = (url) => { const rel = path(url); return rel === '' || rel.endsWith('/') ? `${rel}index.html` : `${rel}.html`; };
   const name = texts(node.publisher.name)[0]?.text ?? '';
+  // The node's own title and description (node.yaml), when it has them; else "Data models by <publisher>" and the fixed intro.
+  const about = texts(node.description)[0]?.text ?? null;
   const site = {
-    name, title: t.dataModelsBy(name), description: `${t.introBefore}catalog.json${t.introAfter}`, locale: t.locale,
+    name, title: texts(node.title)[0]?.text ?? t.dataModelsBy(name), description: about ?? `${t.introBefore}catalog.json${t.introAfter}`, about, locale: t.locale,
     lang, baseUrl: urls.baseUrl, home: prefixOf(lang), catalog: `${urls.baseUrl}/catalog.json`, llms: `${urls.baseUrl}/llms.txt`,
     // The other languages' versions of each page: prefix + the page's path.
     langs: languages.length > 1 ? languages.map((l) => ({ lang: l, label: pageTexts(l).label, locale: pageTexts(l).locale, prefix: prefixOf(l), notFoundText: pageTexts(l).notFoundText, textLang: pageTexts(l).textLang })) : [],
