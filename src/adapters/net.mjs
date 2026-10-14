@@ -33,10 +33,11 @@ function hextets(ip) {
 export function isPublicAddress(ip) {
   const family = isIP(ip);
   if (family === 4) {
-    const [a, b] = v4(ip);
+    const [a, b, c] = v4(ip);
     return !(a === 0 || a === 10 || a === 127 || a >= 224
       || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31)
-      || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19)));
+      || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19))
+      || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113)); // documentation, as 192.0.2.0/24
   }
   if (family === 6) {
     const h = hextets(ip);
@@ -51,12 +52,13 @@ export function isPublicAddress(ip) {
       || (h[0] & 0xffc0) === 0xfec0 // fec0::/10 site-local (old)
       || (h[0] & 0xff00) === 0xff00 // multicast
       || (h[0] === 0x64 && h[1] === 0xff9b) // NAT64, which reaches IPv4 addresses
-      || h[0] === 0x2002 // 6to4, which reaches the IPv4 address inside it (2002:7f00:1:: is 127.0.0.1)
+      || h[0] === 0x2002 // 6to4, which sends to the IPv4 address inside it (2002:7f00:1:: goes to 127.0.0.1)
       || (h[0] === 0x2001 && h[1] === 0) // Teredo, which also carries an IPv4 address
-      || (h[0] === 0x100 && h[1] === 0 && h[2] === 0 && h[3] === 0) // 100::/64 discard-only
+      || (h[0] === 0x100 && h[1] === 0 && h[2] === 0 && h[3] <= 1) // 100::/64 discard-only and 100:0:0:1::/64 dummy
       || (h[0] === 0x2001 && h[1] === 2 && h[2] === 0) // 2001:2::/48 benchmarking, as 198.18.0.0/15
       || (h[0] === 0x2001 && h[1] === 0x0db8) // documentation
-      || (h[0] === 0x3fff && h[1] < 0x1000)); // 3fff::/20 documentation
+      || (h[0] === 0x3fff && h[1] < 0x1000) // 3fff::/20 documentation
+      || h[0] === 0x5f00); // 5f00::/16 SRv6 segment ids, inside one operator's network
   }
   return false;
 }

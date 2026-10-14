@@ -530,10 +530,10 @@ test('the adapters connect only to public addresses, also for the first URL', as
   const { getter } = await import('../src/adapters/index.mjs');
   for (const ok of ['8.8.8.8', '104.21.1.1', '2606:4700::1', '::ffff:808:808', '2a00:1450:4001::1']) assert.ok(isPublicAddress(ok), ok);
   for (const bad of ['127.0.0.1', '10.0.0.5', '172.16.0.1', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1', '::1', '::', 'fd00::1', 'fe80::1', '::ffff:127.0.0.1', '::ffff:10.0.0.1', '::ffff:7f00:1', '::ffff:a00:1', '::ffff:a9fe:a9fe', '0:0:0:0:0:ffff:7f00:1', '::127.0.0.1', 'fc12::1', 'fec0::1', 'ff02::1', '64:ff9b::a00:1', '2001:db8::1', 'not-an-ip']) assert.ok(!isPublicAddress(bad), bad);
-  // IPv6 ranges that carry an IPv4 address (6to4, Teredo) or are not routed (discard-only, benchmarking, documentation).
-  for (const bad of ['2002:7f00:1::', '2002:a9fe:a9fe::1', '2002:808:808::1', '2001:0:4136:e378:8000:63bf:3fff:fdd2', '2001::1', '100::1', '100::ffff:ffff:ffff:ffff', '2001:2::1', '3fff::1', '3fff:fff:ffff::1']) assert.ok(!isPublicAddress(bad), bad);
+  // IPv6 ranges that carry an IPv4 address (6to4, Teredo) or are not reachable on the internet (discard-only, dummy, benchmarking, documentation, SRv6), and the IPv4 documentation ranges.
+  for (const bad of ['2002:7f00:1::', '2002:a9fe:a9fe::1', '2002:808:808::1', '2001:0:4136:e378:8000:63bf:3fff:fdd2', '2001::1', '100::1', '100::ffff:ffff:ffff:ffff', '100:0:0:1::1', '2001:2::1', '3fff::1', '3fff:fff:ffff::1', '5f00::1', '198.51.100.7', '203.0.113.7']) assert.ok(!isPublicAddress(bad), bad);
   // Their neighbours stay public.
-  for (const ok of ['2001:1::1', '2001:4860:4860::8888', '2003::1', '100:0:0:1::1', '2001:2:1::1', '3fff:1000::1', '2001:db9::1']) assert.ok(isPublicAddress(ok), ok);
+  for (const ok of ['2001:1::1', '2001:4860:4860::8888', '2003::1', '100:0:0:2::1', '2001:2:1::1', '3fff:1000::1', '2001:db9::1', '5f01::1', '198.51.101.7', '203.0.114.7']) assert.ok(isPublicAddress(ok), ok);
   await assert.rejects(publicFetch('https://127.0.0.1/x'), /127\.0\.0\.1 is not a public address/);
   await assert.rejects(publicFetch('https://[::1]/x'), /::1 is not a public address/);
   await assert.rejects(publicFetch('http://example.org/x'), /only https is read/);
