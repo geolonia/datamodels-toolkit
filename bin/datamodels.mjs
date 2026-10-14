@@ -452,7 +452,7 @@ async function extend(model, target, dir, { index, subclass }) {
   try { r = await extendModel(dir, model, target, { index, subclass }); } catch (e) { fail(e.message); }
   for (const f of r.added) console.error(`  added ${f}`);
   for (const f of r.changed) console.error(`  changed ${f}`);
-  console.error(`${target}: ${r.typeIri}, extends ${r.extends.typeIri} v${r.extends.version}. Next: this node's attributes in schema.json (each with x-iri), context.jsonld and catalog.yaml, then datamodels check.`);
+  console.error(`${target}: ${r.typeIri}, extends ${r.extends.typeIri} v${r.extends.version}, from ${r.extends.index}. Next: this node's attributes in schema.json (each with x-iri), context.jsonld and catalog.yaml, then datamodels check.`);
   return 0;
 }
 

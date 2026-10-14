@@ -14,30 +14,37 @@
 import { getter, normalUrl } from './adapters/index.mjs';
 import { indexForIri } from './build/urls.mjs';
 
-export { indexForIri };
 export const DEFAULT_INDEX = 'https://datamodels.jp/catalog.json';
 
 // Limits, so a long chain of links or a large network cannot keep the command busy.
 export const MAX_DEPTH = 5;
 export const MAX_NODES = 50;
 
+// The read of a type IRI's own index is a guess, so it waits less than the other reads:
+// a host that does not answer holds up the usual index for at most this long.
+export const OWN_INDEX_TIMEOUT = 5000;
+
 /**
  * Where to look for a model given by its type IRI, when no index is given
  * (geolonia/datamodels#222): first the index of the node that minted the IRI
  * (indexForIri), then `fallback`, the index the command used before. The
- * IRI's own index is read once with `get` (a getter(): https on a public host
- * only) and used when it lists a model with that type IRI, an alias included.
+ * IRI's own index is read once, through the adapters' getter (https on a
+ * public host name only), within OWN_INDEX_TIMEOUT, and used when it lists a
+ * model with that type IRI (an alias included) that `accepts` takes; `what`
+ * says what `accepts` wants, for the message.
  * Returns { from, catalog } when it is used, else { from: fallback, tried },
  * with `tried` saying why it was not used (null when nothing was read: the IRI
  * has no index of its own, or it is the fallback itself).
  */
-export async function indexForModel(iri, fallback, get) {
+export async function indexForModel(iri, fallback, { fetch: fetchUrl = globalThis.fetch, timeout = OWN_INDEX_TIMEOUT, accepts = () => true, what = 'a model' } = {}) {
   const own = indexForIri(iri);
   if (!own || own === normalUrl(fallback)) return { from: fallback, tried: null };
   let catalog;
-  try { catalog = await get(own); } catch (e) { return { from: fallback, tried: e.message }; }
+  try { catalog = await getter(fetchUrl, Math.min(timeout, OWN_INDEX_TIMEOUT))(own); } catch (e) { return { from: fallback, tried: e.message }; }
   if (!Array.isArray(catalog?.models)) return { from: fallback, tried: `${own}: no models (is it a catalog.json?)` };
-  if (!catalog.models.some((m) => m?.typeIri === iri)) return { from: fallback, tried: `${own} does not list it` };
+  const listed = catalog.models.filter((m) => m?.typeIri === iri);
+  if (!listed.length) return { from: fallback, tried: `${own} does not list it` };
+  if (!listed.some(accepts)) return { from: fallback, tried: `${own} lists it, but not as ${what}` };
   return { from: own, catalog };
 }
 

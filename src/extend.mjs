@@ -16,7 +16,7 @@ import { readNode } from './build/node.mjs';
 import { parseYaml } from './build/load.mjs';
 import { catalogUrls } from './build/urls.mjs';
 import { placeModel } from './add.mjs';
-import { getter } from './adapters/index.mjs';
+import { getter, normalUrl } from './adapters/index.mjs';
 import { DEFAULT_INDEX, indexForModel, triedFirst } from './discover.mjs';
 
 const TYPE_NAME = /^[A-Z][A-Za-z0-9]*$/;
@@ -24,18 +24,21 @@ const exists = (p) => stat(p).then(() => true, () => false);
 // Keys of the other catalog's schema that describe it, not the copy.
 const NOT_COPIED = ['$id', 'title', 'x-version', 'x-license-url', 'x-model-tags', 'x-derived-from', 'x-alias-of', 'x-subclass-of'];
 
-/** The models of an index that can be extended: entities, with the URLs extend needs. */
+/**
+ * The models of an index that can be extended: entities, with the URLs extend needs.
+ * Read through the adapters' getter: https on a public host name only.
+ */
 export async function extendableModels(index, { fetch: fetchUrl = globalThis.fetch, timeout = 20000 } = {}) {
-  const res = await fetchUrl(index, { signal: AbortSignal.timeout(timeout) }).catch((e) => { throw new Error(`${index} could not be read (${e.cause?.code ?? e.message})`); });
-  if (!res.ok) throw new Error(`${index}: HTTP ${res.status}`);
-  const catalog = await res.json().catch(() => { throw new Error(`${index}: not JSON`); });
-  return entityModels(catalog, index);
+  return entityModels(await getter(fetchUrl, timeout)(index), index);
 }
+
+/** Whether a catalog entry can be extended: an entity, with the URLs extend needs. */
+const extendable = (m) => (m?.kind ?? 'entity') === 'entity' && Boolean(m?.typeIri && m.version && m.contextUrl && m.schemaUrl);
 
 /** The models of a catalog that can be extended (extendableModels). */
 function entityModels(catalog, index) {
   if (!Array.isArray(catalog?.models)) throw new Error(`${index}: no models (is it a catalog.json?)`);
-  return catalog.models.filter((m) => (m.kind ?? 'entity') === 'entity' && m.typeIri && m.version && m.contextUrl && m.schemaUrl);
+  return catalog.models.filter(extendable);
 }
 
 /**
@@ -54,17 +57,14 @@ export async function extendModel(dir, source, target, { index, subclass = false
   if (!(await exists(join(subjectDir, 'subject.yaml')))) throw new Error(`no subject ${subjectName} in ${join(dir, 'models')} (datamodels init writes the first one)`);
   const subject = await parseYaml(join(subjectDir, 'subject.yaml'), join(dir, 'models'));
   const usual = index ?? node.nodes?.[0]?.index ?? DEFAULT_INDEX;
-  // A type IRI without --index: the index of the node that minted it first, read once
-  // through the adapters' getter (https on a public host only).
+  // A type IRI without --index: the index of the node that minted it first, when it lists
+  // the IRI as a model that can be extended.
   const byIri = /^https?:\/\//.test(source);
-  const where = byIri && !index ? await indexForModel(source, usual, getter(fetchUrl, timeout)) : { from: usual, tried: null };
+  const where = byIri && !index ? await indexForModel(source, usual, { fetch: fetchUrl, timeout, accepts: extendable, what: 'an entity type with a version, @context and schema' }) : { from: usual, tried: null };
   const from = where.from;
-  const get = async (url) => {
-    let res;
-    try { res = await fetchUrl(url, { signal: AbortSignal.timeout(timeout) }); } catch (e) { throw new Error(`${url} could not be read (${e.cause?.code ?? e.message})`); }
-    if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-    return res.json();
-  };
+  // Every read (the index, the schema, the example) goes through the adapters' getter:
+  // https on a public host name only, checked again on every redirect.
+  const get = getter(fetchUrl, timeout);
 
   const entry = await (async () => {
     const models = where.catalog ? entityModels(where.catalog, from) : await extendableModels(from, { fetch: fetchUrl, timeout });
@@ -72,13 +72,20 @@ export async function extendModel(dir, source, target, { index, subclass = false
     if (!found) throw new Error(`${source} is not an entity type in ${from}${byIri ? '' : ' (give <subject>/<Type> as listed there, or its type IRI)'}`);
     return found;
   })().catch((e) => { throw triedFirst(e, where.tried); });
-  const theirs = await get(entry.schemaUrl);
 
   // This node imports the other node's @context, so it must list that node (node.yaml, nodes).
   // The other node's base URL is where its catalog.json is, a path included (a GitHub Pages project site).
   // A node imports contexts from <node>/context/ only (the build checks it), so another place is refused here.
+  // Its schema and example are read only from its own schema/ and examples/, as export does
+  // (src/export.mjs), and only after these checks.
   const nodeUrl = new URL('.', from).href;
   if (!entry.contextUrl.startsWith(`${nodeUrl}context/`)) throw new Error(`${entry.contextUrl} is not under ${nodeUrl}context/, where ${from} publishes its @contexts, so a node cannot import it (docs/node.md)`);
+  const schemaUrl = normalUrl(entry.schemaUrl);
+  if (!schemaUrl?.startsWith(`${nodeUrl}schema/`)) throw new Error(`${from}: the schema of ${entry.typeIri} (${entry.schemaUrl}) is not under ${nodeUrl}schema/, not read`);
+  const keyValues = (Array.isArray(entry.exampleUrls) ? entry.exampleUrls : []).find((u) => typeof u === 'string' && /\/example\.json$/.test(u));
+  const exampleUrl = keyValues === undefined ? null : normalUrl(keyValues);
+  if (keyValues !== undefined && !exampleUrl?.startsWith(`${nodeUrl}examples/`)) throw new Error(`${from}: the example of ${entry.typeIri} (${keyValues}) is not under ${nodeUrl}examples/, not read`);
+  const theirs = await get(schemaUrl);
   const listed = (node.nodes ?? []).some((n) => entry.contextUrl.startsWith(`${n.url.replace(/\/+$/, '')}/context/`));
   let nodeYaml;
   if (!listed) {
@@ -121,10 +128,9 @@ ${YAML.stringify({
 
   // The other catalog's example, with this type; a minimal one when there is none.
   let example = { id: `urn:ngsi-ld:${type}:example-1`, type };
-  const keyValues = (entry.exampleUrls ?? []).find((u) => /\/example\.json$/.test(u));
-  if (keyValues) {
+  if (exampleUrl) {
     try {
-      const theirExample = await get(keyValues);
+      const theirExample = await get(exampleUrl);
       example = { ...theirExample, id: String(theirExample.id ?? '').replace(`:${entry.type}:`, `:${type}:`) || example.id, type };
     } catch { /* the minimal example */ }
   }

@@ -5,8 +5,8 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { discoverNodes, searchModels, indexUrl, indexForIri, indexForModel, triedFirst, plain, words, MAX_NODES, DEFAULT_INDEX } from '../src/discover.mjs';
-import { getter } from '../src/adapters/index.mjs';
+import { discoverNodes, searchModels, indexUrl, indexForModel, triedFirst, plain, words, MAX_NODES, DEFAULT_INDEX, OWN_INDEX_TIMEOUT } from '../src/discover.mjs';
+import { indexForIri } from '../src/build/urls.mjs';
 import * as build from '../src/build/index.mjs';
 
 const run = promisify(execFile);
@@ -242,9 +242,9 @@ test('indexForIri: the index of the node that minted a slash or hash IRI', () =>
 
 const OWN = 'https://models.example.org/catalog.json';
 const IRI = 'https://models.example.org/ns/road#RoadTask';
-const pickFor = async (iri, files, fallback = DEFAULT_INDEX) => {
+const pickFor = async (iri, files, fallback = DEFAULT_INDEX, options = {}) => {
   const seen = [];
-  const r = await indexForModel(iri, fallback, getter(stub(files, seen), 1000));
+  const r = await indexForModel(iri, fallback, { fetch: stub(files, seen), timeout: 1000, ...options });
   return { ...r, seen };
 };
 
@@ -290,4 +290,25 @@ test('indexForModel: the IRI\'s own index when it lists a model with that IRI, a
   assert.deepEqual(await pickFor(IRI, { [OWN]: alias }), { from: OWN, catalog: alias, seen: [OWN] });
   // Whatever the usual index is (here the first node in node.yaml).
   assert.equal((await pickFor(IRI, { [OWN]: catalog }, 'https://other.example.org/catalog.json')).from, OWN);
+});
+
+test('indexForModel: the usual index when the IRI\'s own index lists it, but not as the command needs it', async () => {
+  const value = { models: [{ type: 'RoadTask', kind: 'value', typeIri: IRI }] };
+  const entity = (m) => (m.kind ?? 'entity') === 'entity';
+  assert.deepEqual(await pickFor(IRI, { [OWN]: value }, DEFAULT_INDEX, { accepts: entity, what: 'an entity type' }),
+    { from: DEFAULT_INDEX, tried: `${OWN} lists it, but not as an entity type`, seen: [OWN] });
+  // One entry that it takes is enough.
+  const both = { models: [...value.models, { type: 'RoadTask', typeIri: IRI }] };
+  assert.deepEqual(await pickFor(IRI, { [OWN]: both }, DEFAULT_INDEX, { accepts: entity }), { from: OWN, catalog: both, seen: [OWN] });
+});
+
+test(`indexForModel: a host that does not answer holds up the usual index for at most ${OWN_INDEX_TIMEOUT / 1000} s`, async () => {
+  assert.ok(OWN_INDEX_TIMEOUT <= 5000);
+  // A fetch that answers only when it is aborted, as a host that does not answer.
+  const silent = async (url, { signal }) => new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason)));
+  const started = Date.now();
+  const r = await indexForModel(IRI, DEFAULT_INDEX, { fetch: silent, timeout: 50 });
+  assert.equal(r.from, DEFAULT_INDEX);
+  assert.match(r.tried, new RegExp(`^${OWN.replaceAll('.', '\\.')} could not be read`));
+  assert.ok(Date.now() - started < 2000);
 });

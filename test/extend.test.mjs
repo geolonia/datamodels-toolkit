@@ -185,6 +185,62 @@ test('extend by type IRI: the usual index when the IRI\'s own index cannot be re
   assert.deepEqual(r.extends, { typeIri: GH_TASK, version: '1.0.0', index: INDEX });
 });
 
+test('extend reads a schema and an example only from the other node\'s schema/ and examples/, over https on a public host', async () => {
+  const EVIL = 'https://evil.example';
+  const evilIri = `${EVIL}/ns/x#Y`;
+  const evil = (more) => ({ [`${EVIL}/catalog.json`]: { models: [{ type: 'Y', kind: 'entity', typeIri: evilIri, subject: 'x', version: '1.0.0', contextUrl: `${EVIL}/context/x/v1.0.0.jsonld`, schemaUrl: `${EVIL}/schema/x/Y/v1.0.0.json`, ...more }] } });
+  const cases = [
+    // The metadata service of a cloud machine, and a local server.
+    [{ schemaUrl: 'http://169.254.169.254/latest/meta-data/iam.json', exampleUrls: ['http://127.0.0.1:8080/example.json'] }, /the schema of .* \(http:\/\/169\.254\.169\.254\/latest\/meta-data\/iam\.json\) is not under https:\/\/evil\.example\/schema\/, not read/],
+    // Another public host.
+    [{ schemaUrl: 'https://elsewhere.example/schema/x/Y/v1.0.0.json' }, /\(https:\/\/elsewhere\.example\/schema\/x\/Y\/v1\.0\.0\.json\) is not under https:\/\/evil\.example\/schema\//],
+    // Out of schema/ by dot segments.
+    [{ schemaUrl: `${EVIL}/schema/../secret.json` }, /is not under https:\/\/evil\.example\/schema\//],
+    // A schema in place, but the example on a local server.
+    [{ exampleUrls: ['http://127.0.0.1:8080/example.json'] }, /the example of .* \(http:\/\/127\.0\.0\.1:8080\/example\.json\) is not under https:\/\/evil\.example\/examples\/, not read/],
+    // A @context elsewhere: refused before anything else is read.
+    [{ contextUrl: 'https://elsewhere.example/context/x.jsonld', schemaUrl: 'http://169.254.169.254/x.json' }, /x\.jsonld is not under https:\/\/evil\.example\/context\//],
+  ];
+  for (const [more, message] of cases) {
+    for (const options of [{}, { index: `${EVIL}/catalog.json` }]) {
+      const dir = await node();
+      const before = await read(dir, 'node.yaml');
+      const seen = [];
+      await assert.rejects(extendModel(dir, evilIri, 'road/RoadY', { ...options, fetch: seenFetch(evil(more), seen) }), message);
+      assert.deepEqual(seen, [`${EVIL}/catalog.json`], JSON.stringify(more));
+      assert.equal(await read(dir, 'node.yaml'), before);
+    }
+  }
+  // A schema in place that redirects to the metadata service: the redirect is not followed.
+  const seen = [];
+  const redirecting = async (url, o) => {
+    seen.push(String(url));
+    if (url === `${EVIL}/schema/x/Y/v1.0.0.json`) return new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/latest/meta-data/iam.json' } });
+    return fakeFetch(evil({}))(url, o);
+  };
+  await assert.rejects(extendModel(await node(), evilIri, 'road/RoadY', { fetch: redirecting }), /redirects to http:\/\/169\.254\.169\.254\/latest\/meta-data\/iam\.json, not followed/);
+  assert.deepEqual(seen, [`${EVIL}/catalog.json`, `${EVIL}/schema/x/Y/v1.0.0.json`]);
+  // An index that is not https on a public host is not read at all.
+  for (const bad of ['http://evil.example/catalog.json', 'https://127.0.0.1/catalog.json', 'https://localhost/catalog.json']) {
+    const seen = [];
+    await assert.rejects(extendModel(await node(), 'x/Y', 'road/RoadY', { index: bad, fetch: seenFetch({}, seen) }), /is not read: only https on a public host name/);
+    assert.deepEqual(seen, [], bad);
+  }
+});
+
+test('extend by type IRI: the usual index when the IRI\'s own index lists it only as a value type', async () => {
+  const dir = await node();
+  const asValue = structuredClone(ghFiles);
+  Object.assign(asValue[GH_INDEX].models[0], { kind: 'value' });
+  const seen = [];
+  const r = await extendModel(dir, GH_TASK, 'road/RoadTask', { fetch: seenFetch({ ...withAlias, ...asValue }, seen) });
+  assert.deepEqual(seen.slice(0, 2), [GH_INDEX, INDEX]);
+  assert.deepEqual(r.extends, { typeIri: GH_TASK, version: '1.0.0', index: INDEX });
+  // When the usual index does not have it either, the reason is in the error.
+  await assert.rejects(extendModel(await node(), GH_TASK, 'road/RoadTask', { fetch: seenFetch({ ...files, ...asValue }, []) }),
+    { message: `${GH_TASK} is not an entity type in ${INDEX} (tried first: ${GH_INDEX} lists it, but not as an entity type with a version, @context and schema)` });
+});
+
 test('extend by type IRI: the index of the node that minted it, read once, before the usual one', async () => {
   const dir = await node();
   const seen = [];

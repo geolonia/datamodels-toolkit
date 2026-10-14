@@ -61,11 +61,13 @@ export async function exportModel(target, names, { dir = '.', index, fetch: fetc
     context = { urls: local.urls, languages: local.node.languages, refs };
     from = dir;
   } else {
-    const get = getter(fetchUrl, timeout);
     const fallback = index ?? local?.node.nodes?.[0]?.index ?? DEFAULT_INDEX;
-    // A type IRI without --index: the index of the node that minted it first (one read, kept by get).
-    const pick = byIri && !index ? await indexForModel(target, fallback, get) : { from: fallback, tried: null };
+    // A type IRI without --index: the index of the node that minted it first.
+    const pick = byIri && !index ? await indexForModel(target, fallback, { fetch: fetchUrl, timeout }) : { from: fallback, tried: null };
     from = pick.from;
+    // The index read there is not read again.
+    const read = getter(fetchUrl, timeout);
+    const get = (url) => (pick.catalog && url === from ? Promise.resolve(pick.catalog) : read(url));
     const r = await remoteModel(target, from, get).catch((e) => { throw triedFirst(e, pick.tried); });
     ({ subject, model } = r);
     const { refs, problems } = await readRefs([model], { entries: r.entries, fetch: fetchUrl, timeout, trusted: schemaPrefixes(r.nodes) });
