@@ -167,7 +167,7 @@ export async function buildNode(dir, { out = join(dir, '_site'), now, pages: wit
   // English where a text has it, as in llms.txt; else the node's first language that does.
   const pickText = (o) => o?.en ?? node.languages.map((l) => o?.[l]).find(Boolean) ?? Object.values(o ?? {})[0];
   const name = pickText(node.publisher.name);
-  await writeFile(join(out, 'llms.txt'), llmsTxt(subjects, { urls, name: pickText(node.title) ?? `Data models by ${name}`, description: pickText(node.description), languages: node.languages }));
+  await writeFile(join(out, 'llms.txt'), llmsTxt(subjects, { urls, name: `Data models by ${name}`, title: pickText(node.title), description: pickText(node.description), languages: node.languages }));
   const pages = withPages ? await writePages(subjects, { urls, node, out, adapters }) : [];
   await writeFile(join(out, '_headers'), headersFile());
   const redirectRules = redirectsFile(result.redirects);

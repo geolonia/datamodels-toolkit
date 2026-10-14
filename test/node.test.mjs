@@ -384,9 +384,14 @@ test('node.yaml: a title and a description go into catalog.json, the pages and l
 });
 
 test('llms.txt: a title or description written over several lines stays on one line', () => {
-  const txt = llmsTxt([], { urls: catalogUrls(BASE, { iris: 'hash' }), name: 'Road\nmodels\n', description: '  Models for\n road maintenance.\n' });
+  const txt = llmsTxt([], { urls: catalogUrls(BASE, { iris: 'hash' }), name: 'Data models by X', title: 'Road\nmodels\n', description: '  Models for\n road maintenance.\n' });
   assert.ok(txt.startsWith('# Road models\n\n> Data models:'), txt);
   assert.match(txt, /\n\nModels for road maintenance\.\n\nMachine-readable list/);
+});
+
+test('llms.txt: without a title, the heading is the name as it is (repeated spaces kept)', () => {
+  const txt = llmsTxt([], { urls: catalogUrls(BASE, { iris: 'hash' }), name: 'Data models by Example  Inc.' });
+  assert.ok(txt.startsWith('# Data models by Example  Inc.\n\n'), txt);
 });
 
 test('datamodels build writes the node, and exits with 1 on an invalid one', async () => {

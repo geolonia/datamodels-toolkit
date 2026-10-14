@@ -6,15 +6,17 @@
 const oneLine = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 
 /**
- * The text of llms.txt. `name`: the catalog's name (the heading); `description`:
+ * The text of llms.txt. `name`: the catalog's name (the heading, as it is);
+ * `title`: the node's own title, which replaces it, on one line; `description`:
  * what the catalog is about, in one paragraph (optional); `languages`:
  * the catalog's languages; English is used where a text has it, otherwise the
  * first language that does.
  */
-export function llmsTxt(subjects, { urls, name, description, languages = ['en'] }) {
+export function llmsTxt(subjects, { urls, name, title, description, languages = ['en'] }) {
   const pick = (o) => o?.en ?? languages.map((l) => o?.[l]).find(Boolean) ?? '';
-  // One line: a title written over several lines in YAML would otherwise break the heading.
-  let txt = `# ${oneLine(name)}\n\n`;
+  // A title on one line: written over several lines in YAML it would otherwise break the heading.
+  // Without one, the heading is the name as before, byte for byte.
+  let txt = `# ${title ? oneLine(title) : name}\n\n`;
   txt += `> Data models: JSON Schemas (2020-12), JSON-LD @context files and RDFS vocabularies. Exact versions (v1.0.0) never change; major aliases (v1) follow the latest compatible version.\n\n`;
   if (oneLine(description)) txt += `${oneLine(description)}\n\n`;
   txt += `Machine-readable list of every model with all its URLs: ${urls.baseUrl}/catalog.json.\n\n`;
