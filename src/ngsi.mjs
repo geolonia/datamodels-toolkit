@@ -1,7 +1,10 @@
 // NGSI-LD normalized form. Moved from geolonia/datamodels (scripts/lib/ngsi.mjs, #91);
 // the date rule follows the catalog's (geolonia/datamodels#183). The key-values
 // projection and the json and vocab wrappers came later, for check
-// (geolonia/datamodels#226).
+// (geolonia/datamodels#226). The rules of a normalized entity (attributeProblems,
+// unclosedRings) moved here from src/build/examples.mjs so the datamodels.jp
+// MCP server, a Cloudflare Worker, can use them too (#120): this module must
+// keep having no imports.
 
 /** NGSI-LD attribute types a model may declare in x-ngsi.type. JsonProperty and VocabProperty are NGSI-LD 1.8. */
 export const NGSI_TYPES = ['Property', 'Relationship', 'GeoProperty', 'JsonProperty', 'VocabProperty'];
@@ -15,6 +18,11 @@ export const NGSI_TYPES = ['Property', 'Relationship', 'GeoProperty', 'JsonPrope
 export const WRAPPED = { JsonProperty: 'json', VocabProperty: 'vocab' };
 
 const isObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+/**
+ * Set an own property of `obj`. Keys come from data, and `obj[k] = v` with the
+ * key "__proto__" would change the object's prototype and drop the attribute.
+ */
+const setOwn = (obj, k, v) => Object.defineProperty(obj, k, { value: v, enumerable: true, writable: true, configurable: true });
 /** What a JSON value is, for a message: null, an array, a number, ... */
 const kindOf = (v) => (v === null ? 'null' : Array.isArray(v) ? 'an array' : `a ${typeof v}`);
 
@@ -40,7 +48,7 @@ export function unwrapKeyValues(keyValues, schema) {
     const member = Object.hasOwn(WRAPPED, type ?? '') ? WRAPPED[type] : undefined;
     if (!member || !Object.hasOwn(out, k)) continue;
     const unwrap = (v) => unwrapOne(k, type, v);
-    out[k] = prop['x-ngsi'].multi && Array.isArray(out[k]) ? out[k].map(unwrap) : unwrap(out[k]);
+    setOwn(out, k, prop['x-ngsi'].multi && Array.isArray(out[k]) ? out[k].map(unwrap) : unwrap(out[k]));
   }
   return out;
 }
@@ -57,7 +65,7 @@ export function wrapKeyValues(entity, schema) {
     const member = Object.hasOwn(WRAPPED, type ?? '') ? WRAPPED[type] : undefined;
     if (!member || !Object.hasOwn(out, k)) continue;
     const wrap = (v) => ({ [member]: v });
-    out[k] = prop['x-ngsi'].multi && Array.isArray(out[k]) ? out[k].map(wrap) : wrap(out[k]);
+    setOwn(out, k, prop['x-ngsi'].multi && Array.isArray(out[k]) ? out[k].map(wrap) : wrap(out[k]));
   }
   return out;
 }
@@ -81,26 +89,26 @@ export function toKeyValues(normalized, { multi = new Set() } = {}) {
       if (instances.length === 0) throw new Error(`attribute ${k}: empty multi-valued attribute`);
       const seen = new Set();
       let defaults = 0;
-      out[k] = instances.map((inst) => {
+      setOwn(out, k, instances.map((inst) => {
         const single = toKeyValues({ [k]: inst });
         if (inst.datasetId === undefined) defaults += 1;
         else if (seen.has(inst.datasetId)) throw new Error(`attribute ${k}: duplicate datasetId ${inst.datasetId}`);
         else seen.add(inst.datasetId);
         return single[k];
-      });
+      }));
       if (defaults > 1) throw new Error(`attribute ${k}: only one instance of a multi-valued attribute may omit datasetId`);
       continue;
     }
     if (!v || typeof v !== 'object' || !Object.hasOwn(v, 'type')) throw new Error(`attribute ${k}: not a normalized attribute object`);
-    if (v.type === 'Relationship') { if (typeof v.object !== 'string') throw new Error(`attribute ${k}: Relationship needs a string object`); out[k] = v.object; }
-    else if (v.type === 'GeoProperty') { if (!v.value || typeof v.value !== 'object' || typeof v.value.type !== 'string') throw new Error(`attribute ${k}: GeoProperty needs a GeoJSON value`); out[k] = v.value; }
+    if (v.type === 'Relationship') { if (typeof v.object !== 'string') throw new Error(`attribute ${k}: Relationship needs a string object`); setOwn(out, k, v.object); }
+    else if (v.type === 'GeoProperty') { if (!v.value || typeof v.value !== 'object' || typeof v.value.type !== 'string') throw new Error(`attribute ${k}: GeoProperty needs a GeoJSON value`); setOwn(out, k, v.value); }
     else if (Object.hasOwn(WRAPPED, v.type)) {
       const member = WRAPPED[v.type];
       if (!Object.hasOwn(v, member)) throw new Error(`attribute ${k}: ${v.type} needs a ${member} member`);
-      out[k] = { [member]: v[member] };
+      setOwn(out, k, { [member]: v[member] });
     } else if (v.type === 'Property') {
       if (!Object.hasOwn(v, 'value')) throw new Error(`attribute ${k}: Property needs a value`);
-      out[k] = (v.value && typeof v.value === 'object' && Object.hasOwn(v.value, '@type') && Object.hasOwn(v.value, '@value')) ? v.value['@value'] : v.value;
+      setOwn(out, k, (v.value && typeof v.value === 'object' && Object.hasOwn(v.value, '@type') && Object.hasOwn(v.value, '@value')) ? v.value['@value'] : v.value);
     } else throw new Error(`attribute ${k}: unknown attribute type "${v.type}"`);
   }
   return out;
@@ -133,6 +141,84 @@ export function typedDate(value, formats) {
 }
 
 /**
+ * The NGSI-LD rules of a model that a normalized entity breaks, as data, so
+ * each caller words its own message (check, and the validate tool of the
+ * datamodels.jp MCP server, geolonia/datamodels-toolkit#120).
+ *
+ * `attributes` are the model's [name, schema] pairs (the entries of its
+ * schema's properties; id, type and @context are skipped). Attributes the
+ * entity does not have are skipped too. Returns, attribute by attribute:
+ *
+ *   - { attribute, rule: 'multi', instances: <how many> } when the attribute
+ *     is a list of instances, but the schema has no x-ngsi.multi;
+ *   - { attribute, rule: 'type', found: <the instance's type>, expected: <x-ngsi.type>, implicit }
+ *     for each instance whose type is not the declared one; `implicit` is true
+ *     when the schema has no x-ngsi.type and Property is expected by default;
+ *   - { attribute, rule: 'date', found: <the value as given>, expected: { '@type', '@value' } }
+ *     for each instance of a date or date-time Property whose value does not
+ *     carry its typed form (typedDate).
+ *
+ * An instance that is not an attribute object breaks none of these rules:
+ * toKeyValues reports it. A value that is not a JSON object has no attributes.
+ */
+export function attributeProblems(entity, attributes) {
+  const out = [];
+  if (!isObject(entity)) return out;
+  for (const [name, prop] of attributes) {
+    if (name === 'id' || name === 'type' || name === '@context' || !Object.hasOwn(entity, name)) continue;
+    const ngsi = prop?.['x-ngsi'] ?? {};
+    const declared = ngsi.type ?? 'Property';
+    const instances = [entity[name]].flat();
+    if (Array.isArray(entity[name]) && !ngsi.multi) out.push({ attribute: name, rule: 'multi', instances: entity[name].length });
+    for (const inst of instances) {
+      if (isObject(inst) && Object.hasOwn(inst, 'type') && inst.type !== declared) out.push({ attribute: name, rule: 'type', found: inst.type, expected: declared, implicit: !ngsi.type });
+    }
+    // A date or date-time value carries its NGSI-LD type, and the type fits the value.
+    const formats = declared === 'Property' ? dateFormats(prop) : [];
+    for (const inst of formats.length ? instances : []) {
+      const v = inst?.value;
+      const value = isObject(v) && Object.hasOwn(v, '@value') ? v['@value'] : v;
+      const want = typedDate(value, formats);
+      if (typeof value === 'string' && v?.['@type'] !== want['@type']) out.push({ attribute: name, rule: 'date', found: v, expected: want });
+    }
+  }
+  return out;
+}
+
+const pathStyles = {
+  // $.area.coordinates[0], as check writes it.
+  jsonpath: (segments) => `$${segments.map((s) => (typeof s === 'number' ? `[${s}]` : `.${s}`)).join('')}`,
+  // /area/coordinates/0 (RFC 6901), as JSON Schema validators write it.
+  pointer: (segments) => segments.map((s) => `/${String(s).replaceAll('~', '~0').replaceAll('/', '~1')}`).join(''),
+};
+
+/**
+ * The polygon rings in a value, at any depth, whose first and last positions
+ * differ (RFC 7946, section 3.1.6: a ring closes). JSON Schema cannot compare
+ * two elements of an array, so this is checked apart. Returns their paths, in
+ * `style` 'jsonpath' ($.area.coordinates[0], the default) or 'pointer'
+ * (/area/coordinates/0). An empty ring is left to the schema.
+ */
+export function unclosedRings(value, { style = 'jsonpath' } = {}) {
+  if (!Object.hasOwn(pathStyles, style)) throw new Error(`unknown path style "${style}": use jsonpath or pointer`);
+  const format = pathStyles[style];
+  const out = [];
+  const same = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i]);
+  const closes = (ring) => !Array.isArray(ring) || ring.length === 0 || same(ring[0], ring.at(-1));
+  const walk = (v, p) => {
+    if (Array.isArray(v)) { v.forEach((e, i) => walk(e, [...p, i])); return; }
+    if (!isObject(v)) return;
+    if (v.type === 'Polygon' && Array.isArray(v.coordinates)) v.coordinates.forEach((ring, i) => { if (!closes(ring)) out.push(format([...p, 'coordinates', i])); });
+    else if (v.type === 'MultiPolygon' && Array.isArray(v.coordinates)) {
+      v.coordinates.forEach((poly, i) => (Array.isArray(poly) ? poly : []).forEach((ring, j) => { if (!closes(ring)) out.push(format([...p, 'coordinates', i, j])); }));
+    }
+    for (const [k, vv] of Object.entries(v)) walk(vv, [...p, k]);
+  };
+  walk(value, []);
+  return out;
+}
+
+/**
  * Normalized form of a key-values entity, for a model's JSON Schema: each
  * attribute takes the NGSI-LD type the schema declares (x-ngsi.type),
  * date and date-time Properties become typed Date and DateTime values
@@ -157,8 +243,8 @@ export function toNormalized(keyValues, schema, context) {
       if (Object.hasOwn(WRAPPED, ngsi.type ?? '')) return { type: ngsi.type, [WRAPPED[ngsi.type]]: unwrapOne(k, ngsi.type, value) };
       return { type: 'Property', value: typedDate(value, dateFormats(prop)) };
     };
-    if (ngsi.multi && Array.isArray(v)) out[k] = v.map((item, i) => ({ ...one(item), datasetId: `urn:ngsi-ld:dataset:${k}:${i + 1}` }));
-    else out[k] = one(v);
+    if (ngsi.multi && Array.isArray(v)) setOwn(out, k, v.map((item, i) => ({ ...one(item), datasetId: `urn:ngsi-ld:dataset:${k}:${i + 1}` })));
+    else setOwn(out, k, one(v));
   }
   return out;
 }

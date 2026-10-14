@@ -2,7 +2,10 @@
 // (geolonia/datamodels#183).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dateFormats, typedDate, toNormalized, toKeyValues, wrapKeyValues, unwrapKeyValues } from '../src/ngsi.mjs';
+import { execFile } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { promisify } from 'node:util';
+import { dateFormats, typedDate, toNormalized, toKeyValues, wrapKeyValues, unwrapKeyValues, attributeProblems, unclosedRings } from '../src/ngsi.mjs';
 
 const either = { anyOf: [{ type: 'string', format: 'date' }, { type: 'string', format: 'date-time' }] };
 const schema = {
@@ -74,3 +77,154 @@ test('a JsonProperty or VocabProperty: key-values keeps the wrapper, the normali
   assert.throws(() => toNormalized({ ...kv, details: { a: 1 } }, wrapped), /attribute details: a JsonProperty is \{"json": \.\.\.\} in key-values form/);
 });
 
+
+// The rules of a normalized entity, as data (#120): check and the datamodels.jp MCP server word them.
+const rules = {
+  properties: {
+    id: { type: 'string' }, type: { const: 'Thing' }, '@context': { type: 'array' },
+    route: { type: 'string', 'x-ngsi': { type: 'Property' } },
+    plain: { type: 'string' },
+    owner: { type: 'string', 'x-ngsi': { type: 'Relationship' } },
+    tags: { type: 'array', 'x-ngsi': { type: 'Property', multi: true } },
+    due: { type: 'string', format: 'date-time', 'x-ngsi': { type: 'Property' } },
+    either: { ...either, 'x-ngsi': { type: 'Property' } },
+    holidays: { type: 'array', items: { type: 'string', format: 'date' }, 'x-ngsi': { type: 'Property', multi: true } },
+  },
+};
+const attrs = Object.entries(rules.properties);
+
+test('attributeProblems: an entity that follows the rules has none', () => {
+  assert.deepEqual(attributeProblems({
+    '@context': ['x'], id: 'urn:ngsi-ld:Thing:1', type: 'Thing',
+    route: { type: 'Property', value: 'R1' }, plain: { type: 'Property', value: 'p' },
+    owner: { type: 'Relationship', object: 'urn:x' },
+    tags: [{ type: 'Property', value: 'a', datasetId: 'urn:d:1' }, { type: 'Property', value: 'b' }],
+    due: { type: 'Property', value: { '@type': 'DateTime', '@value': '2026-10-12T09:00:00+09:00' } },
+    either: { type: 'Property', value: { '@type': 'Date', '@value': '2026-10-12' } },
+    holidays: [{ type: 'Property', value: { '@type': 'Date', '@value': '2026-05-03' } }],
+    unknown: [{ type: 'Relationship', object: 'urn:y' }],
+  }, attrs), []);
+});
+
+test('attributeProblems: the attribute type follows x-ngsi.type, Property without it', () => {
+  assert.deepEqual(attributeProblems({
+    route: { type: 'Relationship', object: 'urn:x' },
+    plain: { type: 'GeoProperty', value: { type: 'Point', coordinates: [0, 0] } },
+    owner: { type: 'Property', value: 'urn:x' },
+  }, attrs), [
+    { attribute: 'route', rule: 'type', found: 'Relationship', expected: 'Property', implicit: false },
+    { attribute: 'plain', rule: 'type', found: 'GeoProperty', expected: 'Property', implicit: true },
+    { attribute: 'owner', rule: 'type', found: 'Property', expected: 'Relationship', implicit: false },
+  ]);
+  // One per instance; an instance that is not an attribute object, or has no type, is left to toKeyValues.
+  assert.deepEqual(attributeProblems({ tags: [{ type: 'Relationship', object: 'a' }, 'b', null, { value: 'c' }, { type: 'GeoProperty', value: {} }] }, attrs), [
+    { attribute: 'tags', rule: 'type', found: 'Relationship', expected: 'Property', implicit: false },
+    { attribute: 'tags', rule: 'type', found: 'GeoProperty', expected: 'Property', implicit: false },
+  ]);
+});
+
+test('attributeProblems: several instances only with x-ngsi.multi', () => {
+  assert.deepEqual(attributeProblems({ route: [{ type: 'Property', value: 'a', datasetId: 'urn:d:1' }, { type: 'Property', value: 'b' }] }, attrs), [
+    { attribute: 'route', rule: 'multi', instances: 2 },
+  ]);
+  // A list of one instance is a list too.
+  assert.deepEqual(attributeProblems({ route: [{ type: 'Property', value: 'a' }] }, attrs), [{ attribute: 'route', rule: 'multi', instances: 1 }]);
+  // With x-ngsi.multi, a single instance is fine too.
+  assert.deepEqual(attributeProblems({ tags: { type: 'Property', value: 'a' } }, attrs), []);
+});
+
+test('attributeProblems: a date or date-time value carries its typed form', () => {
+  const p = attributeProblems({
+    due: { type: 'Property', value: '2026-10-12T09:00:00+09:00' },
+    either: { type: 'Property', value: { '@type': 'DateTime', '@value': '2026-10-12' } },
+    holidays: [{ type: 'Property', value: '2026-05-03' }, { type: 'Property', value: { '@type': 'Date', '@value': '2026-05-04' } }],
+  }, attrs);
+  assert.deepEqual(p, [
+    { attribute: 'due', rule: 'date', found: '2026-10-12T09:00:00+09:00', expected: { '@type': 'DateTime', '@value': '2026-10-12T09:00:00+09:00' } },
+    { attribute: 'either', rule: 'date', found: { '@type': 'DateTime', '@value': '2026-10-12' }, expected: { '@type': 'Date', '@value': '2026-10-12' } },
+    { attribute: 'holidays', rule: 'date', found: '2026-05-03', expected: { '@type': 'Date', '@value': '2026-05-03' } },
+  ]);
+  // Not a string (the schema says so), or not a Property: no date rule.
+  assert.deepEqual(attributeProblems({ due: { type: 'Property', value: 42 } }, attrs), []);
+  assert.deepEqual(attributeProblems({ due: { type: 'Relationship', object: 'urn:x' } }, [['due', { format: 'date', 'x-ngsi': { type: 'Relationship' } }]]), []);
+});
+
+test('attributeProblems: id, type, @context and names of Object.prototype are not special', () => {
+  // id, type and @context are not attributes, even when the caller passes them.
+  assert.deepEqual(attributeProblems({ id: ['x'], type: { type: 'Relationship' }, '@context': [{ type: 'GeoProperty' }] }, [['id', {}], ['type', {}], ['@context', {}]]), []);
+  // An attribute the entity has only through its prototype is not there.
+  assert.deepEqual(attributeProblems({}, [['constructor', { 'x-ngsi': { type: 'Relationship' } }], ['toString', {}]]), []);
+  const proto = JSON.parse('{"__proto__": [{ "type": "Relationship", "object": "urn:x" }]}');
+  assert.deepEqual(attributeProblems(proto, [['__proto__', {}]]), [
+    { attribute: '__proto__', rule: 'multi', instances: 1 },
+    { attribute: '__proto__', rule: 'type', found: 'Relationship', expected: 'Property', implicit: true },
+  ]);
+  // A schema that is not an object, or an x-ngsi that is not one, means Property.
+  assert.deepEqual(attributeProblems({ a: { type: 'Relationship', object: 'u' }, b: { type: 'Relationship', object: 'u' } }, [['a', true], ['b', { 'x-ngsi': null }]]), [
+    { attribute: 'a', rule: 'type', found: 'Relationship', expected: 'Property', implicit: true },
+    { attribute: 'b', rule: 'type', found: 'Relationship', expected: 'Property', implicit: true },
+  ]);
+  // A value that is not a JSON object has no attributes.
+  for (const v of [null, undefined, 7, 'x', [{ route: { type: 'Relationship' } }]]) assert.deepEqual(attributeProblems(v, attrs), [], String(v));
+});
+
+test('unclosedRings: paths as check writes them, or as JSON pointers', () => {
+  const value = {
+    area: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]], [[0, 0], [1, 1]]] },
+    parts: [{ type: 'MultiPolygon', coordinates: [[[[0, 0], [1, 1], [2, 2]]], [[[0, 0], [1, 1], [0, 0]]]] }],
+    'a/b~c': { type: 'Polygon', coordinates: [[[0, 0], [1, 1]]] },
+  };
+  assert.deepEqual(unclosedRings(value), ['$.area.coordinates[1]', '$.parts[0].coordinates[0][0]', '$.a/b~c.coordinates[0]']);
+  assert.deepEqual(unclosedRings(value, { style: 'jsonpath' }), unclosedRings(value));
+  assert.deepEqual(unclosedRings(value, { style: 'pointer' }), ['/area/coordinates/1', '/parts/0/coordinates/0/0', '/a~1b~0c/coordinates/0']);
+  // The value itself, and a GeoProperty inside a normalized attribute.
+  assert.deepEqual(unclosedRings({ type: 'Polygon', coordinates: [[[0, 0], [1, 1]]] }, { style: 'pointer' }), ['/coordinates/0']);
+  assert.deepEqual(unclosedRings({ type: 'Polygon', coordinates: [[[0, 0], [1, 1]]] }), ['$.coordinates[0]']);
+  assert.deepEqual(unclosedRings({ geo: { type: 'GeoProperty', value: { type: 'Polygon', coordinates: [[[0, 0], [1, 1]]] } } }, { style: 'pointer' }), ['/geo/value/coordinates/0']);
+  // An empty ring and a ring that is not a list are left to the schema.
+  assert.deepEqual(unclosedRings({ type: 'Polygon', coordinates: [[], 'x'] }), []);
+  assert.deepEqual(unclosedRings({ type: 'MultiPolygon', coordinates: ['x', [[]]] }), []);
+  // Positions compare by their numbers.
+  assert.deepEqual(unclosedRings({ type: 'Polygon', coordinates: [[[0, 0, 5], [1, 1], [0, 0]]] }), ['$.coordinates[0]']);
+  for (const v of [null, 7, 'x', []]) assert.deepEqual(unclosedRings(v), [], String(v));
+  assert.throws(() => unclosedRings(value, { style: 'xpath' }), /unknown path style "xpath": use jsonpath or pointer/);
+});
+
+test('src/ngsi.mjs imports nothing, so a browser or a Cloudflare Worker can load it', async () => {
+  // @geolonia/datamodels/ngsi runs in the datamodels.jp MCP server (a Worker) and in browsers.
+  const source = await readFile(new URL('../src/ngsi.mjs', import.meta.url), 'utf8');
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.deepEqual([...code.matchAll(/\bimport\b[^\n]*|\bexport\b[^\n]*\bfrom\b[^\n]*|\brequire\s*\([^\n]*/g)].map((m) => m[0]), []);
+  // And loading it resolves no other module.
+  const probe = `
+    import { registerHooks } from 'node:module';
+    const seen = [];
+    registerHooks({ resolve(s, c, next) { seen.push(s); return next(s, c); } });
+    await import(process.argv[1]);
+    console.log(JSON.stringify(seen.filter((s) => s !== process.argv[1])));
+  `;
+  const { stdout } = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', probe, new URL('../src/ngsi.mjs', import.meta.url).href]);
+  assert.deepEqual(JSON.parse(stdout), []);
+});
+
+test('an attribute named __proto__ stays an own key and never changes the prototype', () => {
+  const parse = (o) => JSON.parse(JSON.stringify(o).replace('"proto"', '"__proto__"'));
+  const check = (out, value) => {
+    assert.equal(Object.getPrototypeOf(out), Object.prototype);
+    assert.ok(Object.hasOwn(out, '__proto__'));
+    assert.deepEqual(Object.getOwnPropertyDescriptor(out, '__proto__'), { value, enumerable: true, writable: true, configurable: true });
+    assert.equal(out.polluted, undefined);
+  };
+  const norm = parse({ id: 'urn:x', type: 'Thing', proto: { type: 'Property', value: { polluted: true } } });
+  check(toKeyValues(norm), { polluted: true });
+  check(toKeyValues(parse({ proto: [{ type: 'Relationship', object: 'urn:y', datasetId: 'urn:d:1' }] })), ['urn:y']);
+  check(toKeyValues(parse({ proto: { type: 'GeoProperty', value: { type: 'Point', coordinates: [0, 0], polluted: true } } })), { type: 'Point', coordinates: [0, 0], polluted: true });
+  check(toKeyValues(parse({ proto: { type: 'JsonProperty', json: { polluted: true } } })), { json: { polluted: true } });
+  // The wrappers, with __proto__ named in the schema.
+  const schema = parse({ properties: { proto: { 'x-ngsi': { type: 'JsonProperty' } } } });
+  check(unwrapKeyValues(parse({ proto: { json: { polluted: true } } }), schema), { polluted: true });
+  check(wrapKeyValues(parse({ proto: { polluted: true } }), schema), { json: { polluted: true } });
+  check(toNormalized(parse({ proto: { polluted: true } }), { properties: {} }), { type: 'Property', value: { polluted: true } });
+  // A name of Object.prototype that the schema does not declare is a plain Property.
+  assert.deepEqual(toNormalized({ constructor: '2026-01-01' }, { properties: {} }), { constructor: { type: 'Property', value: '2026-01-01' } });
+});

@@ -16,7 +16,10 @@ import jsonld from 'jsonld';
 import { readFileSync } from 'node:fs';
 import { attributesOf } from './urls.mjs';
 import { buildVocabulary } from './vocab.mjs';
-import { NGSI_TYPES, toKeyValues, unwrapKeyValues, dateFormats, typedDate } from '../ngsi.mjs';
+import { NGSI_TYPES, toKeyValues, unwrapKeyValues, attributeProblems, unclosedRings } from '../ngsi.mjs';
+
+// Moved to ../ngsi.mjs (#120); still exported here for the code that imports it from this module.
+export { unclosedRings };
 
 export const CORE_CONTEXT_URL = 'https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context-v1.8.jsonld';
 const CORE_DOCUMENT = JSON.parse(readFileSync(new URL('./ngsi-ld-core-context-v1.8.jsonld', import.meta.url), 'utf8'));
@@ -24,28 +27,6 @@ const RDFS = 'http://www.w3.org/2000/01/rdf-schema#';
 const HAS_VOCAB = 'https://uri.etsi.org/ngsi-ld/hasVocab';
 const DEFAULT_CONTEXT = 'https://uri.etsi.org/ngsi-ld/default-context/';
 const isObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
-
-/**
- * The polygon rings in a value, at any depth, whose first and last positions
- * differ (RFC 7946, section 3.1.6: a ring closes). JSON Schema cannot compare
- * two elements of an array, so this is checked here. Returns their paths.
- */
-export function unclosedRings(value, path = '$') {
-  const out = [];
-  const same = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i]);
-  const closes = (ring) => !Array.isArray(ring) || ring.length === 0 || same(ring[0], ring.at(-1));
-  const walk = (v, p) => {
-    if (Array.isArray(v)) { v.forEach((e, i) => walk(e, `${p}[${i}]`)); return; }
-    if (!isObject(v)) return;
-    if (v.type === 'Polygon' && Array.isArray(v.coordinates)) v.coordinates.forEach((ring, i) => { if (!closes(ring)) out.push(`${p}.coordinates[${i}]`); });
-    else if (v.type === 'MultiPolygon' && Array.isArray(v.coordinates)) {
-      v.coordinates.forEach((poly, i) => (Array.isArray(poly) ? poly : []).forEach((ring, j) => { if (!closes(ring)) out.push(`${p}.coordinates[${i}][${j}]`); }));
-    }
-    for (const [k, vv] of Object.entries(v)) walk(vv, `${p}.${k}`);
-  };
-  walk(value, path);
-  return out;
-}
 
 /**
  * Every key at any depth of an object tree, as "a.b.c" paths; JSON-LD keywords
@@ -108,24 +89,13 @@ export function exampleProblems(subject, model, { urls, validate, errorsText }) 
   const f = at('example-normalized.jsonld');
   if (!isObject(norm)) return [...problems, `${f}: must be one entity, a JSON object`];
   if (isObject(kv) && norm.id !== kv.id) problems.push(`${f}: id must be example.json's id ${kv.id}`);
-  for (const [name, prop] of attrs) {
-    if (!Object.hasOwn(norm, name)) continue;
-    const ngsi = prop?.['x-ngsi'] ?? {};
-    const declared = ngsi.type ?? 'Property';
-    const instances = [norm[name]].flat();
-    if (Array.isArray(norm[name]) && !ngsi.multi) problems.push(`${f}: attribute "${name}" has several instances, but schema.json does not declare x-ngsi.multi`);
-    for (const inst of instances) {
-      // An instance that is not an attribute object is reported with the key-values form below.
-      if (isObject(inst) && Object.hasOwn(inst, 'type') && inst.type !== declared) problems.push(`${f}: attribute "${name}" is a ${inst?.type}, but schema.json makes it a ${declared}${ngsi.type ? '' : ' (no x-ngsi.type)'}`);
-    }
+  for (const p of attributeProblems(norm, attrs)) {
+    const a = `${f}: attribute "${p.attribute}"`;
+    if (p.rule === 'multi') problems.push(`${a} has several instances, but schema.json does not declare x-ngsi.multi`);
+    // An instance that is not an attribute object is reported with the key-values form below.
+    else if (p.rule === 'type') problems.push(`${a} is a ${p.found}, but schema.json makes it a ${p.expected}${p.implicit ? ' (no x-ngsi.type)' : ''}`);
     // A date or date-time value carries its NGSI-LD type, and the type fits the value.
-    const formats = declared === 'Property' ? dateFormats(prop) : [];
-    for (const inst of formats.length ? instances : []) {
-      const v = inst?.value;
-      const value = isObject(v) && Object.hasOwn(v, '@value') ? v['@value'] : v;
-      const want = typedDate(value, formats);
-      if (typeof value === 'string' && v?.['@type'] !== want['@type']) problems.push(`${f}: attribute "${name}": the value must be { "@type": "${want['@type']}", "@value": ${JSON.stringify(value)} }`);
-    }
+    else if (p.rule === 'date') problems.push(`${a}: the value must be { "@type": "${p.expected['@type']}", "@value": ${JSON.stringify(p.expected['@value'])} }`);
   }
   const multi = new Set(attrs.filter(([, p]) => p?.['x-ngsi']?.multi).map(([n]) => n));
   let projected;

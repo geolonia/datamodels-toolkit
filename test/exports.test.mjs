@@ -13,6 +13,9 @@ const run = promisify(execFile);
 test('@geolonia/datamodels/ngsi is the NGSI-LD module', async () => {
   assert.equal(await import('@geolonia/datamodels/ngsi'), ngsi);
   assert.equal(typeof ngsi.toNormalized, 'function');
+  // The rules of a normalized entity, for the datamodels.jp MCP server (#120).
+  assert.equal(typeof ngsi.attributeProblems, 'function');
+  assert.equal(typeof ngsi.unclosedRings, 'function');
 });
 
 test('importing the library does not load Eleventy; writing pages does', async () => {

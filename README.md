@@ -138,7 +138,7 @@ await publishCatalog(subjects, { urls, outDir: 'dist', languages: ['en'], head: 
 
 It also exports the NGSI-LD core context that the build uses (`CORE_CONTEXT`, `CORE_CONTEXT_URL`), and `contextTerms`, which lists the terms of a context.
 
-`@geolonia/datamodels/ngsi` converts entities between the normalized form and key-values (`toNormalized`, `toKeyValues`). It has no Node.js imports, so it also runs in a browser.
+`@geolonia/datamodels/ngsi` converts entities between the normalized form and key-values (`toNormalized`, `toKeyValues`). It also has the NGSI-LD rules that `datamodels check` applies to a normalized entity, as data you can word yourself: `attributeProblems` (attribute types, several instances, typed dates) and `unclosedRings` (polygon rings that do not close). It has no imports, so it also runs in a browser or a Cloudflare Worker.
 
 
 ## Agent skill

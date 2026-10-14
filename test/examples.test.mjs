@@ -253,3 +253,13 @@ test('review fixes: names that Object.prototype has are attributes like any othe
 test('keyPaths follows arrays under their path', () => {
   assert.deepEqual(keyPaths({ a: [{ b: 1 }, { c: { d: 2 } }], '@context': 'x', e: [1, 2] }), ['a', 'a.b', 'a.c', 'a.c.d', 'e']);
 });
+
+test('review fixes: an attribute named __proto__ in the normalized example is an attribute like any other', async () => {
+  // A computed key makes an own property; JSON.parse does the same when check reads the file.
+  const extra = { ['__proto__']: { type: 'Property', value: 'x' } };
+  const p = await problemsOf((f) => ({ ...f, norm: { ...f.norm, ...extra } }));
+  assert.deepEqual(p, [
+    `${N}: its key-values form: data must NOT have additional properties`,
+    `${N}: "__proto__" is lost when JSON-LD expands and compacts it (is it in the @context?)`,
+  ]);
+});
