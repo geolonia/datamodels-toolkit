@@ -109,3 +109,23 @@ test('the NGSI-LD core context is exported, with its URL', async () => {
   assert.equal(core.get('location'), 'https://uri.etsi.org/ngsi-ld/location');
   assert.ok(core.size > 50);
 });
+
+test('a file that does not parse is named in the error', async () => {
+  const models = await mkdtemp(join(tmpdir(), 'datamodels-broken-'));
+  await mkdir(join(models, 'road'), { recursive: true });
+  await writeFile(join(models, 'road', 'subject.yaml'), 'name: road\nversion: 0.1.0\nsource: minted\ntitle: { en: Roads }\ndescription: { en: Roads. }\n');
+  await writeFile(join(models, 'road', 'context.jsonld'), '{ "@context": ');
+  await assert.rejects(loadSubjects(models, { urls: catalogUrls('https://models.example.org'), languages: ['en'], subjectFields: ['title', 'description'] }), /^Error: road\/context\.jsonld: /);
+  await writeFile(join(models, 'road', 'subject.yaml'), 'name: [road\n');
+  await assert.rejects(loadSubjects(models, { urls: catalogUrls('https://models.example.org'), languages: ['en'] }), /^Error: road\/subject\.yaml: /);
+  // A file deeper down, and an empty subject.yaml (null), which is reported by its missing name.
+  await writeFile(join(models, 'road', 'context.jsonld'), '{ "@context": { "road": "https://models.example.org/ns/road#" } }');
+  await writeFile(join(models, 'road', 'subject.yaml'), 'name: road\nversion: 0.1.0\nsource: minted\ntitle: { en: Roads }\ndescription: { en: Roads. }\n');
+  await mkdir(join(models, 'road', 'Patrol', 'examples'), { recursive: true });
+  await writeFile(join(models, 'road', 'Patrol', 'schema.json'), '{}');
+  await writeFile(join(models, 'road', 'Patrol', 'catalog.yaml'), 'title: { en: P }\n');
+  await writeFile(join(models, 'road', 'Patrol', 'examples', 'example.json'), '{ broken');
+  await assert.rejects(loadSubjects(models, { urls: catalogUrls('https://models.example.org'), languages: ['en'], subjectFields: ['title', 'description'] }), /^Error: road\/Patrol\/examples\/example\.json: /);
+  await writeFile(join(models, 'road', 'subject.yaml'), '# nothing yet\n');
+  await assert.rejects(loadSubjects(models, { urls: catalogUrls('https://models.example.org'), languages: ['en'] }), /road\/subject\.yaml: name "undefined" does not match folder/);
+});

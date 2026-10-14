@@ -4,9 +4,10 @@
 // of geolonia/datamodels' scripts/new-model.mjs, in the node's languages and
 // without the file only the shared catalog needs (ADOPTERS).
 import { mkdir, mkdtemp, readFile, writeFile, stat, rename, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import YAML from 'yaml';
 import { readNode } from './build/node.mjs';
+import { parseJson, parseYaml } from './build/load.mjs';
 import { catalogUrls } from './build/urls.mjs';
 
 const TYPE_NAME = /^[A-Z][A-Za-z0-9]*$/;
@@ -34,7 +35,7 @@ export async function placeModel(subjectDir, type, { schema, catalog, example, n
   let moved = false;
   try {
     if (await exists(modelDir)) throw new Error(`${modelDir} already exists`);
-    const context = JSON.parse(await readFile(contextFile, 'utf8'));
+    const context = await parseJson(contextFile, dirname(subjectDir));
     const parts = Array.isArray(context['@context']) ? context['@context'] : [context['@context']];
     // Every inline part, not only the one the type goes into: a type defined anywhere is taken.
     if (parts.some((p) => p && typeof p === 'object' && Object.hasOwn(p, type))) throw new Error(`${contextFile} already defines ${type}`);
@@ -73,7 +74,7 @@ export async function addModel(dir, target, { kind = 'entity' } = {}) {
   const node = await readNode(dir);
   const subjectDir = join(dir, 'models', subjectName);
   if (!(await exists(join(subjectDir, 'subject.yaml')))) throw new Error(`no subject ${subjectName} in ${join(dir, 'models')} (datamodels init writes the first one)`);
-  const subject = YAML.parse(await readFile(join(subjectDir, 'subject.yaml'), 'utf8'));
+  const subject = await parseYaml(join(subjectDir, 'subject.yaml'), join(dir, 'models'));
 
   const urls = catalogUrls(node.baseUrl, { iris: node.iris });
   const mu = urls.modelUrls({ name: subjectName, version: subject.version }, { type, schema: {} });

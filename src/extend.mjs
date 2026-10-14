@@ -13,6 +13,7 @@ import { readFile, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
 import { readNode } from './build/node.mjs';
+import { parseYaml } from './build/load.mjs';
 import { catalogUrls } from './build/urls.mjs';
 import { placeModel } from './add.mjs';
 
@@ -44,7 +45,7 @@ export async function extendModel(dir, source, target, { index, subclass = false
   const node = await readNode(dir);
   const subjectDir = join(dir, 'models', subjectName);
   if (!(await exists(join(subjectDir, 'subject.yaml')))) throw new Error(`no subject ${subjectName} in ${join(dir, 'models')} (datamodels init writes the first one)`);
-  const subject = YAML.parse(await readFile(join(subjectDir, 'subject.yaml'), 'utf8'));
+  const subject = await parseYaml(join(subjectDir, 'subject.yaml'), join(dir, 'models'));
   const from = index ?? node.nodes?.[0]?.index ?? DEFAULT_INDEX;
   const get = async (url) => {
     let res;

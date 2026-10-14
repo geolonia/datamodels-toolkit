@@ -2,13 +2,19 @@
 // Moved from geolonia/datamodels (scripts/lib/models.mjs, loadSubjects), with
 // the folder, the base URL and the required languages as options (#10).
 import { readFile, readdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import YAML from 'yaml';
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
 
-async function readJson(file) { return JSON.parse(await readFile(file, 'utf8')); }
-async function readYaml(file) { return YAML.parse(await readFile(file, 'utf8')); }
+// A file that does not parse is named in the error, from the models folder on (task/Task/examples/example.json: ...).
+const reader = (parse) => async (file, base) => {
+  const text = await readFile(file, 'utf8');
+  try { return parse(text); } catch (e) { throw new Error(`${relative(base, file)}: ${e.message}`, { cause: e }); }
+};
+/** Read and parse a file of a models folder; `base` is the folder its name in an error starts from. */
+export const parseJson = reader((t) => JSON.parse(t));
+export const parseYaml = reader((t) => YAML.parse(t));
 async function isDir(p) { try { return (await stat(p)).isDirectory(); } catch { return false; } }
 async function exists(p) { try { await stat(p); return true; } catch { return false; } }
 
@@ -22,11 +28,14 @@ async function exists(p) { try { await stat(p); return true; } catch { return fa
  * - `importable(url)`: other context URLs a subject may import (a node may import the contexts it extends).
  */
 export async function loadSubjects(modelsDir, { urls, languages = ['ja', 'en'], subjectFields = ['title', 'summary', 'description'], importable = () => false } = {}) {
+  const readJson = (file) => parseJson(file, modelsDir);
+  const readYaml = (file) => parseYaml(file, modelsDir);
   const subjects = [];
   for (const name of (await readdir(modelsDir)).sort()) {
     const dir = join(modelsDir, name);
     if (!(await isDir(dir))) continue;
-    const meta = await readYaml(join(dir, 'subject.yaml'));
+    // An empty subject.yaml (or one with only comments) is null: its missing name is reported below.
+    const meta = (await readYaml(join(dir, 'subject.yaml'))) ?? {};
     if (meta.name !== name) throw new Error(`${name}/subject.yaml: name "${meta.name}" does not match folder`);
     if (!SEMVER.test(meta.version)) throw new Error(`${name}/subject.yaml: version must be X.Y.Z`);
     for (const field of subjectFields) {
