@@ -6,6 +6,18 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.3.14] - 2026-10-14
+
+Errors name the JSON or YAML file in models/ that does not parse.
+
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.13 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.3.13`. The README uses 0.3.13 too (#110).
+
+### Fixed
+
+- A JSON or YAML file in models/ that does not parse is named in the error (`road/context.jsonld: …`), not only the parser's message; also in `datamodels add` and `extend`. An empty `subject.yaml` is reported by its missing name instead of a crash (#111).
+
 ## [0.3.13] - 2026-10-14
 
 `datamodels check` lists a changed release snapshot with the other problems, with the right advice during a pre-release, so datamodels.jp can validate with it (geolonia/datamodels#226).
@@ -274,7 +286,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.13...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.14...main
+[0.3.14]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.13...v0.3.14
 [0.3.13]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.12...v0.3.13
 [0.3.12]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.11...v0.3.12
 [0.3.11]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.10...v0.3.11
