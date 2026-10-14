@@ -315,3 +315,11 @@ test('extend says which index the model came from', () => {
   const line = extendMessage('road/RoadTask', { typeIri: GH_TASK, extends: { typeIri: GH_TASK, version: '1.0.0', index: GH_INDEX } });
   assert.match(line, new RegExp(`^road/RoadTask: ${GH_TASK}, extends ${GH_TASK} v1\\.0\\.0, from ${GH_INDEX.replaceAll('.', '\\.')}\\. Next:`));
 });
+
+test('extend: a node listed with an upper-case host or the default port is the same node', async () => {
+  const dir = await node(`nodes:\n  - { url: https://DataModels.JP:443/, index: ${INDEX} }\n`);
+  const before = await read(dir, 'node.yaml');
+  const r = await extendModel(dir, 'task/Task', 'road/RoadTask', { fetch: fakeFetch(files) });
+  assert.deepEqual(r.changed, ['models/road/context.jsonld']);
+  assert.equal(await read(dir, 'node.yaml'), before);
+});

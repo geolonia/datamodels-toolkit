@@ -385,6 +385,22 @@ test('the time limit of a read covers its redirects', async () => {
   assert.ok(hops.length <= 3, hops.join(' '));
 });
 
+test('a read that is refused says why; one that takes too long says so in words', async () => {
+  const { getter } = await import('../src/adapters/index.mjs');
+  const { publicFetch } = await import('../src/adapters/net.mjs');
+  const dns = (address) => (url, o) => publicFetch(url, { ...o, lookup: (host, opts, callback) => (address ? callback(null, [{ address, family: 4 }]) : undefined) });
+  const reason = (p) => p.then(() => null, (e) => [e.refused ?? null, e.message]);
+  const ok = async () => new Response('{}', { status: 200 });
+  const to = (location) => async () => new Response(null, { status: 302, headers: { location } });
+  assert.deepEqual(await reason(getter(ok)('http://example.org/x.json')), ['url', 'http://example.org/x.json is not read: only https on a public host name']);
+  assert.deepEqual(await reason(getter(to('http://example.org/y.json'))('https://example.org/x.json')), ['redirect', 'https://example.org/x.json: redirects to http://example.org/y.json, not followed (only to https on a public host name, at most 5 times)']);
+  assert.deepEqual(await reason(getter(dns('192.168.0.1'))('https://example.org/x.json')), ['address', 'https://example.org/x.json is not read: example.org resolves to 192.168.0.1, not a public address']);
+  // A host that does not answer: not refused, and the time in seconds (not a DOMException code).
+  assert.deepEqual(await reason(getter(dns(null), 50)('https://example.org/x.json')), [null, 'https://example.org/x.json could not be read (timed out after 0.05 s)']);
+  // Without a time limit given, the default one.
+  assert.deepEqual(await getter(ok)('https://example.org/x.json'), {});
+});
+
 test('check --offline reads no schema of another site for the adapters', async () => {
   const { checkNode } = await import('../src/build/index.mjs');
   const dir = await mkdtemp(join(tmpdir(), 'datamodels-adapters-'));

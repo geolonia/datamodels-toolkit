@@ -109,7 +109,7 @@ export async function extendModel(dir, source, target, { index, subclass = false
   const exampleUrl = keyValues === undefined ? null : normalUrl(keyValues);
   if (keyValues !== undefined && !exampleUrl?.startsWith(`${nodeUrl}examples/`)) throw new Error(`${from}: the example of ${entry.typeIri} (${keyValues}) is not under ${nodeUrl}examples/, not read`);
   const theirs = await get(schemaUrl);
-  const listed = (node.nodes ?? []).some((n) => contextUrl.startsWith(`${n.url.replace(/\/+$/, '')}/context/`));
+  const listed = (node.nodes ?? []).some((n) => contextUrl.startsWith(normalUrl(`${n.url.replace(/\/+$/, '')}/context/`)));
   let nodeYaml;
   if (!listed) {
     // The document API keeps the comments init wrote. Written once the model is in place.

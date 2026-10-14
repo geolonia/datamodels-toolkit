@@ -55,7 +55,7 @@ export async function loadSubjects(modelsDir, { urls, languages = ['ja', 'en'], 
       // Checked as it is requested: dot segments (also %2e%2e) resolved, so a prefix check sees the real path.
       let href = null;
       try { href = new URL(url).href; } catch { /* not a URL: refused below */ }
-      if (!href || (!href.startsWith(`${urls.baseUrl}/context/`) && !importable(href))) throw new Error(`${name}/context.jsonld: only catalog contexts may be imported by URL, got ${url}`);
+      if (!href || (!href.startsWith(new URL(`${urls.baseUrl}/context/`).href) && !importable(href))) throw new Error(`${name}/context.jsonld: only catalog contexts may be imported by URL, got ${url}`);
     }
     const models = [];
     for (const type of (await readdir(dir)).sort()) {

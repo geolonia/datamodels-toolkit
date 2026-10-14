@@ -395,30 +395,88 @@ test('datamodels check exits with 1 on a problem', async () => {
   assert.match(r.stderr, /example\.json: data must have required property 'type'\n.*1 problem\(s\)/);
 });
 
-test('extends: an index or @context that is not https on a public host is a problem, and not read', async () => {
+/** A DNS stand-in that answers `address` for every host name, for the real publicFetch. */
+const dnsSays = (address) => async (url, o) => {
+  const { publicFetch } = await import('../src/adapters/net.mjs');
+  return publicFetch(url, { ...o, lookup: (host, opts, callback) => callback(null, [{ address, family: 4 }]) });
+};
+
+test('extends: an index whose address in catalog.yaml may not be read is a problem; a refusal on the way is a note', async () => {
   const seen = [];
   const record = (files) => { const f = fakeFetch(files); return (url, o) => { seen.push(String(url)); return f(url, o); }; };
   const catalog = join('models', 'road', 'RoadPatrol', 'catalog.yaml');
-  for (const index of ['http://evil.example/catalog.json', 'https://127.0.0.1/catalog.json', 'https://localhost/catalog.json']) {
+  const withIndex = async (index) => {
     const dir = await node();
     await writeFile(join(dir, catalog), (await readFile(join(dir, catalog), 'utf8')).replace(`index: ${INDEX}`, `index: ${index}`));
+    return dir;
+  };
+  const where = `road/RoadPatrol: extends ${TASK} v1.0.0`;
+  // http:// in catalog.yaml: refused when the node is read, with how to fix it.
+  let r = await checkNode(await withIndex('http://evil.example/catalog.json'), { fetch: record({}) });
+  assert.match(r.problems.join('\n'), /extends must be a list of .* index an https URL \(other nodes are read only over https\)/);
+  // An IP address or localhost as written: a problem, and not read.
+  for (const index of ['https://127.0.0.1/catalog.json', 'https://localhost/catalog.json']) {
     seen.length = 0;
-    const r = await checkNode(dir, { fetch: record({}) });
-    assert.deepEqual(r.problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: ${index} is not read: only https on a public host name`], index);
+    r = await checkNode(await withIndex(index), { fetch: record({}) });
+    assert.deepEqual(r.problems, [`${where}: ${index} is not read: only https on a public host name`], index);
     assert.ok(!seen.includes(index), index);
   }
-  // The index is fine, the @context it lists for the model is on a private address, or reached by a redirect there.
+  // A @context the other node's index lists comes from that node: a note, as for a node that is down.
   const dir = await node();
   for (const contextUrl of ['https://169.254.169.254/context/task/v1.0.0.jsonld', 'http://datamodels.jp/context/task/v1.0.0.jsonld']) {
     seen.length = 0;
-    const r = await checkNode(dir, { fetch: record({ [INDEX]: { models: [{ typeIri: TASK, version: '1.0.0', contextUrl }] } }) });
-    assert.deepEqual(r.problems, [`road/RoadPatrol: extends ${TASK} v1.0.0: ${contextUrl} is not read: only https on a public host name`], contextUrl);
+    r = await checkNode(dir, { fetch: record({ [INDEX]: { models: [{ typeIri: TASK, version: '1.0.0', contextUrl }] } }) });
+    assert.deepEqual(r, { problems: [], notes: [`${where}: not checked, ${contextUrl} is not read: only https on a public host name`] }, contextUrl);
     assert.ok(!seen.includes(contextUrl), contextUrl);
   }
-  const redirecting = async (url) => (url === TASK_CONTEXT ? new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/latest/meta-data/' } }) : fakeFetch(datamodelsJp())(url));
-  const r = await checkNode(dir, { fetch: redirecting });
-  assert.equal(r.problems.length, 1);
-  assert.match(r.problems[0], /extends .*: https:\/\/datamodels\.jp\/context\/task\/v1\.0\.0\.jsonld: redirects to http:\/\/169\.254\.169\.254\/latest\/meta-data\/, not followed/);
+  // A node that starts redirecting to http://: a note.
+  const redirecting = async (url) => (url === TASK_CONTEXT ? new Response(null, { status: 302, headers: { location: 'http://datamodels.jp/context/task/v1.0.0.jsonld' } }) : fakeFetch(datamodelsJp())(url));
+  r = await checkNode(dir, { fetch: redirecting });
+  assert.deepEqual(r.problems, []);
+  assert.deepEqual(r.notes, [`${where}: not checked, ${TASK_CONTEXT}: redirects to http://datamodels.jp/context/task/v1.0.0.jsonld, not followed (only to https on a public host name, at most 5 times)`]);
+  // A DNS blocker or proxy that answers 0.0.0.0 for datamodels.jp (the real publicFetch): a note, the check passes.
+  r = await checkNode(dir, { fetch: dnsSays('0.0.0.0') });
+  assert.deepEqual(r.problems, []);
+  assert.ok(r.notes.includes(`${where}: not checked, ${INDEX} is not read: datamodels.jp resolves to 0.0.0.0, not a public address`), r.notes.join('\n'));
+  // The same for a context this node imports from a node it lists.
+  await listNodes(dir, [{ url: 'https://datamodels.jp/', index: INDEX }]);
+  await writeFile(join(dir, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': [TASK_CONTEXT, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' }] }));
+  r = await checkNode(dir, { fetch: dnsSays('0.0.0.0') });
+  assert.deepEqual(r.problems, []);
+  assert.ok(r.notes.some((n) => n.includes(`${TASK_CONTEXT} is not read: datamodels.jp resolves to 0.0.0.0`)), r.notes.join('\n'));
+});
+
+test('a schema $ref this node wrote that may not be read is a problem; a refusal by DNS is a note', async () => {
+  const dir = await node();
+  const file = join(dir, 'models', 'road', 'RoadPatrol', 'schema.json');
+  const schema = JSON.parse(await readFile(file, 'utf8'));
+  const withRef = async (ref) => writeFile(file, JSON.stringify({ ...schema, properties: { ...schema.properties, route: { $ref: ref, 'x-iri': `${BASE}/ns/road#route` } } }));
+  await withRef('https://127.0.0.1/schema/common/Route/v1.0.0.json');
+  let r = await checkNode(dir, { fetch: fakeFetch(datamodelsJp()) });
+  assert.ok(r.problems.includes('road/RoadPatrol/schema.json: https://127.0.0.1/schema/common/Route/v1.0.0.json is not read: only https on a public host name'), r.problems.join('\n'));
+  await withRef('https://datamodels.jp/schema/common/Route/v1.0.0.json');
+  r = await checkNode(dir, { fetch: dnsSays('10.0.0.1') });
+  assert.ok(!r.problems.some((p) => p.includes('schema.json')), r.problems.join('\n'));
+  assert.ok(r.notes.includes('road/RoadPatrol/schema.json: not validated, https://datamodels.jp/schema/common/Route/v1.0.0.json is not read: datamodels.jp resolves to 10.0.0.1, not a public address'), r.notes.join('\n'));
+});
+
+test('node.yaml: other nodes only at https addresses; compared as URLs are requested', async () => {
+  const dir = await node();
+  await listNodes(dir, [{ url: 'http://datamodels.jp/', index: INDEX }]);
+  await writeFile(join(dir, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': [TASK_CONTEXT, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' }] }));
+  assert.match((await checkNode(dir, { offline: true })).problems.join('\n'), /nodes must be a list of \{ url, index \}, both https URLs \(other nodes are read only over https: change http:\/\/ to https:\/\/\)/);
+  // An upper-case host and the default port are the same address.
+  const same = await node();
+  await listNodes(same, [{ url: 'https://DataModels.JP:443/', index: INDEX }]);
+  await writeFile(join(same, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': [TASK_CONTEXT, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' }] }));
+  assert.ok(!(await checkNode(same, { offline: true })).problems.some((p) => p.includes('only catalog contexts')));
+  // The same for this node's own base URL.
+  const { loadNode } = await import('../src/build/index.mjs');
+  const own = await node();
+  const yaml = join(own, 'node.yaml');
+  await writeFile(yaml, (await readFile(yaml, 'utf8')).replace(`baseUrl: ${BASE}`, 'baseUrl: https://Models.Example.org:443'));
+  await writeFile(join(own, 'models', 'road', 'context.jsonld'), JSON.stringify({ '@context': [`${BASE}/context/other/v1.0.0.jsonld`, { road: `${BASE}/ns/road#`, RoadPatrol: 'road:RoadPatrol', route: 'road:route' }] }));
+  await loadNode(own);
 });
 
 test('a context imported by a URL with %2e%2e is checked where it leads', async () => {

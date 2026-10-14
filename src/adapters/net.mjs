@@ -60,30 +60,31 @@ export function isPublicAddress(ip) {
  * dns.lookup that refuses a host with any non-public address, used by
  * https.request for the connection itself. Node asks for one address or, to
  * try several (autoSelectFamily), for all of them; both forms are answered.
+ * `resolve` is dns.lookup; tests pass one of their own.
  */
-function publicLookup(host, options, callback) {
-  dnsLookup(host, { ...options, all: true }, (err, addresses) => {
+const publicLookup = (resolve) => (host, options, callback) => {
+  resolve(host, { ...options, all: true }, (err, addresses) => {
     if (err) return callback(err);
     const bad = addresses.find((a) => !isPublicAddress(a.address));
     if (bad || !addresses.length) return callback(Object.assign(new Error(`${host} resolves to ${bad?.address ?? 'nothing'}, not a public address`), { code: 'ENOTPUBLIC' }));
     if (options?.all) return callback(null, addresses);
     callback(null, addresses[0].address, addresses[0].family);
   });
-}
+};
 
 /**
  * A fetch for what the adapters read: https only, connected to a public address,
  * redirects returned as they are (the caller decides), at most 5 MB.
- * Returns { ok, status, headers, json }.
+ * Returns { ok, status, headers, json }. `lookup`: dns.lookup, or a stand-in for tests.
  */
-export function publicFetch(url, { signal } = {}) {
+export function publicFetch(url, { signal, lookup = dnsLookup } = {}) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     if (u.protocol !== 'https:') { reject(new Error(`${url}: only https is read`)); return; }
     // An address written in the URL is connected to without a lookup: check it here.
     const literal = u.hostname.replace(/^\[|\]$/g, '');
     if (isIP(literal) && !isPublicAddress(literal)) { reject(new Error(`${url}: ${literal} is not a public address`)); return; }
-    const req = request(u, { lookup: publicLookup, signal, headers: { accept: 'application/json, application/ld+json;q=0.9, */*;q=0.1' } }, (res) => {
+    const req = request(u, { lookup: publicLookup(lookup), signal, headers: { accept: 'application/json, application/ld+json;q=0.9, */*;q=0.1' } }, (res) => {
       const chunks = [];
       let size = 0;
       res.on('data', (c) => { size += c.length; if (size > MAX_BYTES) { req.destroy(new Error(`${url}: larger than ${MAX_BYTES} bytes`)); return; } chunks.push(c); });

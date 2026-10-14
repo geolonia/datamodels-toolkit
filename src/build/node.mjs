@@ -26,6 +26,8 @@ import { ADAPTERS, readRefs, localRefs, refsRead, schemaPrefixes } from '../adap
 
 // Every URL here is published: one with a user name or password in it would publish them too.
 export const httpUrl = (s) => { if (typeof s !== 'string') return false; try { const u = new URL(s); return ['http:', 'https:'].includes(u.protocol) && !!u.hostname && !u.username && !u.password; } catch { return false; } };
+// Another node's address or index: https only, as the toolkit reads other nodes (src/adapters/index.mjs).
+export const httpsUrl = (s) => httpUrl(s) && new URL(s).protocol === 'https:';
 // A language tag, as node.yaml lists them: en, ja, pt-BR.
 export const LANGUAGE_TAG = /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/;
 const texts = (o) => !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length > 0 && Object.values(o).every((v) => typeof v === 'string' && v.trim());
@@ -57,7 +59,7 @@ export function settingsProblems(node) {
   if (typeof license !== 'string' || !license.trim()) problems.push('license is required (an SPDX identifier such as CC0-1.0)');
   if (licenseUrl !== undefined && !httpUrl(licenseUrl)) problems.push('licenseUrl must be an http(s) URL');
   if (prerelease !== undefined && typeof prerelease !== 'boolean') problems.push('prerelease must be true or false');
-  if (nodes !== undefined && (!Array.isArray(nodes) || !nodes.every((n) => httpUrl(n?.url) && httpUrl(n?.index)))) problems.push('nodes must be a list of { url, index }, both http(s) URLs');
+  if (nodes !== undefined && (!Array.isArray(nodes) || !nodes.every((n) => httpsUrl(n?.url) && httpsUrl(n?.index)))) problems.push('nodes must be a list of { url, index }, both https URLs (other nodes are read only over https: change http:// to https://)');
   // Only a missing title or description means none; null or an empty one is a mistake.
   const langs = Array.isArray(languages) ? languages.filter((l) => typeof l === 'string') : [];
   for (const field of NODE_TEXTS) {
@@ -88,15 +90,16 @@ export async function loadNode(dir) {
   const modelsDir = join(dir, 'models');
   if (!(await stat(modelsDir).then((s) => s.isDirectory(), () => false))) throw new Error(`${modelsDir}: not found (the models of a node are in models/)`);
   // A context may import the contexts of the nodes this node knows, such as datamodels.jp's.
-  const known = (node.nodes ?? []).map((n) => `${n.url.replace(/\/+$/, '')}/context/`);
+  // Compared as URLs are requested: the host in lower case, no default port (new URL().href).
+  const known = (node.nodes ?? []).map((n) => new URL(`${n.url.replace(/\/+$/, '')}/context/`).href);
   const importable = (url) => { try { const href = new URL(url).href; return known.some((prefix) => href.startsWith(prefix)); } catch { return false; } };
   const subjects = await loadSubjects(modelsDir, { urls, languages: node.languages, subjectFields: ['title', 'description'], importable });
   // extends goes into catalog.json as written, so it is checked here (docs/node.md, section 3).
   for (const s of subjects) for (const m of s.models) {
     const ext = m.catalog?.extends;
     if (ext === undefined) continue;
-    if (!Array.isArray(ext) || !ext.every((e) => httpUrl(e?.typeIri) && typeof e?.version === 'string' && /^\d+\.\d+\.\d+$/.test(e.version) && httpUrl(e?.index))) {
-      throw new Error(`${s.name}/${m.type}/catalog.yaml: extends must be a list of { typeIri, version: X.Y.Z, index }, with http(s) URLs`);
+    if (!Array.isArray(ext) || !ext.every((e) => httpUrl(e?.typeIri) && typeof e?.version === 'string' && /^\d+\.\d+\.\d+$/.test(e.version) && httpsUrl(e?.index))) {
+      throw new Error(`${s.name}/${m.type}/catalog.yaml: extends must be a list of { typeIri, version: X.Y.Z, index }, typeIri an http(s) URL and index an https URL (other nodes are read only over https)`);
     }
   }
   return { node, urls, subjects };
