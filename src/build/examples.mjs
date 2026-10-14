@@ -18,9 +18,6 @@ import { attributesOf } from './urls.mjs';
 import { buildVocabulary } from './vocab.mjs';
 import { NGSI_TYPES, toKeyValues, unwrapKeyValues, attributeProblems, unclosedRings } from '../ngsi.mjs';
 
-// Moved to ../ngsi.mjs (#120); still exported here for the code that imports it from this module.
-export { unclosedRings };
-
 export const CORE_CONTEXT_URL = 'https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context-v1.8.jsonld';
 const CORE_DOCUMENT = JSON.parse(readFileSync(new URL('./ngsi-ld-core-context-v1.8.jsonld', import.meta.url), 'utf8'));
 const RDFS = 'http://www.w3.org/2000/01/rdf-schema#';

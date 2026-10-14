@@ -197,9 +197,13 @@ const pathStyles = {
  * differ (RFC 7946, section 3.1.6: a ring closes). JSON Schema cannot compare
  * two elements of an array, so this is checked apart. Returns their paths, in
  * `style` 'jsonpath' ($.area.coordinates[0], the default) or 'pointer'
- * (/area/coordinates/0). An empty ring is left to the schema.
+ * (/area/coordinates/0). An empty ring is left to the schema. The jsonpath
+ * style does not escape keys: a key with "." or "[" makes an ambiguous path.
  */
-export function unclosedRings(value, { style = 'jsonpath' } = {}) {
+export function unclosedRings(value, options = {}) {
+  // The old signature took a path prefix as its second argument.
+  if (!isObject(options)) throw new TypeError(`unclosedRings: the second argument is { style }, got ${kindOf(options)}`);
+  const { style = 'jsonpath' } = options;
   if (!Object.hasOwn(pathStyles, style)) throw new Error(`unknown path style "${style}": use jsonpath or pointer`);
   const format = pathStyles[style];
   const out = [];
@@ -234,7 +238,7 @@ export function toNormalized(keyValues, schema, context) {
   for (const [k, v] of Object.entries(keyValues)) {
     if (k === '@context') continue;
     if (k === 'id' || k === 'type') { out[k] = v; continue; }
-    const prop = props[k] ?? {};
+    const prop = Object.hasOwn(props, k) ? props[k] : {};
     const ngsi = prop['x-ngsi'] ?? {};
     const one = (value) => {
       if (ngsi.type === 'Relationship') return { type: 'Relationship', object: value };

@@ -6,9 +6,9 @@ import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkNode } from '../src/build/index.mjs';
-import { unclosedRings, schemaRuleProblems, keyPaths } from '../src/build/examples.mjs';
+import { schemaRuleProblems, keyPaths } from '../src/build/examples.mjs';
 import { catalogUrls } from '../src/build/urls.mjs';
-import { toKeyValues, unwrapKeyValues } from '../src/ngsi.mjs';
+import { toKeyValues, unwrapKeyValues, unclosedRings } from '../src/ngsi.mjs';
 
 const BASE = 'https://models.example.org';
 const CORE = 'https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context-v1.8.jsonld';

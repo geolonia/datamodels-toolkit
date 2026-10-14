@@ -146,7 +146,7 @@ test('attributeProblems: a date or date-time value carries its typed form', () =
   ]);
   // Not a string (the schema says so), or not a Property: no date rule.
   assert.deepEqual(attributeProblems({ due: { type: 'Property', value: 42 } }, attrs), []);
-  assert.deepEqual(attributeProblems({ due: { type: 'Relationship', object: 'urn:x' } }, [['due', { format: 'date', 'x-ngsi': { type: 'Relationship' } }]]), []);
+  assert.deepEqual(attributeProblems({ due: { type: 'Relationship', object: 'urn:x', value: '2026-01-01' } }, [['due', { format: 'date', 'x-ngsi': { type: 'Relationship' } }]]), []);
 });
 
 test('attributeProblems: id, type, @context and names of Object.prototype are not special', () => {
@@ -188,6 +188,10 @@ test('unclosedRings: paths as check writes them, or as JSON pointers', () => {
   assert.deepEqual(unclosedRings({ type: 'Polygon', coordinates: [[[0, 0, 5], [1, 1], [0, 0]]] }), ['$.coordinates[0]']);
   for (const v of [null, 7, 'x', []]) assert.deepEqual(unclosedRings(v), [], String(v));
   assert.throws(() => unclosedRings(value, { style: 'xpath' }), /unknown path style "xpath": use jsonpath or pointer/);
+  // The old second argument, a path prefix, is refused rather than ignored.
+  for (const [arg, got] of [['$', 'a string'], [null, 'null'], [['pointer'], 'an array']]) {
+    assert.throws(() => unclosedRings(value, arg), { name: 'TypeError', message: `unclosedRings: the second argument is { style }, got ${got}` });
+  }
 });
 
 test('src/ngsi.mjs imports nothing, so a browser or a Cloudflare Worker can load it', async () => {
@@ -225,6 +229,10 @@ test('an attribute named __proto__ stays an own key and never changes the protot
   check(unwrapKeyValues(parse({ proto: { json: { polluted: true } } }), schema), { polluted: true });
   check(wrapKeyValues(parse({ proto: { polluted: true } }), schema), { json: { polluted: true } });
   check(toNormalized(parse({ proto: { polluted: true } }), { properties: {} }), { type: 'Property', value: { polluted: true } });
+  check(toNormalized(parse({ proto: ['a', 'b'] }), parse({ properties: { proto: { 'x-ngsi': { type: 'Property', multi: true } } } })), [
+    { type: 'Property', value: 'a', datasetId: 'urn:ngsi-ld:dataset:__proto__:1' },
+    { type: 'Property', value: 'b', datasetId: 'urn:ngsi-ld:dataset:__proto__:2' },
+  ]);
   // A name of Object.prototype that the schema does not declare is a plain Property.
   assert.deepEqual(toNormalized({ constructor: '2026-01-01' }, { properties: {} }), { constructor: { type: 'Property', value: '2026-01-01' } });
 });
