@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { randomBytes } from 'node:crypto';
-import { readNode, buildNode, buildVocabulary, catalogUrls } from '../src/build/index.mjs';
+import { readNode, buildNode, buildVocabulary, catalogUrls, llmsTxt } from '../src/build/index.mjs';
 import { pageTexts } from '../src/build/page-texts.mjs';
 
 const run = promisify(execFile);
@@ -381,6 +381,12 @@ test('node.yaml: a title and a description go into catalog.json, the pages and l
   await writeFile(join(dir, 'node.yaml'), yaml);
   await buildNode(dir, { now });
   assert.deepEqual(await snapshot(), before);
+});
+
+test('llms.txt: a title or description written over several lines stays on one line', () => {
+  const txt = llmsTxt([], { urls: catalogUrls(BASE, { iris: 'hash' }), name: 'Road\nmodels\n', description: '  Models for\n road maintenance.\n' });
+  assert.ok(txt.startsWith('# Road models\n\n> Data models:'), txt);
+  assert.match(txt, /\n\nModels for road maintenance\.\n\nMachine-readable list/);
 });
 
 test('datamodels build writes the node, and exits with 1 on an invalid one', async () => {

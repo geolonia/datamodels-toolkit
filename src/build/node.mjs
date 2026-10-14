@@ -41,7 +41,8 @@ export function textsProblem(v, languages) {
   return null;
 }
 
-// The node's own texts: optional, and when given, in every language of the node (catalog.json and the home page show them).
+// The node's own texts: optional, and when given, in every language of the node. The title names the
+// site on every page, in catalog.json, llms.txt and datamodels nodes; the home page shows the description.
 const NODE_TEXTS = ['title', 'description'];
 
 /** The problems of the settings of a node, as node.yaml holds them (also used by init before it writes). */

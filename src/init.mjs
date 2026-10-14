@@ -124,12 +124,14 @@ export function nodeFiles({ node, subject }, { licenseFile } = {}) {
   const namespace = node.iris === 'hash' ? `${node.baseUrl}/ns/${subject}#` : `${node.baseUrl}/ns/${subject}/`;
   const perLanguage = (text) => Object.fromEntries(node.languages.map((l) => [l, text]));
   const yaml = (o) => YAML.stringify(o, { lineWidth: 0 });
-  // Left for the user to fill in: a text in each language, or the node goes without (catalog.json and the home page then use the publisher's name).
-  const textsHint = `{ ${node.languages.map((l) => `${l}: ...`).join(', ')} }`;
+  // Left for the user to fill in, each language: empty texts, so check refuses them until they are filled in.
+  // Without a title, the pages and llms.txt name the site after the publisher.
+  const textsHint = `{ ${node.languages.map((l) => `${l}: ""`).join(', ')} }`;
   return [
     { path: 'node.yaml', content: `# The settings of this data model node (https://github.com/geolonia/datamodels/blob/main/docs/node.md).
 # The base URL and the IRI form are part of every IRI the node publishes: do not change them once published.
-${yaml(node)}# Optional: the node's name and what it publishes, in each language, for catalog.json and the home page.
+${yaml(node)}# Optional: the node's name and what it publishes. Fill in each language before you uncomment them.
+# The title names the site on every page and in catalog.json; the home page shows the description.
 # title: ${textsHint}
 # description: ${textsHint}
 ` },

@@ -13,7 +13,8 @@ const oneLine = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
  */
 export function llmsTxt(subjects, { urls, name, description, languages = ['en'] }) {
   const pick = (o) => o?.en ?? languages.map((l) => o?.[l]).find(Boolean) ?? '';
-  let txt = `# ${name}\n\n`;
+  // One line: a title written over several lines in YAML would otherwise break the heading.
+  let txt = `# ${oneLine(name)}\n\n`;
   txt += `> Data models: JSON Schemas (2020-12), JSON-LD @context files and RDFS vocabularies. Exact versions (v1.0.0) never change; major aliases (v1) follow the latest compatible version.\n\n`;
   if (oneLine(description)) txt += `${oneLine(description)}\n\n`;
   txt += `Machine-readable list of every model with all its URLs: ${urls.baseUrl}/catalog.json.\n\n`;

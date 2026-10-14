@@ -52,10 +52,11 @@ test('a node\'s own title, when its catalog.json has one: in English, else its f
     [B]: { title: { en: ' ', ja: 'ビーのモデル' }, publisher: { name: { ja: 'ビー' } }, models: [model('Shelter')] },
     // Not a text per language: no title, as when there is none.
     [C]: { title: 'Models of C', models: [] },
-    [D]: { title: { en: 1 }, models: [] },
+    // A publisher name that is empty in English is named in its other language, not by the host.
+    [D]: { title: { en: 1 }, publisher: { name: { en: ' ', ja: 'ディー' } }, models: [] },
   };
   const { nodes } = await discoverNodes(A, { fetch: stub(files) });
-  assert.deepEqual(nodes.map(({ name, title }) => [name, title]), [['A', 'Models of A'], ['ビー', 'ビーのモデル'], ['c.example.org', null], ['d.example.org', null]]);
+  assert.deepEqual(nodes.map(({ name, title }) => [name, title]), [['A', 'Models of A'], ['ビー', 'ビーのモデル'], ['c.example.org', null], ['ディー', null]]);
   // Search results carry it next to the publisher's name.
   assert.deepEqual(searchModels('shelter', nodes).results.map((r) => [r.site, r.siteTitle]), [['A', 'Models of A'], ['ビー', 'ビーのモデル']]);
 });

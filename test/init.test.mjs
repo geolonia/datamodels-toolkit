@@ -25,7 +25,15 @@ test('init writes a node that passes check and builds', async () => {
   assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
   // The node's title and description are left to fill in, in each language: commented out, so the node has none yet.
   const settings = await readFile(join(dir, 'node.yaml'), 'utf8');
-  assert.ok(settings.endsWith('\n# title: { ja: ..., en: ... }\n# description: { ja: ..., en: ... }\n'), settings);
+  assert.ok(settings.endsWith('\n# title: { ja: "", en: "" }\n# description: { ja: "", en: "" }\n'), settings);
+  // Uncommented as they are, the empty texts are refused: nothing unfinished is published.
+  const nodeYaml = join(dir, 'node.yaml');
+  await writeFile(nodeYaml, settings.replace('# title:', 'title:').replace('# description:', 'description:'));
+  const [problem] = (await checkNode(dir, { offline: true })).problems;
+  assert.match(problem, /node\.yaml:\n {2}title needs a non-empty ja and en text\n {2}description needs a non-empty ja and en text$/);
+  await writeFile(nodeYaml, settings.replace('# title: { ja: "", en: "" }', 'title: { ja: 道路のモデル, en: Road models }'));
+  assert.deepEqual((await checkNode(dir, { offline: true })).problems, []);
+  await writeFile(nodeYaml, settings);
   const b = await datamodels('build', dir);
   assert.equal(b.code, 0, b.stderr);
   const catalog = JSON.parse(await readFile(join(dir, '_site', 'catalog.json'), 'utf8'));
