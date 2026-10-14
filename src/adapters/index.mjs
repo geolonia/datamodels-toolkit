@@ -51,14 +51,18 @@ const refusal = (message, refused, options) => Object.assign(new Error(message, 
  * reads through publicFetch, which also refuses a host that resolves to a
  * private address. Tests pass a fetch of their own.
  * `timeout` (ms) is for the whole read of a URL, its redirects included.
+ * `under` (a URL prefix, or a list of them): every redirect must stay under it,
+ * so a read limited to a node's schema/ or examples/ cannot be taken elsewhere.
  * An error for a URL that is not read because of where it is has `refused` (see refusal()).
  */
 export const getter = (fetchUrl, timeout = 20000) => {
   const read = !fetchUrl || fetchUrl === globalThis.fetch ? publicFetch : fetchUrl;
   const cache = new Map();
-  return (url) => {
-    if (!cache.has(url)) {
-      cache.set(url, (async () => {
+  return (url, { under } = {}) => {
+    const prefixes = under === undefined ? null : [under].flat();
+    const key = `${prefixes?.join(' ') ?? ''}\n${url}`;
+    if (!cache.has(key)) {
+      cache.set(key, (async () => {
         let res;
         let at = normalUrl(url);
         if (!publicUrl(at)) throw refusal(`${url} is not read: only https on a public host name`, 'url');
@@ -78,13 +82,14 @@ export const getter = (fetchUrl, timeout = 20000) => {
           if (!location) break;
           const next = normalUrl(new URL(location, at).href);
           if (hop >= REDIRECTS || !publicUrl(next)) throw refusal(`${url}: redirects to ${next ?? location}, not followed (only to https on a public host name, at most ${REDIRECTS} times)`, 'redirect');
+          if (prefixes && !prefixes.some((p) => next.startsWith(p))) throw refusal(`${url}: redirects to ${next}, not followed (only under ${prefixes.join(', ')})`, 'redirect');
           at = next;
         }
         if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
         return res.json().catch(() => { throw new Error(`${url}: not JSON`); });
       })());
     }
-    return cache.get(url);
+    return cache.get(key);
   };
 };
 
@@ -112,7 +117,7 @@ export async function readRefs(models, { local = new Map(), entries = [], fetch:
     if (!href || !trusted.some((prefix) => href.startsWith(prefix))) { problems.push(`${url} is not read: only the schemas of the nodes in node.yaml are (${trusted.join(', ') || 'none listed'})`); continue; }
     if (offline) { problems.push(`${url} is on another site, not read offline`); continue; }
     try {
-      const schema = await get(href);
+      const schema = await get(href, { under: trusted });
       refs[url] = { schema, texts: textsOfEntry(entries.find((e) => e.schemaUrl === url)) };
     } catch (e) { problems.push(e.message); }
   }

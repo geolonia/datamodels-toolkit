@@ -97,7 +97,7 @@ export async function extendModel(dir, source, target, { index, subclass = false
   // This node imports the other node's @context, so it must list that node (node.yaml, nodes).
   // The other node's base URL is where its catalog.json is, a path included (a GitHub Pages project site).
   // A node imports contexts from <node>/context/ only (the build checks it), so another place is refused here.
-  // Its schema and example are read only from its own schema/ and examples/, as export does
+  // Its schema and example are read only from its own schema/ and examples/ (redirects too), as export does
   // (src/export.mjs), and only after these checks.
   // The URLs as they are requested (dot segments, also %2e%2e, resolved), so a prefix check sees the real path.
   const nodeUrl = new URL('.', from).href;
@@ -108,7 +108,7 @@ export async function extendModel(dir, source, target, { index, subclass = false
   const keyValues = (Array.isArray(entry.exampleUrls) ? entry.exampleUrls : []).find((u) => typeof u === 'string' && /\/example\.json$/.test(u));
   const exampleUrl = keyValues === undefined ? null : normalUrl(keyValues);
   if (keyValues !== undefined && !exampleUrl?.startsWith(`${nodeUrl}examples/`)) throw new Error(`${from}: the example of ${entry.typeIri} (${keyValues}) is not under ${nodeUrl}examples/, not read`);
-  const theirs = await get(schemaUrl);
+  const theirs = await get(schemaUrl, { under: `${nodeUrl}schema/` });
   const listed = (node.nodes ?? []).some((n) => contextUrl.startsWith(normalUrl(`${n.url.replace(/\/+$/, '')}/context/`)));
   let nodeYaml;
   if (!listed) {
@@ -153,7 +153,7 @@ ${YAML.stringify({
   let example = { id: `urn:ngsi-ld:${type}:example-1`, type };
   if (exampleUrl) {
     try {
-      const theirExample = await get(exampleUrl);
+      const theirExample = await get(exampleUrl, { under: `${nodeUrl}examples/` });
       example = { ...theirExample, id: String(theirExample.id ?? '').replace(`:${entry.type}:`, `:${type}:`) || example.id, type };
     } catch { /* the minimal example */ }
   }

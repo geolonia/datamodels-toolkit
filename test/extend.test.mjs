@@ -223,6 +223,27 @@ test('extend reads a schema and an example only from the other node\'s schema/ a
   };
   await assert.rejects(extendModel(await node(), evilIri, 'road/RoadY', { fetch: redirecting }), /redirects to http:\/\/169\.254\.169\.254\/latest\/meta-data\/iam\.json, not followed/);
   assert.deepEqual(seen, [`${EVIL}/catalog.json`, `${EVIL}/schema/x/Y/v1.0.0.json`]);
+  // A redirect to another public place, outside the node's schema/ or examples/: not followed either.
+  const esc = (u) => u.replace(/[.?/]/g, '\\$&');
+  const away = (from, to, seen) => async (url, o) => { seen.push(String(url)); return url === from ? new Response(null, { status: 302, headers: { location: to } }) : fakeFetch(files)(url, o); };
+  for (const to of ['https://other.example/schema/task/Task/v1.0.0.json', `${DJ}/elsewhere/Task.json`]) {
+    const dir = await node();
+    const before = await read(dir, 'node.yaml');
+    const seen = [];
+    await assert.rejects(extendModel(dir, 'task/Task', 'road/RoadTask', { fetch: away(SCHEMA, to, seen) }), new RegExp(`${esc(SCHEMA)}: redirects to ${esc(to)}, not followed \\(only under ${esc(`${DJ}/schema/`)}\\)`), to);
+    assert.equal(await read(dir, 'node.yaml'), before, to);
+    assert.ok(!seen.includes(to), to);
+  }
+  // An example that redirects out of examples/ is not read: the minimal example instead.
+  const seenExample = [];
+  const exDir = await node();
+  await extendModel(exDir, 'task/Task', 'road/RoadTask', { fetch: away(EXAMPLE, SCHEMA, seenExample) });
+  assert.deepEqual(JSON.parse(await read(exDir, 'models/road/RoadTask/examples/example.json')), { id: 'urn:ngsi-ld:RoadTask:example-1', type: 'RoadTask' });
+  assert.equal(seenExample.filter((u) => u === SCHEMA).length, 1);
+  // A redirect within schema/ is followed.
+  const moved = `${DJ}/schema/task/Task/v1.0.0/schema.json`;
+  const within = async (url, o) => (url === SCHEMA ? new Response(null, { status: 301, headers: { location: moved } }) : fakeFetch({ ...files, [moved]: files[SCHEMA] })(url, o));
+  await extendModel(await node(), 'task/Task', 'road/RoadTask', { fetch: within });
   // An index that is not https on a public host is not read at all.
   for (const bad of ['http://evil.example/catalog.json', 'https://127.0.0.1/catalog.json', 'https://localhost/catalog.json']) {
     const seen = [];

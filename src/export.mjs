@@ -22,7 +22,7 @@ export async function remoteModel(target, from, get) {
   if (!schemaUrl?.startsWith(schemaRoot)) throw new Error(`${from}: the schema of ${target} (${entry.schemaUrl}) is not under ${schemaRoot}, not read`);
   // Its type and version go into file names and the files: only plain ones.
   if (!usableEntry(entry)) throw new Error(`${from}: ${target} has no usable type name (UpperCamelCase) and version (x.y.z)`);
-  const schema = await get(schemaUrl);
+  const schema = await get(schemaUrl, { under: schemaRoot });
   // The catalog's languages, in the order its titles give them (datamodels.jp: ja, en).
   const languages = Object.keys(entry.title ?? {}).length ? Object.keys(entry.title) : ['en'];
   const subject = { name: entry.subject, version: entry.version };
@@ -70,7 +70,7 @@ export async function exportModel(target, names, { dir = '.', index, fetch: fetc
     from = pick.from;
     // The index read there is not read again.
     const read = getter(fetchUrl, timeout);
-    const get = (url) => (pick.catalog && url === from ? Promise.resolve(pick.catalog) : read(url));
+    const get = (url, options) => (pick.catalog && url === from ? Promise.resolve(pick.catalog) : read(url, options));
     const r = await remoteModel(target, from, get).catch((e) => { throw triedFirst(e, pick.tried); });
     ({ subject, model } = r);
     const { refs, problems } = await readRefs([model], { entries: r.entries, fetch: fetchUrl, timeout, trusted: schemaPrefixes(r.nodes) });

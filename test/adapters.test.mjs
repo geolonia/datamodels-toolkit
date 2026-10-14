@@ -399,6 +399,13 @@ test('a read that is refused says why; one that takes too long says so in words'
   assert.deepEqual(await reason(getter(dns(null), 50)('https://example.org/x.json')), [null, 'https://example.org/x.json could not be read (timed out after 0.05 s)']);
   // Without a time limit given, the default one.
   assert.deepEqual(await getter(ok)('https://example.org/x.json'), {});
+  // `under`: every redirect stays under the prefix (or one of the prefixes); without it, any public https place.
+  const hop = async (url) => (url === 'https://example.org/schema/a.json' ? new Response(null, { status: 302, headers: { location: 'https://other.example/a.json' } }) : ok());
+  const get = getter(hop);
+  assert.deepEqual(await reason(get('https://example.org/schema/a.json', { under: 'https://example.org/schema/' })), ['redirect', 'https://example.org/schema/a.json: redirects to https://other.example/a.json, not followed (only under https://example.org/schema/)']);
+  assert.deepEqual(await reason(get('https://example.org/schema/a.json', { under: ['https://example.org/schema/', 'https://w3id.org/x/schema/'] })), ['redirect', 'https://example.org/schema/a.json: redirects to https://other.example/a.json, not followed (only under https://example.org/schema/, https://w3id.org/x/schema/)']);
+  assert.deepEqual(await get('https://example.org/schema/a.json', { under: ['https://example.org/schema/', 'https://other.example/'] }), {});
+  assert.deepEqual(await get('https://example.org/schema/a.json'), {});
 });
 
 test('check --offline reads no schema of another site for the adapters', async () => {
@@ -430,6 +437,24 @@ test('a $ref outside the schema/ of a known node is never fetched', async () => 
   assert.deepEqual(Object.keys(r.refs), [good]);
   assert.equal(r.problems.length, bad.length);
   assert.ok(r.problems.every((x) => / is not read: only the schemas of the nodes in node\.yaml are \(https:\/\/datamodels\.jp\/schema\/\)$/.test(x)));
+});
+
+test('a schema or $ref of another node that redirects out of its schema/ is not followed', async () => {
+  const { schemaPrefixes } = await import('../src/adapters/index.mjs');
+  const entry = siteCatalog.models.find((m) => m.type === 'EvacuationSite');
+  const away = (from, seen) => async (url, o) => { seen.push(String(url)); return url === from ? new Response(null, { status: 302, headers: { location: 'https://other.example/x.json' } }) : siteFetch(url, o); };
+  // export: the model's own schema.
+  let seen = [];
+  await assert.rejects(exportModel('disaster/EvacuationSite', ['csv'], { index: DJ_INDEX, fetch: away(entry.schemaUrl, seen) }), new RegExp(`redirects to https://other\\.example/x\\.json, not followed \\(only under ${DJ.replace(/[.]/g, '\\.')}/schema/\\)`));
+  assert.ok(!seen.includes('https://other.example/x.json'));
+  // readRefs: a $ref under a known node's schema/.
+  const good = `${DJ}/schema/common/JapaneseAddress/v1.0.0.json`;
+  const thing = { type: 'Thing', kind: 'entity', schema: { properties: { id: { type: 'string' }, type: { const: 'Thing' }, p: { $ref: good } } } };
+  seen = [];
+  const r = await readRefs([thing], { fetch: away(good, seen), trusted: schemaPrefixes([{ url: `${DJ}/` }]) });
+  assert.deepEqual(Object.keys(r.refs), []);
+  assert.deepEqual(r.problems, [`${good}: redirects to https://other.example/x.json, not followed (only under ${DJ}/schema/)`]);
+  assert.ok(!seen.includes('https://other.example/x.json'));
 });
 
 test('PostGIS: a list without duplicates is checked by a function the file creates first', async () => {
