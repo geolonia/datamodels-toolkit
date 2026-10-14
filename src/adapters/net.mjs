@@ -51,7 +51,12 @@ export function isPublicAddress(ip) {
       || (h[0] & 0xffc0) === 0xfec0 // fec0::/10 site-local (old)
       || (h[0] & 0xff00) === 0xff00 // multicast
       || (h[0] === 0x64 && h[1] === 0xff9b) // NAT64, which reaches IPv4 addresses
-      || (h[0] === 0x2001 && h[1] === 0x0db8)); // documentation
+      || h[0] === 0x2002 // 6to4, which reaches the IPv4 address inside it (2002:7f00:1:: is 127.0.0.1)
+      || (h[0] === 0x2001 && h[1] === 0) // Teredo, which also carries an IPv4 address
+      || (h[0] === 0x100 && h[1] === 0 && h[2] === 0 && h[3] === 0) // 100::/64 discard-only
+      || (h[0] === 0x2001 && h[1] === 2 && h[2] === 0) // 2001:2::/48 benchmarking, as 198.18.0.0/15
+      || (h[0] === 0x2001 && h[1] === 0x0db8) // documentation
+      || (h[0] === 0x3fff && h[1] < 0x1000)); // 3fff::/20 documentation
   }
   return false;
 }
