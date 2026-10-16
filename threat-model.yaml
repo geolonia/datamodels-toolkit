@@ -1,0 +1,2383 @@
+# threat-model.yaml — derived index; the prose threat model (threat-model.md) is canonical.
+schema: threat-model-sidecar/v2
+project: datamodels-toolkit
+prose_version: "threat-model.md@sha256:661667d7aee2695463070164ef91d318f407bf53ba9f17e0fb22dcc8e927fc15"
+model_status: unratified-draft
+triage_policy: strict
+confidence:
+  documented: 192
+  maintainer: 0
+  inferred: 65
+  assumption: 26
+generation:
+  model: Claude Opus 5.5 (claude-opus-5-5)
+  effort: session default
+  plugins:
+  - threat-model
+  - threat-model-recon
+  - threat-model-surface
+  - threat-model-interview
+  - threat-model-authoring
+  - threat-model-backtest
+  - threat-model-sidecar
+components:
+- name: convert
+  scope: in
+  reachability_precondition: "it is reachable from the bytes of a CSV the user converts, with a mapping file and a site the user chose"
+  provenance:
+    kind: documented
+    source: bin/datamodels.mjs header comment
+- name: node-tools
+  scope: in
+  reachability_precondition: "it is reachable from the files of a node folder (from a contributor's pull request, or from a node the user did not write), or from what another node or the node's own site answers"
+  provenance:
+    kind: documented
+    source: "README \"Commands\" table"
+- name: remote-reads
+  scope: in
+  reachability_precondition: "it is reachable from what another node's host answers (content, headers, redirects, DNS) to a read the toolkit makes on its own or for a URL in a node file"
+  provenance:
+    kind: documented
+    source: src/adapters/net.mjs header; src/discover.mjs header
+- name: init-github
+  scope: in
+  reachability_precondition: "it is reachable from the options of `init` and the content of the folder it runs in"
+  provenance:
+    kind: documented
+    source: src/init.mjs publishToGitHub comment
+- name: action
+  scope: in
+  reachability_precondition: "it is reachable from a node repository's files or a pull request, through the Action's steps, and changes what is deployed or exposes the token"
+  provenance:
+    kind: documented
+    source: action.yml header comment
+- name: library
+  scope: in
+  reachability_precondition: it is reachable through an exported function from the data its caller passes
+  provenance:
+    kind: documented
+    source: "README \"Build library\""
+- name: agent-skill
+  scope: in
+  reachability_precondition: "it is reachable from text an agent reads while following the skill, and changes what the agent does beyond what the user asked"
+  provenance:
+    kind: documented
+    source: "README \"Agent skill\""
+- name: release-pipeline
+  scope: in
+  reachability_precondition: "it lets someone without the maintainers' rights change what `npx @geolonia/datamodels@X.Y.Z` or `uses: geolonia/datamodels-toolkit@<SHA>` runs"
+  provenance:
+    kind: documented
+    source: .github/workflows/publish.yml header comment
+- name: dev-tools
+  scope: out
+  reason: "tests, fixture scripts and changelog tooling are not in the npm package, per §1.3"
+  provenance:
+    kind: documented
+    source: package.json files
+- name: toolkit-docs
+  scope: out
+  reason: "maintained in geolonia/datamodels; cited where they state a promise, per §1.3"
+  provenance:
+    kind: assumption
+    question_id: Q1
+- name: catalogue
+  scope: out
+  reason: "datamodels.jp has its own sibling model, per §1.1 and §1.3"
+  provenance:
+    kind: assumption
+    question_id: Q1
+- name: user-nodes
+  scope: out
+  reason: "sites built with the toolkit belong to their owners, per §1.3"
+  provenance:
+    kind: assumption
+    question_id: Q18
+host_side_effects:
+- effect: outbound-network-shared-reader
+  stance: present
+  components:
+  - remote-reads
+  - node-tools
+  conditions: "search, nodes, export, extend; check and build for other nodes' schemas, contexts and indexes; none with --offline"
+  provenance:
+    kind: documented
+    source: "src/adapters/index.mjs getter comment: \"with the global fetch (the default everywhere), it reads through publicFetch\""
+- effect: outbound-network-outside-reader
+  stance: present
+  components:
+  - convert
+  - node-tools
+  conditions: "convert and mapping read --site (default https://datamodels.jp) with the global fetch; check and release read the node's own published files under baseUrl; upgrade reads https://api.github.com/repos/geolonia/datamodels-toolkit/"
+  provenance:
+    kind: assumption
+    question_id: Q4
+- effect: child-processes
+  stance: present
+  components:
+  - node-tools
+  - init-github
+  - action
+  conditions: "git rev-parse, git show, git diff for check --base; gh and git for init --github; the Action runs npm ci and git fetch. Search: grep -rn \"execFile\" src bin — 2 files, src/build/published.mjs and bin/datamodels.mjs (for init)"
+  provenance:
+    kind: assumption
+    question_id: Q4
+- effect: filesystem-writes
+  stance: present
+  components:
+  - convert
+  - node-tools
+  - remote-reads
+  - init-github
+  conditions: "only the named outputs: --out of convert (overwrites), mapping (never overwrites), export (overwrites files of the same name), build into _site/ or --out; init, add, extend, release, bump, upgrade write into the node folder; check builds into a temporary folder and removes it"
+  provenance:
+    kind: assumption
+    question_id: Q4
+- effect: environment-variables
+  stance: absent
+  components:
+  - convert
+  - node-tools
+  - remote-reads
+  - init-github
+  conditions: "grep -rn \"process.env\" src bin — 0 hits. Dependencies may read their own (Eleventy, Node.js)"
+  provenance:
+    kind: assumption
+    question_id: Q4
+- effect: code-from-node-folder
+  stance: absent
+  components:
+  - node-tools
+  conditions: "pages use the toolkit's own templates and its own Eleventy configuration; Eleventy still reads a .eleventyignore in the current directory"
+  provenance:
+    kind: documented
+    source: "src/build/pages.mjs writePages comment: \"A .eleventyignore in the current directory is still read\""
+- effect: writes-to-users-github
+  stance: present
+  components:
+  - init-github
+  conditions: "only with --github: creates a public repository, pushes the first commit, turns on Pages"
+  provenance:
+    kind: documented
+    source: "src/init.mjs publishToGitHub comment: \"create the public repository repo\""
+- effect: writes-to-node-repository-from-action
+  stance: absent
+  components:
+  - action
+  conditions: the Action pushes nothing and calls no GitHub API with the token; it uploads a Pages artifact and deploys it
+  provenance:
+    kind: documented
+    source: "action.yml header comment: \"check the node, build its files and pages, and deploy them\""
+entry_points:
+- id: "convert / mapping: CSV file"
+  component: convert
+  parameters:
+  - name: csv_bytes
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - size
+    obligation_id: bound-input-size
+    caller_must_enforce: bound the size of the file (D-NO-INPUT-LIMITS)
+    provenance:
+      kind: documented
+      source: "src/convert.mjs parseCsv comment: \"Throws on what would otherwise shift or merge values silently\""
+  - name: csv_header_names
+    attacker_controllable: true
+    control_kinds:
+    - data
+    obligation_id: review-generated-mapping
+    caller_must_enforce: review the generated mapping file before use (Q12)
+    provenance:
+      kind: inferred
+      question_id: Q12
+  - name: cell_values
+    attacker_controllable: true
+    control_kinds:
+    - data
+    obligation_id: escape-converted-values
+    caller_must_enforce: treat converted values as untrusted in the app or broker (D-OUTPUT-TEXT-AS-INPUT)
+    provenance:
+      kind: documented
+      source: "bin/datamodels.mjs header: \"validates every entity against the model's schema\""
+  - name: json_transform_cell
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - object-topology
+    obligation_id: escape-converted-values
+    caller_must_enforce: treat converted values as untrusted in the app or broker (D-OUTPUT-TEXT-AS-INPUT)
+    provenance:
+      kind: documented
+      source: src/convert.mjs apply case json
+- id: "convert / mapping: options and mapping"
+  component: convert
+  parameters:
+  - name: mapping_argument
+    attacker_controllable: false
+    control_kinds:
+    - resource-name
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: "bin/datamodels.mjs header: \"The mapping may also be a file of your own\""
+  - name: own_mapping_file_and_via
+    attacker_controllable: false
+    control_kinds:
+    - resource-name
+    - data
+    obligation_id: review-own-config
+    caller_must_enforce: write or review the mapping file (D-NOT-A-SANDBOX)
+    provenance:
+      kind: inferred
+      question_id: Q11
+  - name: site_option
+    attacker_controllable: false
+    control_kinds:
+    - resource-name
+    obligation_id: trusted-urls-only
+    caller_must_enforce: use https or a local directory (D-OWN-SITE-READS)
+    provenance:
+      kind: documented
+      source: "src/catalog.mjs siteReader comment: \"the file must stay inside the site directory\""
+  - name: catalogue_files_from_site
+    attacker_controllable: false
+    control_kinds:
+    - data
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: "src/catalog.mjs header: \"URLs in the catalog always name https://datamodels.jp\""
+  - name: set_option
+    attacker_controllable: false
+    control_kinds:
+    - data
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: "bin/datamodels.mjs header: \"--set attribute=value (for what the list does not carry\""
+  - name: out_path
+    attacker_controllable: false
+    control_kinds:
+    - resource-name
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: "bin/datamodels.mjs mapping: \"A mapping someone has filled in is work: never write over it\""
+- id: "check / build / release / bump / add: node folder"
+  component: node-tools
+  parameters:
+  - name: node_yaml
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - resource-name
+    obligation_id: review-node-changes
+    caller_must_enforce: review node.yaml before merge
+    provenance:
+      kind: documented
+      source: "src/build/node.mjs settingsProblems and httpUrl comment: \"Every URL here is published\""
+  - name: base_url
+    attacker_controllable: true
+    control_kinds:
+    - resource-name
+    obligation_id: trusted-urls-only
+    caller_must_enforce: use https or a local directory (D-OWN-SITE-READS)
+    provenance:
+      kind: inferred
+      question_id: Q14
+  - name: subject_context
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - resource-name
+    caller_must_enforce: none — P-CONTEXT-IMPORTS-LISTED
+    provenance:
+      kind: documented
+      source: "src/build/load.mjs import check: \"only catalog contexts may be imported by URL\""
+  - name: schema_json
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - size
+    - resource-name
+    obligation_id: review-node-changes
+    caller_must_enforce: review node.yaml before merge
+    provenance:
+      kind: inferred
+      question_id: Q9
+  - name: examples
+    attacker_controllable: true
+    control_kinds:
+    - data
+    obligation_id: review-node-changes
+    caller_must_enforce: review node.yaml before merge
+    provenance:
+      kind: documented
+      source: "datamodels.jp/en/toolkit/check \"What check checks\""
+  - name: model_texts
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - x-agent-text
+    caller_must_enforce: none — P-PAGES-ESCAPED
+    provenance:
+      kind: documented
+      source: "src/build/pages.mjs setNunjucksEnvironmentOptions({ autoescape: true"
+  - name: extends_index
+    attacker_controllable: true
+    control_kinds:
+    - resource-name
+    caller_must_enforce: none — P-PUBLIC-READS
+    provenance:
+      kind: documented
+      source: "src/build/node.mjs loadNode comment: \"extends goes into catalog.json as written, so it is checked here\""
+  - name: folder_and_file_names
+    attacker_controllable: true
+    control_kinds:
+    - resource-name
+    obligation_id: review-node-changes
+    caller_must_enforce: review node.yaml before merge
+    provenance:
+      kind: assumption
+      question_id: Q2
+- id: check --base
+  component: node-tools
+  parameters:
+  - name: git_ref
+    attacker_controllable: false
+    control_kinds:
+    - resource-name
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: src/build/published.mjs compareWithBase comment
+  - name: base_ref_snapshots
+    attacker_controllable: false
+    control_kinds:
+    - data
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: "src/build/published.mjs header: \"The base branch decides\""
+- id: "check / release: own published files"
+  component: node-tools
+  parameters:
+  - name: own_site_answers
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - size
+    obligation_id: trusted-urls-only
+    caller_must_enforce: use https or a local directory (D-OWN-SITE-READS)
+    provenance:
+      kind: inferred
+      question_id: Q14
+- id: upgrade
+  component: node-tools
+  parameters:
+  - name: github_release_answer
+    attacker_controllable: false
+    control_kinds:
+    - data
+    obligation_id: trusted-platform-answer
+    caller_must_enforce: "n/a: GitHub is trusted"
+    provenance:
+      kind: documented
+      source: "src/version.mjs upgradeNode: \"A release, not only a tag or branch of that name\""
+  - name: node_workflow_and_markdown
+    attacker_controllable: false
+    control_kinds:
+    - data
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: src/version.mjs upgradeNode comment
+- id: search / nodes
+  component: remote-reads
+  parameters:
+  - name: index_and_depth
+    attacker_controllable: false
+    control_kinds:
+    - resource-name
+    - size
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: "src/discover.mjs MAX_DEPTH comment: \"a large network cannot keep the command busy\""
+  - name: linked_catalog_json
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - size
+    - resource-name
+    caller_must_enforce: none — P-TERMINAL-TEXT-PLAIN
+    provenance:
+      kind: documented
+      source: "src/discover.mjs header: \"Every read goes through the adapters' getter\""
+- id: export / extend
+  component: remote-reads
+  parameters:
+  - name: model_argument
+    attacker_controllable: false
+    control_kinds:
+    - resource-name
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: src/discover.mjs indexForModel comment
+  - name: remote_catalog_entry
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - resource-name
+    caller_must_enforce: none — P-REMOTE-NAMES-CHECKED
+    provenance:
+      kind: documented
+      source: "CHANGELOG.md 0.3.15 \"Security\": \"so a catalog cannot add lines to the files they write\""
+  - name: remote_schema_and_example
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - size
+    obligation_id: review-extend-copy
+    caller_must_enforce: review what extend copied before committing (D-REMOTE-CONTENT-UNREVIEWED)
+    provenance:
+      kind: assumption
+      question_id: Q15
+- id: "shared reader: any read of another node"
+  component: remote-reads
+  parameters:
+  - name: http_status_headers_redirects
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - size
+    - rate
+    caller_must_enforce: none — P-REMOTE-READS-BOUNDED
+    provenance:
+      kind: documented
+      source: "src/adapters/index.mjs getter comment: \"One deadline for the read\""
+  - name: dns_answers
+    attacker_controllable: true
+    control_kinds:
+    - resource-name
+    caller_must_enforce: none — P-PUBLIC-READS
+    provenance:
+      kind: documented
+      source: "src/adapters/net.mjs publicLookup comment: \"dns.lookup that refuses a host with any non-public address\""
+  - name: remote_context_documents
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - size
+    caller_must_enforce: none — P-PUBLIC-READS
+    provenance:
+      kind: documented
+      source: src/build/examples.mjs contextLoader
+  - name: remote_schemas_for_ref
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - size
+    obligation_id: choose-refs
+    caller_must_enforce: choose the $refs you write (D-SCHEMA-COMPILE-COST)
+    provenance:
+      kind: inferred
+      question_id: Q9
+- id: "export: output options"
+  component: remote-reads
+  parameters:
+  - name: to_and_out
+    attacker_controllable: false
+    control_kinds:
+    - resource-name
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: "src/export.mjs writeExport comment: \"over files of the same name\""
+- id: init
+  component: init-github
+  parameters:
+  - name: options_and_answers
+    attacker_controllable: false
+    control_kinds:
+    - data
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: "bin/datamodels.mjs init: \"init: nothing written\""
+  - name: existing_folder_content
+    attacker_controllable: false
+    control_kinds:
+    - data
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: "src/init.mjs writeNode comment: \"never over an existing file\""
+  - name: gh_account
+    attacker_controllable: false
+    control_kinds:
+    - collaborator-implementation
+    obligation_id: trusted-platform-answer
+    caller_must_enforce: "n/a: GitHub is trusted"
+    provenance:
+      kind: documented
+      source: "src/init.mjs publishToGitHub comment: \"Put the node on GitHub with the gh CLI\""
+- id: action.yml
+  component: action
+  parameters:
+  - name: input_directory
+    attacker_controllable: false
+    control_kinds:
+    - resource-name
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: "action.yml header comment: \"Inputs reach the shell only through environment variables\""
+  - name: inputs_deploy_offline
+    attacker_controllable: false
+    control_kinds:
+    - data
+    obligation_id: trusted-input-chosen-by-user
+    caller_must_enforce: "n/a: a trusted input the user or owner chooses"
+    provenance:
+      kind: documented
+      source: action.yml header comment
+  - name: github_base_ref
+    attacker_controllable: true
+    control_kinds:
+    - resource-name
+    caller_must_enforce: none — P-ACTION-INPUTS-AS-DATA
+    provenance:
+      kind: documented
+      source: "action.yml step \"Check\", env BASE_REF"
+  - name: checked_out_repository
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - callback-code
+    obligation_id: scope-job-permissions
+    caller_must_enforce: "grant the check job contents: read only; make the check required"
+    provenance:
+      kind: assumption
+      question_id: Q18
+  - name: github_token
+    attacker_controllable: false
+    control_kinds:
+    - collaborator-implementation
+    obligation_id: scope-job-permissions
+    caller_must_enforce: "grant the check job contents: read only; make the check required"
+    provenance:
+      kind: documented
+      source: "action.yml comment: \"the token is passed to this one fetch in the environment\""
+- id: "library: fetch option"
+  component: library
+  parameters:
+  - name: fetch_option
+    attacker_controllable: false
+    control_kinds:
+    - collaborator-implementation
+    obligation_id: caller-address-check
+    caller_must_enforce: do the address check your own fetch skips (D-CALLER-FETCH)
+    provenance:
+      kind: inferred
+      question_id: Q3
+- id: "agent-skill: text read by the agent"
+  component: agent-skill
+  parameters:
+  - name: text_read_by_agent
+    attacker_controllable: true
+    control_kinds:
+    - x-agent-text
+    obligation_id: agent-text-as-data
+    caller_must_enforce: treat text as data; confirm commands (D-AGENT-TEXT)
+    provenance:
+      kind: inferred
+      question_id: Q21
+contract_dimensions:
+- component: convert
+  dimension: numeric-domain
+  status: claimed
+  conditions: "numbers must be finite, whole numbers whole, municipality codes checked (check digit); invalid values are reported, not guessed"
+  property_id: P-ROWS-VALIDATED
+  provenance:
+    kind: documented
+    source: "src/convert.mjs code6 and apply cases number, integer"
+- component: convert
+  dimension: failure-atomicity
+  status: claimed
+  conditions: an invalid row is reported and the exit code is 1; with --check nothing is written; a parse error stops before output
+  property_id: P-CSV-STRICT
+  provenance:
+    kind: documented
+    source: "bin/datamodels.mjs header: \"the exit code is 1 when a row is invalid\""
+- component: convert
+  dimension: recursive-cyclic-topology
+  status: claimed
+  conditions: via chains between mapping files are followed once each; a cycle is reported
+  property_id: P-ROWS-VALIDATED
+  provenance:
+    kind: documented
+    source: "src/catalog.mjs loadTarget comment: \"the converter reports a cycle\""
+- component: convert
+  dimension: callback-execution
+  status: not-applicable
+  conditions: mapping files are data; transforms are a fixed list in the code
+  provenance:
+    kind: documented
+    source: src/convert.mjs TRANSFORMS
+- component: convert
+  dimension: serialization-reconstruction
+  status: claimed
+  conditions: a __proto__ column or attribute stays data in the NGSI-LD helpers
+  property_id: P-NGSI-PROTO-AS-DATA
+  provenance:
+    kind: documented
+    source: "src/ngsi.mjs setOwn comment: \"would change the object's prototype and drop the attribute\""
+- component: convert
+  dimension: reference-lifecycle
+  status: not-applicable
+  conditions: "one run, no objects outlive it"
+  provenance:
+    kind: documented
+    source: bin/datamodels.mjs header
+- component: convert
+  dimension: concurrency-reentrancy
+  status: not-applicable
+  conditions: one process per command
+  provenance:
+    kind: documented
+    source: bin/datamodels.mjs header
+- component: convert
+  dimension: resource-complexity
+  status: disclaimed
+  conditions: "no limit on file size, rows or columns; the whole CSV is in memory"
+  property_id: D-NO-INPUT-LIMITS
+  provenance:
+    kind: inferred
+    question_id: Q7
+- component: convert
+  dimension: x-outbound-requests
+  status: disclaimed
+  conditions: "--site is read with the global fetch: redirects followed, no address check, no deadline"
+  property_id: D-OWN-SITE-READS
+  provenance:
+    kind: inferred
+    question_id: Q14
+- component: convert
+  dimension: x-agent-instructions
+  status: unresolved
+  conditions: "CSV header text is written into the comments of the generated mapping file with line breaks kept, so it can add lines that an agent or convert reads"
+  question_id: Q12
+  provenance:
+    kind: inferred
+    question_id: Q12
+- component: node-tools
+  dimension: numeric-domain
+  status: claimed
+  conditions: versions X.Y.Z; URLs in node.yaml http(s) without credentials; other nodes https
+  property_id: P-CONTEXT-IMPORTS-LISTED
+  provenance:
+    kind: documented
+    source: src/build/node.mjs settingsProblems
+- component: node-tools
+  dimension: failure-atomicity
+  status: claimed
+  conditions: check collects every problem and exits 1; the build stops before writing a released version whose sources changed; add stages files and renames them
+  property_id: P-PUBLISHED-COMPARISON
+  provenance:
+    kind: documented
+    source: "src/build/check.mjs header and src/release.mjs releaseSubject: \"throws on a problem\""
+- component: node-tools
+  dimension: recursive-cyclic-topology
+  status: claimed
+  conditions: a context that imports itself is an error; mapping via cycles are problems
+  property_id: P-CONTEXT-IMPORTS-LISTED
+  provenance:
+    kind: documented
+    source: "src/build/check.mjs resolveContext comment: \"only an import of itself is refused\""
+- component: node-tools
+  dimension: callback-execution
+  status: unresolved
+  conditions: "node files are read as data and pages use the toolkit's own templates and configuration; no written promise that nothing in a node folder runs as code"
+  question_id: Q2
+  provenance:
+    kind: inferred
+    question_id: Q2
+- component: node-tools
+  dimension: serialization-reconstruction
+  status: disclaimed
+  conditions: "schemas are compiled by Ajv, which treats a schema like code; pattern becomes a regular expression"
+  property_id: D-SCHEMA-COMPILE-COST
+  provenance:
+    kind: inferred
+    question_id: Q9
+- component: node-tools
+  dimension: reference-lifecycle
+  status: claimed
+  conditions: a released version keeps a snapshot; a published version without one is noted
+  property_id: P-PUBLISHED-COMPARISON
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/versions \"How a published version is kept\""
+- component: node-tools
+  dimension: concurrency-reentrancy
+  status: claimed
+  conditions: add refuses a second run on the same subject while the lock file exists
+  property_id: P-PUBLISHED-COMPARISON
+  provenance:
+    kind: documented
+    source: src/add.mjs lock file
+- component: node-tools
+  dimension: resource-complexity
+  status: disclaimed
+  conditions: no limit on node files; reads of other nodes bounded as in remote-reads
+  property_id: D-NO-INPUT-LIMITS
+  provenance:
+    kind: inferred
+    question_id: Q7
+- component: node-tools
+  dimension: x-outbound-requests
+  status: disclaimed
+  conditions: "the node's own published files are read under baseUrl with the global fetch"
+  property_id: D-OWN-SITE-READS
+  provenance:
+    kind: inferred
+    question_id: Q14
+- component: node-tools
+  dimension: x-version-immutability
+  status: claimed
+  conditions: "check --base fails on a changed or removed snapshot file, except during the pre-release"
+  property_id: P-BASE-COMPARISON
+  provenance:
+    kind: documented
+    source: src/build/published.mjs header
+- component: node-tools
+  dimension: x-agent-instructions
+  status: disclaimed
+  conditions: "model text goes unfiltered into llms.txt, catalog.json and the AI adapter's schema descriptions"
+  property_id: D-AGENT-TEXT
+  provenance:
+    kind: inferred
+    question_id: Q21
+- component: remote-reads
+  dimension: numeric-domain
+  status: claimed
+  conditions: "IPv4 and IPv6 addresses classified, IPv4 inside IPv6 included; non-public ranges refused"
+  property_id: P-PUBLIC-READS
+  provenance:
+    kind: documented
+    source: src/adapters/net.mjs isPublicAddress comment
+- component: remote-reads
+  dimension: failure-atomicity
+  status: disclaimed
+  conditions: "a node that cannot be read is a note, never a failure of someone else's command (except the starting index of search)"
+  property_id: D-OTHER-NODES-NOTED
+  provenance:
+    kind: documented
+    source: "src/discover.mjs header: \"A node that cannot be read is a note, never a failure\""
+- component: remote-reads
+  dimension: recursive-cyclic-topology
+  status: claimed
+  conditions: "each index is read once, so a cycle of nodes links ends; depth at most 5"
+  property_id: P-REMOTE-READS-BOUNDED
+  provenance:
+    kind: documented
+    source: "src/discover.mjs header: \"Each index is read once, so a cycle ends\""
+- component: remote-reads
+  dimension: callback-execution
+  status: not-applicable
+  conditions: answers are parsed as JSON only
+  provenance:
+    kind: documented
+    source: "src/adapters/index.mjs getter: res.json()"
+- component: remote-reads
+  dimension: serialization-reconstruction
+  status: claimed
+  conditions: "a remote type name and version are used in file names, YAML and messages only when they match ^[A-Z][A-Za-z0-9]*$ and x.y.z"
+  property_id: P-REMOTE-NAMES-CHECKED
+  provenance:
+    kind: documented
+    source: "src/discover.mjs TYPE_NAME comment: \"before its type and version are used in file names\""
+- component: remote-reads
+  dimension: reference-lifecycle
+  status: not-applicable
+  conditions: each command reads afresh; caches live for one run
+  provenance:
+    kind: documented
+    source: "src/adapters/index.mjs getter: \"A reader of JSON URLs that reads each once\""
+- component: remote-reads
+  dimension: concurrency-reentrancy
+  status: not-applicable
+  conditions: reads within one command
+  provenance:
+    kind: documented
+    source: src/discover.mjs header
+- component: remote-reads
+  dimension: resource-complexity
+  status: claimed
+  conditions: "5 MB per response, one deadline per read, 50 nodes"
+  property_id: P-REMOTE-READS-BOUNDED
+  provenance:
+    kind: documented
+    source: src/adapters/net.mjs MAX_BYTES
+- component: remote-reads
+  dimension: x-outbound-requests
+  status: claimed
+  conditions: "https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's schema/ or examples/ stay there"
+  property_id: P-PUBLIC-READS
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.15 \"Security\""
+- component: remote-reads
+  dimension: x-agent-instructions
+  status: claimed
+  conditions: "text from other nodes printed by search and nodes has no control characters or direction overrides, on one line"
+  property_id: P-TERMINAL-TEXT-PLAIN
+  provenance:
+    kind: documented
+    source: "src/discover.mjs plain comment: \"an escape sequence could rewrite the screen\""
+- component: init-github
+  dimension: numeric-domain
+  status: claimed
+  conditions: "--github must be owner/name of letters, digits and ._-"
+  property_id: P-INIT-ONLY-ITS-FILES
+  provenance:
+    kind: documented
+    source: src/init.mjs REPO_NAME
+- component: init-github
+  dimension: failure-atomicity
+  status: claimed
+  conditions: "settings are checked before anything is written; with --github, other files in the folder stop it before a commit"
+  property_id: P-INIT-ONLY-ITS-FILES
+  provenance:
+    kind: documented
+    source: "src/init.mjs publishToGitHub comment: \"anything else in the folder stops it, so nothing else is published\""
+- component: init-github
+  dimension: recursive-cyclic-topology
+  status: not-applicable
+  conditions: no recursive input
+  provenance:
+    kind: documented
+    source: src/init.mjs nodeFiles
+- component: init-github
+  dimension: callback-execution
+  status: claimed
+  conditions: "gh and git are run without a shell, with arguments as a list"
+  property_id: P-INIT-ONLY-ITS-FILES
+  provenance:
+    kind: documented
+    source: "src/init.mjs publishToGitHub comment: \"runs a command without a shell\""
+- component: init-github
+  dimension: serialization-reconstruction
+  status: not-applicable
+  conditions: "writes fixed templates with the user's answers"
+  provenance:
+    kind: documented
+    source: src/init.mjs nodeFiles
+- component: init-github
+  dimension: reference-lifecycle
+  status: not-applicable
+  conditions: one run
+  provenance:
+    kind: documented
+    source: src/init.mjs writeNode
+- component: init-github
+  dimension: concurrency-reentrancy
+  status: not-applicable
+  conditions: one process
+  provenance:
+    kind: documented
+    source: src/init.mjs writeNode
+- component: init-github
+  dimension: resource-complexity
+  status: not-applicable
+  conditions: a fixed set of files
+  provenance:
+    kind: documented
+    source: src/init.mjs nodeFiles
+- component: action
+  dimension: numeric-domain
+  status: not-applicable
+  conditions: three string inputs
+  provenance:
+    kind: documented
+    source: action.yml inputs
+- component: action
+  dimension: failure-atomicity
+  status: claimed
+  conditions: a problem in check fails the step; build and deploy do not run after it
+  property_id: P-BASE-COMPARISON
+  provenance:
+    kind: documented
+    source: "action.yml steps \"Check\", \"Build\", \"Deploy to GitHub Pages\""
+- component: action
+  dimension: recursive-cyclic-topology
+  status: not-applicable
+  conditions: no recursive input
+  provenance:
+    kind: documented
+    source: action.yml runs
+- component: action
+  dimension: callback-execution
+  status: claimed
+  conditions: inputs reach the shell only through environment variables; the token only for one git fetch
+  property_id: P-ACTION-INPUTS-AS-DATA
+  provenance:
+    kind: documented
+    source: action.yml header comment
+- component: action
+  dimension: serialization-reconstruction
+  status: not-applicable
+  conditions: no serialized state
+  provenance:
+    kind: documented
+    source: action.yml runs
+- component: action
+  dimension: reference-lifecycle
+  status: disclaimed
+  conditions: "the token is in the environment of the whole \"Check\" step, so the toolkit process and its dependencies run with it"
+  property_id: D-TOKEN-IN-STEP-ENV
+  provenance:
+    kind: inferred
+    question_id: Q17
+- component: action
+  dimension: concurrency-reentrancy
+  status: not-applicable
+  conditions: "the caller's concurrency group serialises Pages deploys"
+  provenance:
+    kind: documented
+    source: "README \"The whole workflow that init writes\": concurrency: group: pages"
+- component: action
+  dimension: resource-complexity
+  status: not-applicable
+  conditions: "the caller's timeout-minutes bounds the job"
+  provenance:
+    kind: documented
+    source: "README \"The whole workflow that init writes\": timeout-minutes: 10"
+- component: action
+  dimension: x-outbound-requests
+  status: claimed
+  conditions: "npm ci from the lockfile with --ignore-scripts; one git fetch of the base branch; the toolkit's own reads as in node-tools"
+  property_id: P-INSTALL-NO-SCRIPTS
+  provenance:
+    kind: documented
+    source: "action.yml step \"Install the toolkit\""
+- component: action
+  dimension: x-version-immutability
+  status: claimed
+  conditions: on a pull request the snapshots are compared with the base branch
+  property_id: P-BASE-COMPARISON
+  provenance:
+    kind: documented
+    source: "action.yml comment: \"a published version is never changed or removed\""
+- component: library
+  dimension: numeric-domain
+  status: claimed
+  conditions: the same checks as the commands; ngsi checks attribute types and polygon rings
+  property_id: P-NGSI-PROTO-AS-DATA
+  provenance:
+    kind: documented
+    source: "README \"Build library\""
+- component: library
+  dimension: failure-atomicity
+  status: claimed
+  conditions: "readRefs returns problems instead of throwing, so the caller decides"
+  property_id: P-PUBLIC-READS
+  provenance:
+    kind: documented
+    source: "src/adapters/index.mjs readRefs comment: \"a schema that cannot be read is a problem, not an error\""
+- component: library
+  dimension: recursive-cyclic-topology
+  status: disclaimed
+  conditions: toNormalized and toKeyValues walk the data the caller passes; no depth limit
+  property_id: D-NO-INPUT-LIMITS
+  provenance:
+    kind: inferred
+    question_id: Q7
+- component: library
+  dimension: callback-execution
+  status: disclaimed
+  conditions: "a caller's own fetch replaces publicFetch and is trusted"
+  property_id: D-CALLER-FETCH
+  provenance:
+    kind: inferred
+    question_id: Q3
+- component: library
+  dimension: serialization-reconstruction
+  status: claimed
+  conditions: __proto__ keys stay own properties
+  property_id: P-NGSI-PROTO-AS-DATA
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.16 \"Fixed\""
+- component: library
+  dimension: reference-lifecycle
+  status: not-applicable
+  conditions: pure functions return new objects
+  provenance:
+    kind: documented
+    source: src/ngsi.mjs header
+- component: library
+  dimension: concurrency-reentrancy
+  status: not-applicable
+  conditions: no shared mutable state
+  provenance:
+    kind: documented
+    source: "README \"Build library\": \"It has no imports\""
+- component: library
+  dimension: resource-complexity
+  status: disclaimed
+  conditions: no limit on the data the caller passes
+  property_id: D-NO-INPUT-LIMITS
+  provenance:
+    kind: inferred
+    question_id: Q7
+- component: agent-skill
+  dimension: numeric-domain
+  status: not-applicable
+  conditions: "instructions, no input"
+  provenance:
+    kind: documented
+    source: skills/datamodels/SKILL.md
+- component: agent-skill
+  dimension: failure-atomicity
+  status: not-applicable
+  conditions: instructions
+  provenance:
+    kind: documented
+    source: skills/datamodels/SKILL.md
+- component: agent-skill
+  dimension: recursive-cyclic-topology
+  status: not-applicable
+  conditions: instructions
+  provenance:
+    kind: documented
+    source: skills/datamodels/SKILL.md
+- component: agent-skill
+  dimension: callback-execution
+  status: disclaimed
+  conditions: "the agent runs the commands the skill names with the user's rights; the skill does not limit it"
+  property_id: D-SKILL-GUIDANCE-ONLY
+  provenance:
+    kind: inferred
+    question_id: Q21
+- component: agent-skill
+  dimension: serialization-reconstruction
+  status: not-applicable
+  conditions: instructions
+  provenance:
+    kind: documented
+    source: skills/datamodels/SKILL.md
+- component: agent-skill
+  dimension: reference-lifecycle
+  status: not-applicable
+  conditions: copied once by the user; not updated by the package
+  provenance:
+    kind: documented
+    source: "README \"Agent skill\": \"It is not in the npm package\""
+- component: agent-skill
+  dimension: concurrency-reentrancy
+  status: not-applicable
+  conditions: instructions
+  provenance:
+    kind: documented
+    source: skills/datamodels/SKILL.md
+- component: agent-skill
+  dimension: resource-complexity
+  status: not-applicable
+  conditions: instructions
+  provenance:
+    kind: documented
+    source: skills/datamodels/SKILL.md
+- component: agent-skill
+  dimension: x-agent-instructions
+  status: disclaimed
+  conditions: "the skill sends agents to read llms.txt, catalog.json and MCP answers; nothing filters instructions in them"
+  property_id: D-AGENT-TEXT
+  provenance:
+    kind: inferred
+    question_id: Q21
+- component: release-pipeline
+  dimension: numeric-domain
+  status: claimed
+  conditions: the release tag must be v plus the version in package.json
+  property_id: P-RELEASE-GATED
+  provenance:
+    kind: documented
+    source: ".github/workflows/publish.yml step \"The tag is the package version\""
+- component: release-pipeline
+  dimension: failure-atomicity
+  status: claimed
+  conditions: the tests run before npm publish; a failure publishes nothing; a GitHub pre-release publishes nothing
+  property_id: P-RELEASE-GATED
+  provenance:
+    kind: documented
+    source: ".github/workflows/publish.yml header: \"only after the tests pass. A pre-release publishes nothing\""
+- component: release-pipeline
+  dimension: recursive-cyclic-topology
+  status: not-applicable
+  conditions: no recursive input
+  provenance:
+    kind: documented
+    source: .github/workflows/publish.yml
+- component: release-pipeline
+  dimension: callback-execution
+  status: claimed
+  conditions: no dependency runs install scripts while the job can get an OIDC token
+  property_id: P-INSTALL-NO-SCRIPTS
+  provenance:
+    kind: documented
+    source: ".github/workflows/publish.yml comment: \"no dependency runs code while this job can get an\""
+- component: release-pipeline
+  dimension: serialization-reconstruction
+  status: disclaimed
+  conditions: the package pins its direct dependencies exactly but ships no lockfile; npx resolves the rest at install time
+  property_id: D-NO-SHRINKWRAP
+  provenance:
+    kind: inferred
+    question_id: Q20
+- component: release-pipeline
+  dimension: reference-lifecycle
+  status: claimed
+  conditions: "v*.*.* tags cannot be moved or deleted (organisation ruleset, bypass for the operations team); init pins the Action by commit SHA"
+  property_id: P-RELEASE-GATED
+  provenance:
+    kind: inferred
+    question_id: Q20
+- component: release-pipeline
+  dimension: concurrency-reentrancy
+  status: not-applicable
+  conditions: one publish per release event
+  provenance:
+    kind: documented
+    source: ".github/workflows/publish.yml on: release"
+- component: release-pipeline
+  dimension: resource-complexity
+  status: not-applicable
+  conditions: runner time limit of 10 minutes
+  provenance:
+    kind: documented
+    source: ".github/workflows/publish.yml timeout-minutes: 10"
+outputs:
+- component: convert
+  channel: converted-entities
+  taint: same-as-input
+  taint_provenance: &id001
+    kind: inferred
+    question_id: Q19
+  invariants: []
+  downstream_must_not_assume:
+  - id: converted-text-safe
+    statement: "that text is safe for HTML, SQL, a broker query or an agent; that values are true"
+    provenance: *id001
+- component: convert
+  channel: convert-summary-stderr
+  taint: same-as-input
+  taint_provenance: &id002
+    kind: inferred
+    question_id: Q12
+  invariants: []
+  downstream_must_not_assume:
+  - id: summary-constant-text
+    statement: that it is constant text or free of terminal control characters
+    provenance: *id002
+- component: convert
+  channel: generated-mapping-file
+  taint: constrained
+  taint_provenance: &id003
+    kind: inferred
+    question_id: Q12
+  invariants: []
+  downstream_must_not_assume:
+  - id: mapping-lines-from-model
+    statement: that every line comes from the model
+    provenance: *id003
+- component: node-tools
+  channel: built-site
+  taint: constrained
+  taint_provenance: &id004
+    kind: documented
+    source: "src/adapters/index.mjs header: \"is not covered by the promise that published files never change\""
+  invariants:
+  - id: released-snapshots-copied
+    statement: release snapshots are copied byte for byte
+    property_id: P-BASE-COMPARISON
+    provenance: &id017
+      kind: documented
+      source: src/build/published.mjs header
+  downstream_must_not_assume:
+  - id: unversioned-bytes-stable
+    statement: that files without a version in their URL keep their bytes
+    provenance: *id004
+- component: node-tools
+  channel: model-pages
+  taint: sanitized
+  taint_provenance: &id005
+    kind: documented
+    source: "src/build/pages.mjs httpOnly comment: \"A link only for an http(s) URL\""
+  invariants:
+  - id: pages-escaped
+    statement: "node text escaped, links only http(s)"
+    property_id: P-PAGES-ESCAPED
+    provenance: &id018
+      kind: documented
+      source: src/build/pages.mjs httpOnly comment
+  downstream_must_not_assume:
+  - id: descriptions-not-misleading
+    statement: that a description is free of misleading links or text
+    provenance: *id005
+- component: node-tools
+  channel: llms-txt
+  taint: constrained
+  taint_provenance: &id006
+    kind: documented
+    source: "src/build/llms.mjs llmsTxt comment: \"on one line\""
+  invariants: []
+  downstream_must_not_assume:
+  - id: llms-free-of-instructions
+    statement: that it is free of instructions aimed at agents
+    provenance: *id006
+- component: node-tools
+  channel: adapter-files
+  taint: constrained
+  taint_provenance: &id007
+    kind: documented
+    source: "src/adapters/postgis/index.mjs num comment: \"so a schema can never add SQL of its own\""
+  invariants:
+  - id: sql-quoted
+    statement: SQL identifiers and literals quoted
+    property_id: P-SQL-QUOTED
+    provenance: &id019
+      kind: documented
+      source: src/adapters/postgis/index.mjs num comment
+  downstream_must_not_assume:
+  - id: ai-schema-free-of-instructions
+    statement: "that the AI schema descriptions are free of instructions or the SQL reviewed for the reader's database"
+    provenance: *id007
+- component: remote-reads
+  channel: extend-written-files
+  taint: same-as-input
+  taint_provenance: &id008
+    kind: assumption
+    question_id: Q15
+  invariants:
+  - id: remote-names-checked
+    statement: type and version names checked; comments on one line
+    property_id: P-REMOTE-NAMES-CHECKED
+    provenance: &id015
+      kind: documented
+      source: "CHANGELOG.md 0.3.15 \"Security\": \"so a catalog cannot add lines to the files they write\""
+  downstream_must_not_assume:
+  - id: extend-copy-reviewed
+    statement: that the copied schema or example was reviewed
+    provenance: *id008
+- component: remote-reads
+  channel: export-written-files
+  taint: constrained
+  taint_provenance: &id009
+    kind: documented
+    source: src/export.mjs writeExport comment
+  invariants: []
+  downstream_must_not_assume:
+  - id: export-keeps-existing
+    statement: that an existing file of the same name is kept
+    provenance: *id009
+- component: remote-reads
+  channel: search-nodes-output
+  taint: sanitized
+  taint_provenance: &id010
+    kind: documented
+    source: src/discover.mjs plain comment
+  invariants:
+  - id: listing-plain
+    statement: "listing text plain, one line"
+    property_id: P-TERMINAL-TEXT-PLAIN
+    provenance: &id016
+      kind: documented
+      source: src/discover.mjs plain comment
+  downstream_must_not_assume:
+  - id: json-text-plain
+    statement: that --json text is plain; that a listed node is endorsed
+    provenance: *id010
+- component: node-tools
+  channel: notes-and-problems
+  taint: same-as-input
+  taint_provenance: &id011
+    kind: inferred
+    question_id: Q16
+  invariants: []
+  downstream_must_not_assume:
+  - id: notes-constant-text
+    statement: that they are constant text
+    provenance: *id011
+- component: node-tools
+  channel: upgrade-edits
+  taint: constrained
+  taint_provenance: &id012
+    kind: documented
+    source: src/version.mjs upgradeNode
+  invariants: []
+  downstream_must_not_assume:
+  - id: upgrade-sha-reviewed
+    statement: that the SHA was reviewed
+    provenance: *id012
+- component: init-github
+  channel: init-files
+  taint: constrained
+  taint_provenance:
+    kind: documented
+    source: src/init.mjs workflow
+  invariants: []
+  downstream_must_not_assume: []
+- component: action
+  channel: action-site-and-pages
+  taint: constrained
+  taint_provenance: &id013
+    kind: documented
+    source: action.yml outputs
+  invariants: []
+  downstream_must_not_assume:
+  - id: deployment-reviewed
+    statement: that the deployment waited for a review
+    provenance: *id013
+- component: action
+  channel: action-page-url
+  taint: constrained
+  taint_provenance:
+    kind: documented
+    source: action.yml outputs
+  invariants: []
+  downstream_must_not_assume: []
+- component: release-pipeline
+  channel: npm-package-and-provenance
+  taint: constrained
+  taint_provenance: &id014
+    kind: documented
+    source: "README \"Releases\": \"npm adds provenance (the commit and the workflow that built the package)\""
+  invariants:
+  - id: package-from-tag
+    statement: built from the tagged commit by publish.yml
+    property_id: P-RELEASE-GATED
+    provenance: &id020
+      kind: documented
+      source: .github/workflows/publish.yml header comment
+  downstream_must_not_assume:
+  - id: provenance-is-review
+    statement: that provenance means review
+    provenance: *id014
+adversaries:
+- name: csv-author
+  scope: in
+  capabilities:
+  - csv-bytes
+  - header-names
+  - cell-values
+  - file-size
+  excluded_capabilities:
+  - mapping-file
+  - command-line
+  - site-option
+  - catalogue-files
+  goals:
+  - wrong-entities
+  - harm-downstream-app
+  - add-mapping-lines
+  - hang-or-crash
+  provenance:
+    kind: assumption
+    question_id: Q1
+- name: node-contributor
+  scope: in
+  capabilities:
+  - any-file-in-pull-request
+  - run-code-in-pull-request-job
+  excluded_capabilities:
+  - merge
+  - run-publish-job
+  - pages-write-or-id-token
+  - read-secrets
+  goals:
+  - change-published-version
+  - slip-remote-import
+  - obtain-write-token
+  provenance:
+    kind: assumption
+    question_id: Q18
+- name: other-node-operator
+  scope: in
+  capabilities:
+  - site-content
+  - http-behaviour
+  - dns
+  - redirects
+  - slow-or-large-answers
+  - model-text
+  excluded_capabilities:
+  - user-files
+  - command-line
+  - read-user-data
+  goals:
+  - ssrf
+  - add-lines-to-written-files
+  - terminal-escape
+  - hang-command
+  - steer-agent
+  provenance:
+    kind: documented
+    source: src/adapters/net.mjs header and src/discover.mjs plain comment
+- name: agent-text-author
+  scope: in
+  capabilities:
+  - text-in-files-agents-read
+  excluded_capabilities:
+  - beyond-csv-author-contributor-or-node-operator
+  goals:
+  - steer-agent
+  provenance:
+    kind: inferred
+    question_id: Q21
+- name: integrator
+  scope: out
+  capabilities:
+  - command-line
+  - options
+  - node-folder
+  - mapping-files
+  - workflow
+  - permissions
+  excluded_capabilities: []
+  goals: []
+  provenance:
+    kind: assumption
+    question_id: Q1
+- name: catalogue-operator
+  scope: out
+  capabilities: []
+  excluded_capabilities: []
+  goals: []
+  provenance:
+    kind: assumption
+    question_id: Q15
+- name: toolkit-maintainers
+  scope: out
+  capabilities:
+  - merge
+  - publish-release
+  - bypass-tag-rules
+  excluded_capabilities: []
+  goals: []
+  provenance:
+    kind: documented
+    source: "README \"Releases\""
+- name: platforms
+  scope: out
+  capabilities: []
+  excluded_capabilities: []
+  goals: []
+  provenance:
+    kind: assumption
+    question_id: Q20
+- name: network-attacker-https
+  scope: out
+  capabilities: []
+  excluded_capabilities: []
+  goals: []
+  provenance:
+    kind: assumption
+    question_id: Q3
+- name: network-attacker-plain-http
+  scope: out
+  capabilities: []
+  excluded_capabilities: []
+  goals: []
+  provenance:
+    kind: inferred
+    question_id: Q3
+dependency_policy:
+  zero_runtime_dependencies: false
+  provenance:
+    kind: documented
+    source: package.json dependencies
+dependencies:
+- name: nodejs
+  relied_on_for: "TLS and certificate checks, the lookup hook used at connection, strict decoding, running git and gh without a shell"
+  relied_on_properties:
+  - tls-and-lookup-hook
+  - strict-decoding
+  - execfile-without-shell
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: "src/adapters/net.mjs header: \"The address is checked where the connection is made\""
+- name: ajv
+  relied_on_for: compiling and running JSON Schemas
+  relied_on_properties:
+  - schema-compilation
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: inferred
+    question_id: Q9
+- name: jsonld
+  relied_on_for: "expansion and compaction with the toolkit's document loader"
+  relied_on_properties:
+  - expand-compact-with-loader
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: src/build/examples.mjs contextLoader
+- name: yaml
+  relied_on_for: parsing YAML without running code or reading files; its default alias limit
+  relied_on_properties:
+  - no-code-or-file-access
+  - alias-limit
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: inferred
+    question_id: Q8
+- name: eleventy-nunjucks
+  relied_on_for: "rendering the toolkit's own templates with autoescape"
+  relied_on_properties:
+  - autoescape
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: src/build/pages.mjs writePages
+- name: commander-clack
+  relied_on_for: parsing the command line; prompts in a terminal
+  relied_on_properties:
+  - argument-parsing
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: bin/datamodels.mjs header comment for commander
+- name: git
+  relied_on_for: "rev-parse, show, diff for --base; init, add, commit for init --github"
+  relied_on_properties:
+  - rev-parse-show-diff
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: src/build/published.mjs git
+- name: gh
+  relied_on_for: "creating the repository and turning on Pages with the user's account"
+  relied_on_properties:
+  - create-repository-with-user-account
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: src/init.mjs publishToGitHub
+- name: github
+  relied_on_for: running the Action with the permissions the caller grants; deploying Pages; answering upgrade; keeping tags immutable
+  relied_on_properties:
+  - job-permissions
+  - pages
+  - tag-rulesets
+  - rest-api
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: action.yml header comment
+- name: github-actions-used
+  relied_on_for: Node in the Action; uploading and deploying the site
+  relied_on_properties:
+  - setup-node
+  - upload-and-deploy-pages
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: "action.yml uses: lines"
+- name: npm
+  relied_on_for: "delivering the package and, for the Action, the locked dependencies; accepting only publish.yml's OIDC token"
+  relied_on_properties:
+  - package-delivery
+  - trusted-publishing
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: .github/workflows/publish.yml header comment
+- name: datamodels-jp
+  relied_on_for: "the content of catalog.json, schemas and mapping files convert reads"
+  relied_on_properties:
+  - catalogue-content
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded: []
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: src/catalog.mjs header
+- name: other-nodes
+  relied_on_for: "nothing: their files are untrusted data"
+  relied_on_properties: []
+  caller_obligations_acknowledged: []
+  adversary_capabilities_forwarded:
+  - site-content
+  - http-behaviour
+  - dns
+  - redirects
+  outputs_consumed: []
+  covered_here: false
+  violation_disposition: "OUT-OF-MODEL: dependency-contract"
+  provenance:
+    kind: documented
+    source: src/discover.mjs header
+build_policy:
+  security_relevant_flags_present: true
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/versions \"Before the launch\""
+build_flags:
+- name: offline
+  default: "off"
+  security_relevant: true
+  maintainer_stance: supported
+  affects_properties:
+  - property_id: P-PUBLISHED-COMPARISON
+    effect: voids
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/check: \"--offline skips the published files, the extended models\""
+- name: base
+  default: "not set locally; origin/<base> in the Action on pull_request"
+  security_relevant: true
+  maintainer_stance: supported
+  affects_properties:
+  - property_id: P-BASE-COMPARISON
+    effect: preserves
+  provenance:
+    kind: documented
+    source: "action.yml comment: \"On a pull request, also compare with the base branch\""
+- name: prerelease
+  default: absent
+  security_relevant: true
+  maintainer_stance: supported
+  affects_properties:
+  - property_id: P-BASE-COMPARISON
+    effect: voids
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/versions \"Before the launch\""
+- name: all-released
+  default: "off"
+  security_relevant: false
+  maintainer_stance: supported
+  affects_properties: []
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/versions: \"--all-released also requires a snapshot of each subject's current version\""
+- name: deploy
+  default: "'true'"
+  security_relevant: false
+  maintainer_stance: supported
+  affects_properties: []
+  provenance:
+    kind: documented
+    source: action.yml input deploy description
+- name: site
+  default: "https://datamodels.jp"
+  security_relevant: true
+  maintainer_stance: supported
+  affects_properties:
+  - property_id: P-PUBLIC-READS
+    effect: narrows
+  provenance:
+    kind: inferred
+    question_id: Q3
+- name: index
+  default: "https://datamodels.jp/catalog.json"
+  security_relevant: false
+  maintainer_stance: supported
+  affects_properties: []
+  provenance:
+    kind: documented
+    source: datamodels.jp/en/toolkit/reference --index rows
+- name: library-fetch-option
+  default: "global fetch, replaced by publicFetch"
+  security_relevant: true
+  maintainer_stance: supported
+  affects_properties:
+  - property_id: P-PUBLIC-READS
+    effect: narrows
+  - property_id: P-REMOTE-READS-BOUNDED
+    effect: narrows
+  provenance:
+    kind: inferred
+    question_id: Q3
+- name: github
+  default: "off"
+  security_relevant: false
+  maintainer_stance: supported
+  affects_properties: []
+  provenance:
+    kind: documented
+    source: "bin/datamodels.mjs header: \"With --github owner/name it also creates the repository and turns on Pages\""
+- name: "yes"
+  default: "off"
+  security_relevant: false
+  maintainer_stance: supported
+  affects_properties: []
+  provenance:
+    kind: documented
+    source: "bin/datamodels.mjs init: \"Questions only in a terminal\""
+properties_claimed:
+- id: P-PUBLIC-READS
+  kind: integrity
+  components:
+  - remote-reads
+  - node-tools
+  - library
+  tier: security-critical
+  conditions: "reads of other nodes through getter: https, public host names, public addresses at connection, redirects checked, at most 5, prefix kept"
+  violation_symptoms:
+  - x-ssrf
+  provenance:
+    kind: documented
+    source: "src/adapters/net.mjs header: \"only https, and only to a public address\""
+- id: P-REMOTE-READS-BOUNDED
+  kind: resource-bound
+  components:
+  - remote-reads
+  - node-tools
+  tier: correctness-only
+  conditions: "5 MB per answer, one deadline per read (20 s, 5 s), depth 5, 50 nodes"
+  violation_symptoms:
+  - hang
+  - unbounded-allocation
+  provenance:
+    kind: documented
+    source: src/adapters/net.mjs MAX_BYTES; src/discover.mjs MAX_DEPTH
+- id: P-REMOTE-NAMES-CHECKED
+  kind: integrity
+  components:
+  - remote-reads
+  tier: security-critical
+  conditions: extend and export use a remote type name and version only when UpperCamelCase and x.y.z
+  violation_symptoms:
+  - x-file-injection
+  provenance: *id015
+- id: P-TERMINAL-TEXT-PLAIN
+  kind: output-sanitization
+  components:
+  - remote-reads
+  tier: security-critical
+  conditions: "the search and nodes listing; not --json, not notes of other commands"
+  violation_symptoms:
+  - x-terminal-injection
+  provenance: *id016
+- id: P-CONTEXT-IMPORTS-LISTED
+  kind: integrity
+  components:
+  - node-tools
+  tier: correctness-only
+  conditions: "imports only from the node's own or a listed node's /context/, after URL normalisation"
+  violation_symptoms:
+  - bad-data-accepted
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.15 \"Security\": \"The build checks a `@context` imported by URL after\""
+- id: P-BASE-COMPARISON
+  kind: integrity
+  components:
+  - node-tools
+  - action
+  tier: security-critical
+  conditions: "check --base: released snapshot files at the ref unchanged and present; prerelease flag kept; not during the pre-release"
+  violation_symptoms:
+  - integrity-bypass
+  provenance: *id017
+- id: P-PUBLISHED-COMPARISON
+  kind: integrity
+  components:
+  - node-tools
+  tier: correctness-only
+  conditions: online only; exact versions served equal the build; release refuses changed sources
+  violation_symptoms:
+  - integrity-bypass
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/versions \"How a published version is kept\""
+- id: P-CSV-STRICT
+  kind: correctness
+  components:
+  - convert
+  tier: correctness-only
+  conditions: "strict decoding (UTF-8, Shift_JIS) and RFC 4180 parsing"
+  violation_symptoms:
+  - bad-data-accepted
+  provenance:
+    kind: documented
+    source: src/convert.mjs decodeCsv and parseCsv comments
+- id: P-ROWS-VALIDATED
+  kind: correctness
+  components:
+  - convert
+  tier: correctness-only
+  conditions: every entity validated against the model schema; only valid entities written
+  violation_symptoms:
+  - bad-data-accepted
+  provenance:
+    kind: documented
+    source: bin/datamodels.mjs header
+- id: P-NGSI-PROTO-AS-DATA
+  kind: correctness
+  components:
+  - library
+  - convert
+  tier: correctness-only
+  conditions: an attribute named __proto__ stays an own property
+  violation_symptoms:
+  - wrong-output
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.16 \"Fixed\""
+- id: P-PAGES-ESCAPED
+  kind: output-sanitization
+  components:
+  - node-tools
+  tier: correctness-only
+  conditions: autoescape on; links from model files only http(s); node.yaml URLs http(s) without credentials
+  violation_symptoms:
+  - x-markup-injection
+  provenance: *id018
+- id: P-SQL-QUOTED
+  kind: output-sanitization
+  components:
+  - node-tools
+  - remote-reads
+  - library
+  tier: security-critical
+  conditions: "PostGIS adapter: identifiers and literals quoted, numbers finite, comments on one line"
+  violation_symptoms:
+  - x-sql-injection
+  provenance: *id019
+- id: P-ACTION-INPUTS-AS-DATA
+  kind: integrity
+  components:
+  - action
+  tier: security-critical
+  conditions: inputs reach the shell only through environment variables
+  violation_symptoms:
+  - x-command-injection
+  provenance:
+    kind: documented
+    source: action.yml header comment
+- id: P-ACTION-TOKEN-USE
+  kind: confidentiality
+  components:
+  - action
+  tier: security-critical
+  conditions: "the token only for the base fetch, masked, via environment; no writes to the repository"
+  violation_symptoms:
+  - info-leak
+  - integrity-bypass
+  provenance:
+    kind: documented
+    source: "action.yml comment: \"passed to this one fetch in the environment\""
+- id: P-INSTALL-NO-SCRIPTS
+  kind: integrity
+  components:
+  - action
+  - release-pipeline
+  tier: security-critical
+  conditions: npm ci --ignore-scripts in the Action and the publish job
+  violation_symptoms:
+  - x-code-execution
+  provenance:
+    kind: documented
+    source: .github/workflows/publish.yml comment
+- id: P-RELEASE-GATED
+  kind: integrity
+  components:
+  - release-pipeline
+  tier: security-critical
+  conditions: "npm publish only from publish.yml on a published non-pre-release whose tag equals the version, after tests, OIDC, provenance"
+  violation_symptoms:
+  - integrity-bypass
+  provenance: *id020
+- id: P-INIT-ONLY-ITS-FILES
+  kind: confidentiality
+  components:
+  - init-github
+  tier: security-critical
+  conditions: never overwrites; with --github commits only files init wrote and stops on other files; no shell
+  violation_symptoms:
+  - info-leak
+  provenance:
+    kind: documented
+    source: src/init.mjs publishToGitHub comment
+properties_disclaimed:
+- id: D-NOT-A-SANDBOX
+  components:
+  - convert
+  - node-tools
+  conditions: "silence. Commands run with the rights of the person or job; a mapping file's via may name any .yaml file the user can read; check --base runs git in the node folder; a node or mapping file from someone else is configuration, not data you can open safely"
+  tier: security-critical
+  false_friend: false
+  provenance:
+    kind: inferred
+    question_id: Q2
+- id: D-VALIDATION-NOT-TRUTH
+  components:
+  - convert
+  - node-tools
+  conditions: "stated. They check the JSON Schema, the NGSI-LD and JSON-LD rules and the @context terms; not truth, safety for HTML or SQL, licences, or personal data"
+  tier: correctness-only
+  false_friend: true
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/check \"What check checks\""
+- id: D-NO-INPUT-LIMITS
+  components:
+  - convert
+  - node-tools
+  - library
+  conditions: "silence. A CSV is read whole; parsers run with their defaults; the process is the user's own"
+  tier: correctness-only
+  false_friend: false
+  provenance:
+    kind: inferred
+    question_id: Q7
+- id: D-SCHEMA-COMPILE-COST
+  components:
+  - node-tools
+  - convert
+  conditions: silence. Schemas are compiled by Ajv; pattern becomes a JavaScript regular expression (ReDoS); in check a $ref to another public site is compiled too
+  tier: correctness-only
+  false_friend: false
+  provenance:
+    kind: inferred
+    question_id: Q9
+- id: D-OUTPUT-TEXT-AS-INPUT
+  components:
+  - convert
+  conditions: "silence. Entities carry CSV text as it is after the transforms, json cells as parsed JSON; validated, not sanitised"
+  tier: security-critical
+  false_friend: false
+  provenance:
+    kind: inferred
+    question_id: Q19
+- id: D-OWN-SITE-READS
+  components:
+  - convert
+  - node-tools
+  conditions: "silence. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site)"
+  tier: security-critical
+  false_friend: false
+  provenance:
+    kind: inferred
+    question_id: Q14
+- id: D-CALLER-FETCH
+  components:
+  - library
+  conditions: "silence. The caller's fetch is used as it is; URL and redirect checks remain"
+  tier: correctness-only
+  false_friend: false
+  provenance:
+    kind: inferred
+    question_id: Q3
+- id: D-OTHER-NODES-NOTED
+  components:
+  - node-tools
+  - remote-reads
+  conditions: "stated. Another node that cannot be read, or does not answer within 20 seconds, is only noted; a node that is down never fails someone else's check"
+  tier: correctness-only
+  false_friend: true
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/check: \"a node that is down never fails someone else's check\""
+- id: D-REMOTE-CONTENT-UNREVIEWED
+  components:
+  - remote-reads
+  conditions: "silence. Names, URLs and shape are checked; the schema, example and texts are copied as the other node publishes them"
+  tier: correctness-only
+  false_friend: false
+  provenance:
+    kind: assumption
+    question_id: Q15
+- id: D-PRERELEASE-CORRECTIONS
+  components:
+  - node-tools
+  - action
+  conditions: "stated. While prerelease: true is in node.yaml at the base ref and in the change, check --base notes changed and removed snapshot files of **any** version, and the online comparison notes changed files; a stricter rule (only the current version) is the node's own policy, kept by review"
+  tier: security-critical
+  false_friend: false
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/versions \"Before the launch\": \"An earlier version that should not have been published can be removed\""
+- id: D-TOKEN-IN-STEP-ENV
+  components:
+  - action
+  conditions: "silence. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event"
+  tier: security-critical
+  false_friend: false
+  provenance:
+    kind: inferred
+    question_id: Q17
+- id: D-AGENT-TEXT
+  components:
+  - node-tools
+  - agent-skill
+  conditions: "silence. Model titles and descriptions reach llms.txt, catalog.json, pages and the AI adapter's schema descriptions as written; the skill sends agents to read such text"
+  tier: security-critical
+  false_friend: false
+  provenance:
+    kind: inferred
+    question_id: Q21
+- id: D-SKILL-GUIDANCE-ONLY
+  components:
+  - agent-skill
+  conditions: "silence. The skill is instructions; an agent may ignore them, and it runs commands with the user's rights"
+  tier: correctness-only
+  false_friend: true
+  provenance:
+    kind: inferred
+    question_id: Q21
+- id: D-RELEASE-SINGLE-GATE
+  components:
+  - release-pipeline
+  conditions: stated. Publishing the GitHub release is the only gate
+  tier: security-critical
+  false_friend: false
+  provenance:
+    kind: documented
+    source: ".github/workflows/publish.yml header: \"no second approval on npmjs.com\""
+- id: D-PROVENANCE-NOT-REVIEW
+  components:
+  - release-pipeline
+  conditions: stated. Provenance names the commit and the workflow that built the package
+  tier: correctness-only
+  false_friend: true
+  provenance:
+    kind: documented
+    source: "README \"Releases\""
+- id: D-NO-SHRINKWRAP
+  components:
+  - release-pipeline
+  conditions: "silence. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile"
+  tier: security-critical
+  false_friend: false
+  provenance:
+    kind: inferred
+    question_id: Q20
+downstream_responsibilities:
+- id: R-REVIEW-MAPPING-FILES
+  component: convert
+  statement: convert only with a mapping file you wrote or reviewed
+  enforces:
+  - review-own-config
+  provenance:
+    kind: inferred
+    question_id: Q11
+- id: R-REVIEW-NODE-FOLDER
+  component: node-tools
+  statement: review a node folder from someone else before check or build
+  enforces:
+  - review-node-changes
+  - D-NOT-A-SANDBOX
+  provenance:
+    kind: inferred
+    question_id: Q2
+- id: R-BOUND-INPUT
+  component: convert
+  statement: bound the size of the files you convert or check
+  enforces:
+  - bound-input-size
+  provenance:
+    kind: inferred
+    question_id: Q7
+- id: R-ESCAPE-ENTITIES
+  component: convert
+  statement: "treat converted entities as untrusted input: escape before rendering, parameterise before querying"
+  enforces:
+  - escape-converted-values
+  - converted-text-safe
+  provenance:
+    kind: inferred
+    question_id: Q19
+- id: R-REVIEW-GENERATED-MAPPING
+  component: convert
+  statement: review a mapping file mapping wrote before using it
+  enforces:
+  - review-generated-mapping
+  - mapping-lines-from-model
+  provenance:
+    kind: inferred
+    question_id: Q12
+- id: R-TRUSTED-URLS
+  component: node-tools
+  statement: use https for --site and baseUrl and do not point them at internal addresses
+  enforces:
+  - trusted-urls-only
+  provenance:
+    kind: inferred
+    question_id: Q14
+- id: R-REVIEW-EXTEND
+  component: remote-reads
+  statement: review what extend copied before committing
+  enforces:
+  - review-extend-copy
+  - extend-copy-reviewed
+  provenance:
+    kind: assumption
+    question_id: Q15
+- id: R-REVIEW-SQL
+  component: remote-reads
+  statement: review an exported SQL file before running it with rights in production
+  enforces:
+  - ai-schema-free-of-instructions
+  provenance:
+    kind: documented
+    source: src/adapters/postgis/index.mjs header
+- id: R-PIN-NPX
+  component: release-pipeline
+  statement: pin a version with npx; install in a project with a lockfile for a fixed tree
+  enforces:
+  - D-NO-SHRINKWRAP
+  provenance:
+    kind: documented
+    source: "README \"Install\""
+- id: R-PIN-ACTION-SHA
+  component: action
+  statement: pin the Action by commit SHA and move with upgrade or Dependabot
+  enforces:
+  - P-RELEASE-GATED
+  provenance:
+    kind: documented
+    source: "README \"The workflow\""
+- id: R-SCOPE-JOB-PERMISSIONS
+  component: action
+  statement: "grant the check job contents: read only, pages and id-token only to the publish job on main; keep persist-credentials false"
+  enforces:
+  - scope-job-permissions
+  provenance:
+    kind: documented
+    source: "README \"The whole workflow that init writes\""
+- id: R-REQUIRE-CHECK
+  component: action
+  statement: make the pull-request check required and do not bypass it
+  enforces:
+  - P-BASE-COMPARISON
+  - deployment-reviewed
+  provenance:
+    kind: inferred
+    question_id: Q18
+- id: R-LAUNCH
+  component: node-tools
+  statement: "set prerelease: false at the launch; enforce stricter correction rules by review until then"
+  enforces:
+  - D-PRERELEASE-CORRECTIONS
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/versions \"Before the launch\""
+- id: R-TOKEN-STEP
+  component: action
+  statement: do not rely on the token being hidden from the toolkit process in the Check step
+  enforces:
+  - D-TOKEN-IN-STEP-ENV
+  provenance:
+    kind: inferred
+    question_id: Q17
+- id: R-CALLER-FETCH
+  component: library
+  statement: "when passing your own fetch, do the address check yourself"
+  enforces:
+  - caller-address-check
+  provenance:
+    kind: inferred
+    question_id: Q3
+- id: R-AGENT-TEXT
+  component: agent-skill
+  statement: treat text the agent reads as data; let it run commands only with confirmation
+  enforces:
+  - agent-text-as-data
+  - llms-free-of-instructions
+  provenance:
+    kind: inferred
+    question_id: Q21
+known_misuses:
+- id: M-FOREIGN-MAPPING
+  components:
+  - convert
+  pattern: converting with a mapping file from someone else
+  safer_alternative: write or review it
+  provenance:
+    kind: inferred
+    question_id: Q11
+- id: M-VALID-AS-SAFE
+  components:
+  - convert
+  pattern: rendering convert output unescaped because every row was valid
+  safer_alternative: escape in the app
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/check \"What check checks\""
+- id: M-WRITE-PERMS-ON-PR
+  components:
+  - action
+  pattern: one job with write permissions on pull_request and main
+  safer_alternative: two jobs as init writes them
+  provenance:
+    kind: documented
+    source: "README \"The whole workflow that init writes\""
+- id: M-PRERELEASE-OLDER-VERSIONS
+  components:
+  - node-tools
+  pattern: expecting check --base to fail when an older release changes before the launch
+  safer_alternative: "review, or launch"
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/versions \"Before the launch\""
+- id: M-INTERNAL-SITE
+  components:
+  - convert
+  - node-tools
+  pattern: pointing --site or baseUrl at an internal host
+  safer_alternative: use a local directory for --site
+  provenance:
+    kind: inferred
+    question_id: Q14
+- id: M-AGENT-FOLLOWS-TEXT
+  components:
+  - agent-skill
+  pattern: an agent following an instruction in a model description
+  safer_alternative: treat it as data
+  provenance:
+    kind: inferred
+    question_id: Q21
+- id: M-UNPINNED-NPX
+  components:
+  - release-pipeline
+  pattern: "npx @geolonia/datamodels without a version in CI"
+  safer_alternative: "pin @X.Y.Z"
+  provenance:
+    kind: documented
+    source: "README \"Install\""
+known_non_findings:
+- id: KNF-PRERELEASE-NOTE
+  components:
+  - node-tools
+  - action
+  symptom: integrity-change
+  tool_pattern: check --base passes although a released snapshot file changed or was removed
+  conditions: "node.yaml has prerelease: true at the base ref and in the change; the output lists the file as a note \"corrected in place during the pre-release\""
+  discharged_by:
+  - D-PRERELEASE-CORRECTIONS
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/versions \"Before the launch\": \"check --base notes the corrections and removals instead of failing\""
+- id: KNF-TOKEN-BASE-FETCH
+  components:
+  - action
+  symptom: credential-exposure
+  tool_pattern: "the Action reads github.token\" or \"passes a token to git"
+  conditions: "the token is used only in the \"Check\" step's git fetch of the base branch, through GIT_CONFIG_* environment variables, masked, with persist-credentials: false on the checkout"
+  discharged_by:
+  - P-ACTION-TOKEN-USE
+  provenance:
+    kind: documented
+    source: "action.yml comment: \"passed to this one fetch in the environment\""
+- id: KNF-OTHER-NODE-DOWN
+  components:
+  - node-tools
+  - remote-reads
+  symptom: missing-failure
+  tool_pattern: check exits 0 although an extended model or a remote context could not be read
+  conditions: the output has a note for that URL; the URL belongs to another node
+  discharged_by:
+  - D-OTHER-NODES-NOTED
+  provenance:
+    kind: documented
+    source: "datamodels.jp/en/toolkit/check: \"does not answer within 20 seconds, is only noted\""
+- id: KNF-OIDC-PUBLISH
+  components:
+  - release-pipeline
+  symptom: excessive-permission
+  tool_pattern: "the publish workflow has id-token: write"
+  conditions: "the job is publish in publish.yml, runs on a published non-pre-release, installs with --ignore-scripts"
+  discharged_by:
+  - P-RELEASE-GATED
+  provenance:
+    kind: documented
+    source: ".github/workflows/publish.yml comment: \"the OIDC token npm exchanges for a publish token\""
+dispositions:
+- VALID
+- VALID-HARDENING
+- "OUT-OF-MODEL: trusted-input"
+- "OUT-OF-MODEL: adversary-not-in-scope"
+- "OUT-OF-MODEL: unsupported-component"
+- "OUT-OF-MODEL: non-default-build"
+- "OUT-OF-MODEL: dependency-contract"
+- "BY-DESIGN: property-disclaimed"
+- KNOWN-NON-FINDING
+- MODEL-GAP
+disposition_precedence:
+- KNOWN-NON-FINDING
+- "OUT-OF-MODEL: unsupported-component"
+- "OUT-OF-MODEL: non-default-build"
+- "OUT-OF-MODEL: dependency-contract"
+- "OUT-OF-MODEL: trusted-input"
+- "OUT-OF-MODEL: adversary-not-in-scope"
+- "BY-DESIGN: property-disclaimed"
+- VALID
+- VALID-HARDENING
+- MODEL-GAP

@@ -1,0 +1,1161 @@
+{
+  "spec_version": 1,
+  "repository": "https://github.com/geolonia/datamodels-toolkit",
+  "commit": "4d88e4e57fa5225f5069ce481ec0ccc45d1f69bd",
+  "date": "2026-10-16",
+  "scope_subpath": null,
+  "description": "datamodels-toolkit is a command line and a GitHub Action for data models in the style of datamodels.jp. People use it to turn a CSV list into NGSI-LD entities, to start and maintain a *node* (a site of their own that publishes JSON Schemas, JSON-LD @context files and vocabularies at fixed URLs), to find models on other nodes, and to export a model for other tools (a CSV template, a Table Schema, a JSON Schema for AI output, a PostgreSQL table). It runs on the user's machine or in the user's GitHub Actions job, with the user's rights. It has no server, stores nothing of its own and holds no credential except the job token the Action is given.",
+  "confidence": {
+    "documented": 192,
+    "inferred": 91
+  },
+  "components": [
+    {
+      "name": "convert",
+      "entry_points": [
+        "convert / mapping: CSV file",
+        "convert / mapping: options and mapping"
+      ],
+      "touches": [],
+      "in_scope": true,
+      "provenance": "documented",
+      "source": "bin/datamodels.mjs header comment"
+    },
+    {
+      "name": "node-tools",
+      "entry_points": [
+        "check / build / release / bump / add: node folder",
+        "check --base",
+        "check / release: own published files",
+        "upgrade"
+      ],
+      "touches": [
+        "child_processes"
+      ],
+      "in_scope": true,
+      "provenance": "documented",
+      "source": "README \"Commands\" table"
+    },
+    {
+      "name": "remote-reads",
+      "entry_points": [
+        "search / nodes",
+        "export / extend",
+        "shared reader: any read of another node",
+        "export: output options"
+      ],
+      "touches": [],
+      "in_scope": true,
+      "provenance": "documented",
+      "source": "src/adapters/net.mjs header; src/discover.mjs header"
+    },
+    {
+      "name": "init-github",
+      "entry_points": [
+        "init"
+      ],
+      "touches": [
+        "child_processes"
+      ],
+      "in_scope": true,
+      "provenance": "documented",
+      "source": "src/init.mjs publishToGitHub comment"
+    },
+    {
+      "name": "action",
+      "entry_points": [
+        "action.yml"
+      ],
+      "touches": [
+        "child_processes"
+      ],
+      "in_scope": true,
+      "provenance": "documented",
+      "source": "action.yml header comment"
+    },
+    {
+      "name": "library",
+      "entry_points": [
+        "library: fetch option"
+      ],
+      "touches": [],
+      "in_scope": true,
+      "provenance": "documented",
+      "source": "README \"Build library\""
+    },
+    {
+      "name": "agent-skill",
+      "entry_points": [
+        "agent-skill: text read by the agent"
+      ],
+      "touches": [],
+      "in_scope": true,
+      "provenance": "documented",
+      "source": "README \"Agent skill\""
+    },
+    {
+      "name": "release-pipeline",
+      "entry_points": [],
+      "touches": [],
+      "in_scope": true,
+      "provenance": "documented",
+      "source": ".github/workflows/publish.yml header comment"
+    }
+  ],
+  "out_of_scope": [
+    {
+      "item": "dev-tools",
+      "reason": "tests, fixture scripts and changelog tooling are not in the npm package, per §1.3",
+      "provenance": "documented",
+      "source": "package.json files"
+    },
+    {
+      "item": "toolkit-docs",
+      "reason": "maintained in geolonia/datamodels; cited where they state a promise, per §1.3",
+      "provenance": "inferred",
+      "source": "open question Q1"
+    },
+    {
+      "item": "catalogue",
+      "reason": "datamodels.jp has its own sibling model, per §1.1 and §1.3",
+      "provenance": "inferred",
+      "source": "open question Q1"
+    },
+    {
+      "item": "user-nodes",
+      "reason": "sites built with the toolkit belong to their owners, per §1.3",
+      "provenance": "inferred",
+      "source": "open question Q18"
+    }
+  ],
+  "trust_boundaries": [
+    {
+      "component": "convert",
+      "boundary": "Command-line boundary: the person running datamodels chooses the command, the options, the mapping file and the site; the content of a CSV is untrusted.",
+      "provenance": "inferred",
+      "reachability_precondition": "it is reachable from the bytes of a CSV the user converts, with a mapping file and a site the user chose"
+    },
+    {
+      "component": "node-tools",
+      "boundary": "Pull-request boundary of a node: a contributor's files are untrusted until the owner merges; the toolkit reads node files as data and reads the node's own site under baseUrl.",
+      "provenance": "documented",
+      "reachability_precondition": "it is reachable from the files of a node folder (from a contributor's pull request, or from a node the user did not write), or from what another node or the node's own site answers"
+    },
+    {
+      "component": "remote-reads",
+      "boundary": "Network boundary: files of other nodes are read only through the shared reader (https, a public host name, an address checked when connecting, every redirect checked again).",
+      "provenance": "documented",
+      "reachability_precondition": "it is reachable from what another node's host answers (content, headers, redirects, DNS) to a read the toolkit makes on its own or for a URL in a node file"
+    },
+    {
+      "component": "init-github",
+      "boundary": "Command-line boundary: init writes only new files and, with --github, publishes only those files with the user's gh account.",
+      "provenance": "documented",
+      "reachability_precondition": "it is reachable from the options of `init` and the content of the folder it runs in"
+    },
+    {
+      "component": "action",
+      "boundary": "Pull-request and publish boundaries of a node: on pull_request the job runs the contributor's merge commit with a read-only token; on main the calling job grants pages: write and id-token: write.",
+      "provenance": "documented",
+      "reachability_precondition": "it is reachable from a node repository's files or a pull request, through the Action's steps, and changes what is deployed or exposes the token"
+    },
+    {
+      "component": "library",
+      "boundary": "Caller boundary: the calling program passes the data and may pass its own fetch, which then replaces the address check.",
+      "provenance": "inferred",
+      "reachability_precondition": "it is reachable through an exported function from the data its caller passes"
+    },
+    {
+      "component": "agent-skill",
+      "boundary": "Agent boundary: the skill is guidance; text the agent reads is data, and the user confirms the commands it runs.",
+      "provenance": "inferred",
+      "reachability_precondition": "it is reachable from text an agent reads while following the skill, and changes what the agent does beyond what the user asked"
+    },
+    {
+      "component": "release-pipeline",
+      "boundary": "Release boundary of the toolkit: a published GitHub release whose tag is v plus the package version starts publish.yml; npm accepts its OIDC token and adds provenance.",
+      "provenance": "documented",
+      "reachability_precondition": "it lets someone without the maintainers' rights change what `npx @geolonia/datamodels@X.Y.Z` or `uses: geolonia/datamodels-toolkit@<SHA>` runs"
+    }
+  ],
+  "entry_points": [
+    {
+      "entry_point": "convert / mapping: CSV file",
+      "parameter": "csv_bytes",
+      "attacker_controllable": "yes",
+      "component": "convert",
+      "caller_must_enforce": "bound the size of the file (D-NO-INPUT-LIMITS)",
+      "provenance": "documented",
+      "source": "src/convert.mjs parseCsv comment: \"Throws on what would otherwise shift or merge values silently\""
+    },
+    {
+      "entry_point": "convert / mapping: CSV file",
+      "parameter": "csv_header_names",
+      "attacker_controllable": "yes",
+      "component": "convert",
+      "caller_must_enforce": "review the generated mapping file before use (Q12)",
+      "provenance": "inferred",
+      "source": "open question Q12"
+    },
+    {
+      "entry_point": "convert / mapping: CSV file",
+      "parameter": "cell_values",
+      "attacker_controllable": "yes",
+      "component": "convert",
+      "caller_must_enforce": "treat converted values as untrusted in the app or broker (D-OUTPUT-TEXT-AS-INPUT)",
+      "provenance": "documented",
+      "source": "bin/datamodels.mjs header: \"validates every entity against the model's schema\""
+    },
+    {
+      "entry_point": "convert / mapping: CSV file",
+      "parameter": "json_transform_cell",
+      "attacker_controllable": "yes",
+      "component": "convert",
+      "caller_must_enforce": "treat converted values as untrusted in the app or broker (D-OUTPUT-TEXT-AS-INPUT)",
+      "provenance": "documented",
+      "source": "src/convert.mjs apply case json"
+    },
+    {
+      "entry_point": "convert / mapping: options and mapping",
+      "parameter": "mapping_argument",
+      "attacker_controllable": "no",
+      "component": "convert",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "bin/datamodels.mjs header: \"The mapping may also be a file of your own\""
+    },
+    {
+      "entry_point": "convert / mapping: options and mapping",
+      "parameter": "own_mapping_file_and_via",
+      "attacker_controllable": "no",
+      "component": "convert",
+      "caller_must_enforce": "write or review the mapping file (D-NOT-A-SANDBOX)",
+      "provenance": "inferred",
+      "source": "open question Q11"
+    },
+    {
+      "entry_point": "convert / mapping: options and mapping",
+      "parameter": "site_option",
+      "attacker_controllable": "no",
+      "component": "convert",
+      "caller_must_enforce": "use https or a local directory (D-OWN-SITE-READS)",
+      "provenance": "documented",
+      "source": "src/catalog.mjs siteReader comment: \"the file must stay inside the site directory\""
+    },
+    {
+      "entry_point": "convert / mapping: options and mapping",
+      "parameter": "catalogue_files_from_site",
+      "attacker_controllable": "no",
+      "component": "convert",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "src/catalog.mjs header: \"URLs in the catalog always name https://datamodels.jp\""
+    },
+    {
+      "entry_point": "convert / mapping: options and mapping",
+      "parameter": "set_option",
+      "attacker_controllable": "no",
+      "component": "convert",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "bin/datamodels.mjs header: \"--set attribute=value (for what the list does not carry\""
+    },
+    {
+      "entry_point": "convert / mapping: options and mapping",
+      "parameter": "out_path",
+      "attacker_controllable": "no",
+      "component": "convert",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "bin/datamodels.mjs mapping: \"A mapping someone has filled in is work: never write over it\""
+    },
+    {
+      "entry_point": "check / build / release / bump / add: node folder",
+      "parameter": "node_yaml",
+      "attacker_controllable": "yes",
+      "component": "node-tools",
+      "caller_must_enforce": "review node.yaml before merge",
+      "provenance": "documented",
+      "source": "src/build/node.mjs settingsProblems and httpUrl comment: \"Every URL here is published\""
+    },
+    {
+      "entry_point": "check / build / release / bump / add: node folder",
+      "parameter": "base_url",
+      "attacker_controllable": "yes",
+      "component": "node-tools",
+      "caller_must_enforce": "use https or a local directory (D-OWN-SITE-READS)",
+      "provenance": "inferred",
+      "source": "open question Q14"
+    },
+    {
+      "entry_point": "check / build / release / bump / add: node folder",
+      "parameter": "subject_context",
+      "attacker_controllable": "yes",
+      "component": "node-tools",
+      "caller_must_enforce": "none — P-CONTEXT-IMPORTS-LISTED",
+      "provenance": "documented",
+      "source": "src/build/load.mjs import check: \"only catalog contexts may be imported by URL\""
+    },
+    {
+      "entry_point": "check / build / release / bump / add: node folder",
+      "parameter": "schema_json",
+      "attacker_controllable": "yes",
+      "component": "node-tools",
+      "caller_must_enforce": "review node.yaml before merge",
+      "provenance": "inferred",
+      "source": "open question Q9"
+    },
+    {
+      "entry_point": "check / build / release / bump / add: node folder",
+      "parameter": "examples",
+      "attacker_controllable": "yes",
+      "component": "node-tools",
+      "caller_must_enforce": "review node.yaml before merge",
+      "provenance": "documented",
+      "source": "datamodels.jp/en/toolkit/check \"What check checks\""
+    },
+    {
+      "entry_point": "check / build / release / bump / add: node folder",
+      "parameter": "model_texts",
+      "attacker_controllable": "yes",
+      "component": "node-tools",
+      "caller_must_enforce": "none — P-PAGES-ESCAPED",
+      "provenance": "documented",
+      "source": "src/build/pages.mjs setNunjucksEnvironmentOptions({ autoescape: true"
+    },
+    {
+      "entry_point": "check / build / release / bump / add: node folder",
+      "parameter": "extends_index",
+      "attacker_controllable": "yes",
+      "component": "node-tools",
+      "caller_must_enforce": "none — P-PUBLIC-READS",
+      "provenance": "documented",
+      "source": "src/build/node.mjs loadNode comment: \"extends goes into catalog.json as written, so it is checked here\""
+    },
+    {
+      "entry_point": "check / build / release / bump / add: node folder",
+      "parameter": "folder_and_file_names",
+      "attacker_controllable": "yes",
+      "component": "node-tools",
+      "caller_must_enforce": "review node.yaml before merge",
+      "provenance": "inferred",
+      "source": "open question Q2"
+    },
+    {
+      "entry_point": "check --base",
+      "parameter": "git_ref",
+      "attacker_controllable": "no",
+      "component": "node-tools",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "src/build/published.mjs compareWithBase comment"
+    },
+    {
+      "entry_point": "check --base",
+      "parameter": "base_ref_snapshots",
+      "attacker_controllable": "no",
+      "component": "node-tools",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "src/build/published.mjs header: \"The base branch decides\""
+    },
+    {
+      "entry_point": "check / release: own published files",
+      "parameter": "own_site_answers",
+      "attacker_controllable": "yes",
+      "component": "node-tools",
+      "caller_must_enforce": "use https or a local directory (D-OWN-SITE-READS)",
+      "provenance": "inferred",
+      "source": "open question Q14"
+    },
+    {
+      "entry_point": "upgrade",
+      "parameter": "github_release_answer",
+      "attacker_controllable": "no",
+      "component": "node-tools",
+      "caller_must_enforce": "n/a: GitHub is trusted",
+      "provenance": "documented",
+      "source": "src/version.mjs upgradeNode: \"A release, not only a tag or branch of that name\""
+    },
+    {
+      "entry_point": "upgrade",
+      "parameter": "node_workflow_and_markdown",
+      "attacker_controllable": "no",
+      "component": "node-tools",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "src/version.mjs upgradeNode comment"
+    },
+    {
+      "entry_point": "search / nodes",
+      "parameter": "index_and_depth",
+      "attacker_controllable": "no",
+      "component": "remote-reads",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "src/discover.mjs MAX_DEPTH comment: \"a large network cannot keep the command busy\""
+    },
+    {
+      "entry_point": "search / nodes",
+      "parameter": "linked_catalog_json",
+      "attacker_controllable": "yes",
+      "component": "remote-reads",
+      "caller_must_enforce": "none — P-TERMINAL-TEXT-PLAIN",
+      "provenance": "documented",
+      "source": "src/discover.mjs header: \"Every read goes through the adapters' getter\""
+    },
+    {
+      "entry_point": "export / extend",
+      "parameter": "model_argument",
+      "attacker_controllable": "no",
+      "component": "remote-reads",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "src/discover.mjs indexForModel comment"
+    },
+    {
+      "entry_point": "export / extend",
+      "parameter": "remote_catalog_entry",
+      "attacker_controllable": "yes",
+      "component": "remote-reads",
+      "caller_must_enforce": "none — P-REMOTE-NAMES-CHECKED",
+      "provenance": "documented",
+      "source": "CHANGELOG.md 0.3.15 \"Security\": \"so a catalog cannot add lines to the files they write\""
+    },
+    {
+      "entry_point": "export / extend",
+      "parameter": "remote_schema_and_example",
+      "attacker_controllable": "yes",
+      "component": "remote-reads",
+      "caller_must_enforce": "review what extend copied before committing (D-REMOTE-CONTENT-UNREVIEWED)",
+      "provenance": "inferred",
+      "source": "open question Q15"
+    },
+    {
+      "entry_point": "shared reader: any read of another node",
+      "parameter": "http_status_headers_redirects",
+      "attacker_controllable": "yes",
+      "component": "remote-reads",
+      "caller_must_enforce": "none — P-REMOTE-READS-BOUNDED",
+      "provenance": "documented",
+      "source": "src/adapters/index.mjs getter comment: \"One deadline for the read\""
+    },
+    {
+      "entry_point": "shared reader: any read of another node",
+      "parameter": "dns_answers",
+      "attacker_controllable": "yes",
+      "component": "remote-reads",
+      "caller_must_enforce": "none — P-PUBLIC-READS",
+      "provenance": "documented",
+      "source": "src/adapters/net.mjs publicLookup comment: \"dns.lookup that refuses a host with any non-public address\""
+    },
+    {
+      "entry_point": "shared reader: any read of another node",
+      "parameter": "remote_context_documents",
+      "attacker_controllable": "yes",
+      "component": "remote-reads",
+      "caller_must_enforce": "none — P-PUBLIC-READS",
+      "provenance": "documented",
+      "source": "src/build/examples.mjs contextLoader"
+    },
+    {
+      "entry_point": "shared reader: any read of another node",
+      "parameter": "remote_schemas_for_ref",
+      "attacker_controllable": "yes",
+      "component": "remote-reads",
+      "caller_must_enforce": "choose the $refs you write (D-SCHEMA-COMPILE-COST)",
+      "provenance": "inferred",
+      "source": "open question Q9"
+    },
+    {
+      "entry_point": "export: output options",
+      "parameter": "to_and_out",
+      "attacker_controllable": "no",
+      "component": "remote-reads",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "src/export.mjs writeExport comment: \"over files of the same name\""
+    },
+    {
+      "entry_point": "init",
+      "parameter": "options_and_answers",
+      "attacker_controllable": "no",
+      "component": "init-github",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "bin/datamodels.mjs init: \"init: nothing written\""
+    },
+    {
+      "entry_point": "init",
+      "parameter": "existing_folder_content",
+      "attacker_controllable": "no",
+      "component": "init-github",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "src/init.mjs writeNode comment: \"never over an existing file\""
+    },
+    {
+      "entry_point": "init",
+      "parameter": "gh_account",
+      "attacker_controllable": "no",
+      "component": "init-github",
+      "caller_must_enforce": "n/a: GitHub is trusted",
+      "provenance": "documented",
+      "source": "src/init.mjs publishToGitHub comment: \"Put the node on GitHub with the gh CLI\""
+    },
+    {
+      "entry_point": "action.yml",
+      "parameter": "input_directory",
+      "attacker_controllable": "no",
+      "component": "action",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "action.yml header comment: \"Inputs reach the shell only through environment variables\""
+    },
+    {
+      "entry_point": "action.yml",
+      "parameter": "inputs_deploy_offline",
+      "attacker_controllable": "no",
+      "component": "action",
+      "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
+      "provenance": "documented",
+      "source": "action.yml header comment"
+    },
+    {
+      "entry_point": "action.yml",
+      "parameter": "github_base_ref",
+      "attacker_controllable": "yes",
+      "component": "action",
+      "caller_must_enforce": "none — P-ACTION-INPUTS-AS-DATA",
+      "provenance": "documented",
+      "source": "action.yml step \"Check\", env BASE_REF"
+    },
+    {
+      "entry_point": "action.yml",
+      "parameter": "checked_out_repository",
+      "attacker_controllable": "yes",
+      "component": "action",
+      "caller_must_enforce": "grant the check job contents: read only; make the check required",
+      "provenance": "inferred",
+      "source": "open question Q18"
+    },
+    {
+      "entry_point": "action.yml",
+      "parameter": "github_token",
+      "attacker_controllable": "no",
+      "component": "action",
+      "caller_must_enforce": "grant the check job contents: read only; make the check required",
+      "provenance": "documented",
+      "source": "action.yml comment: \"the token is passed to this one fetch in the environment\""
+    },
+    {
+      "entry_point": "library: fetch option",
+      "parameter": "fetch_option",
+      "attacker_controllable": "no",
+      "component": "library",
+      "caller_must_enforce": "do the address check your own fetch skips (D-CALLER-FETCH)",
+      "provenance": "inferred",
+      "source": "open question Q3"
+    },
+    {
+      "entry_point": "agent-skill: text read by the agent",
+      "parameter": "text_read_by_agent",
+      "attacker_controllable": "yes",
+      "component": "agent-skill",
+      "caller_must_enforce": "treat text as data; confirm commands (D-AGENT-TEXT)",
+      "provenance": "inferred",
+      "source": "open question Q21"
+    }
+  ],
+  "environment": {
+    "assumes": [
+      "**Runtime.** Node.js 24 or later. The command line is an ES module run by `node`; the Action uses `actions/setup-node` with Node 24.",
+      "**Terminal.** Prompts only when both standard input and output are a terminal; in CI a missing answer is a usage error.",
+      "**Concurrency.** One command is one process; nothing is shared between runs. `add` takes a lock file in the subject folder against two runs at once ` with comment)*."
+    ],
+    "does_not": [
+      "**Host.** Any machine the user runs it on, or a GitHub-hosted runner for the Action. No platform is singled out.",
+      "**Exit codes.** 0 success, 1 a problem, 2 a usage error; the command line never calls `process.exit()` \")*."
+    ],
+    "provenance": "inferred"
+  },
+  "build_variants": [
+    {
+      "name": "offline",
+      "default": "off",
+      "effect": "voids P-PUBLISHED-COMPARISON",
+      "discouraged": false,
+      "provenance": "documented",
+      "source": "datamodels.jp/en/toolkit/check: \"--offline skips the published files, the extended models\""
+    },
+    {
+      "name": "base",
+      "default": "not set locally; origin/<base> in the Action on pull_request",
+      "effect": "preserves P-BASE-COMPARISON",
+      "discouraged": false,
+      "provenance": "documented",
+      "source": "action.yml comment: \"On a pull request, also compare with the base branch\""
+    },
+    {
+      "name": "prerelease",
+      "default": "absent",
+      "effect": "voids P-BASE-COMPARISON",
+      "discouraged": false,
+      "provenance": "documented",
+      "source": "datamodels.jp/en/toolkit/versions \"Before the launch\""
+    },
+    {
+      "name": "all-released",
+      "default": "off",
+      "effect": "no effect on claimed properties",
+      "discouraged": false,
+      "provenance": "documented",
+      "source": "datamodels.jp/en/toolkit/versions: \"--all-released also requires a snapshot of each subject's current version\""
+    },
+    {
+      "name": "deploy",
+      "default": "'true'",
+      "effect": "no effect on claimed properties",
+      "discouraged": false,
+      "provenance": "documented",
+      "source": "action.yml input deploy description"
+    },
+    {
+      "name": "site",
+      "default": "https://datamodels.jp",
+      "effect": "narrows P-PUBLIC-READS",
+      "discouraged": false,
+      "provenance": "inferred",
+      "source": "open question Q3"
+    },
+    {
+      "name": "index",
+      "default": "https://datamodels.jp/catalog.json",
+      "effect": "no effect on claimed properties",
+      "discouraged": false,
+      "provenance": "documented",
+      "source": "datamodels.jp/en/toolkit/reference --index rows"
+    },
+    {
+      "name": "library-fetch-option",
+      "default": "global fetch, replaced by publicFetch",
+      "effect": "narrows P-PUBLIC-READS; narrows P-REMOTE-READS-BOUNDED",
+      "discouraged": false,
+      "provenance": "inferred",
+      "source": "open question Q3"
+    },
+    {
+      "name": "github",
+      "default": "off",
+      "effect": "no effect on claimed properties",
+      "discouraged": false,
+      "provenance": "documented",
+      "source": "bin/datamodels.mjs header: \"With --github owner/name it also creates the repository and turns on Pages\""
+    },
+    {
+      "name": "yes",
+      "default": "off",
+      "effect": "no effect on claimed properties",
+      "discouraged": false,
+      "provenance": "documented",
+      "source": "bin/datamodels.mjs init: \"Questions only in a terminal\""
+    }
+  ],
+  "adversaries": {
+    "in_scope": [
+      "csv-author",
+      "node-contributor",
+      "other-node-operator",
+      "agent-text-author"
+    ],
+    "out_of_scope": [
+      "integrator",
+      "catalogue-operator",
+      "toolkit-maintainers",
+      "platforms",
+      "network-attacker-https",
+      "network-attacker-plain-http"
+    ],
+    "provenance": "inferred"
+  },
+  "properties_provided": [
+    {
+      "property": "P-PUBLIC-READS",
+      "violation_symptom": "x-ssrf",
+      "severity_tier": "security",
+      "conditions": "reads of other nodes through getter: https, public host names, public addresses at connection, redirects checked, at most 5, prefix kept",
+      "provenance": "documented",
+      "source": "src/adapters/net.mjs header: \"only https, and only to a public address\""
+    },
+    {
+      "property": "P-REMOTE-READS-BOUNDED",
+      "violation_symptom": "hang, unbounded-allocation",
+      "severity_tier": "correctness",
+      "conditions": "5 MB per answer, one deadline per read (20 s, 5 s), depth 5, 50 nodes",
+      "provenance": "documented",
+      "source": "src/adapters/net.mjs MAX_BYTES; src/discover.mjs MAX_DEPTH"
+    },
+    {
+      "property": "P-REMOTE-NAMES-CHECKED",
+      "violation_symptom": "x-file-injection",
+      "severity_tier": "security",
+      "conditions": "extend and export use a remote type name and version only when UpperCamelCase and x.y.z",
+      "provenance": "documented",
+      "source": "CHANGELOG.md 0.3.15 \"Security\": \"so a catalog cannot add lines to the files they write\""
+    },
+    {
+      "property": "P-TERMINAL-TEXT-PLAIN",
+      "violation_symptom": "x-terminal-injection",
+      "severity_tier": "security",
+      "conditions": "the search and nodes listing; not --json, not notes of other commands",
+      "provenance": "documented",
+      "source": "src/discover.mjs plain comment"
+    },
+    {
+      "property": "P-CONTEXT-IMPORTS-LISTED",
+      "violation_symptom": "bad-data-accepted",
+      "severity_tier": "correctness",
+      "conditions": "imports only from the node's own or a listed node's /context/, after URL normalisation",
+      "provenance": "documented",
+      "source": "CHANGELOG.md 0.3.15 \"Security\": \"The build checks a `@context` imported by URL after\""
+    },
+    {
+      "property": "P-BASE-COMPARISON",
+      "violation_symptom": "integrity-bypass",
+      "severity_tier": "security",
+      "conditions": "check --base: released snapshot files at the ref unchanged and present; prerelease flag kept; not during the pre-release",
+      "provenance": "documented",
+      "source": "src/build/published.mjs header"
+    },
+    {
+      "property": "P-PUBLISHED-COMPARISON",
+      "violation_symptom": "integrity-bypass",
+      "severity_tier": "correctness",
+      "conditions": "online only; exact versions served equal the build; release refuses changed sources",
+      "provenance": "documented",
+      "source": "datamodels.jp/en/toolkit/versions \"How a published version is kept\""
+    },
+    {
+      "property": "P-CSV-STRICT",
+      "violation_symptom": "bad-data-accepted",
+      "severity_tier": "correctness",
+      "conditions": "strict decoding (UTF-8, Shift_JIS) and RFC 4180 parsing",
+      "provenance": "documented",
+      "source": "src/convert.mjs decodeCsv and parseCsv comments"
+    },
+    {
+      "property": "P-ROWS-VALIDATED",
+      "violation_symptom": "bad-data-accepted",
+      "severity_tier": "correctness",
+      "conditions": "every entity validated against the model schema; only valid entities written",
+      "provenance": "documented",
+      "source": "bin/datamodels.mjs header"
+    },
+    {
+      "property": "P-NGSI-PROTO-AS-DATA",
+      "violation_symptom": "wrong-output",
+      "severity_tier": "correctness",
+      "conditions": "an attribute named __proto__ stays an own property",
+      "provenance": "documented",
+      "source": "CHANGELOG.md 0.3.16 \"Fixed\""
+    },
+    {
+      "property": "P-PAGES-ESCAPED",
+      "violation_symptom": "x-markup-injection",
+      "severity_tier": "correctness",
+      "conditions": "autoescape on; links from model files only http(s); node.yaml URLs http(s) without credentials",
+      "provenance": "documented",
+      "source": "src/build/pages.mjs httpOnly comment"
+    },
+    {
+      "property": "P-SQL-QUOTED",
+      "violation_symptom": "x-sql-injection",
+      "severity_tier": "security",
+      "conditions": "PostGIS adapter: identifiers and literals quoted, numbers finite, comments on one line",
+      "provenance": "documented",
+      "source": "src/adapters/postgis/index.mjs num comment"
+    },
+    {
+      "property": "P-ACTION-INPUTS-AS-DATA",
+      "violation_symptom": "x-command-injection",
+      "severity_tier": "security",
+      "conditions": "inputs reach the shell only through environment variables",
+      "provenance": "documented",
+      "source": "action.yml header comment"
+    },
+    {
+      "property": "P-ACTION-TOKEN-USE",
+      "violation_symptom": "info-leak, integrity-bypass",
+      "severity_tier": "security",
+      "conditions": "the token only for the base fetch, masked, via environment; no writes to the repository",
+      "provenance": "documented",
+      "source": "action.yml comment: \"passed to this one fetch in the environment\""
+    },
+    {
+      "property": "P-INSTALL-NO-SCRIPTS",
+      "violation_symptom": "x-code-execution",
+      "severity_tier": "security",
+      "conditions": "npm ci --ignore-scripts in the Action and the publish job",
+      "provenance": "documented",
+      "source": ".github/workflows/publish.yml comment"
+    },
+    {
+      "property": "P-RELEASE-GATED",
+      "violation_symptom": "integrity-bypass",
+      "severity_tier": "security",
+      "conditions": "npm publish only from publish.yml on a published non-pre-release whose tag equals the version, after tests, OIDC, provenance",
+      "provenance": "documented",
+      "source": ".github/workflows/publish.yml header comment"
+    },
+    {
+      "property": "P-INIT-ONLY-ITS-FILES",
+      "violation_symptom": "info-leak",
+      "severity_tier": "security",
+      "conditions": "never overwrites; with --github commits only files init wrote and stops on other files; no shell",
+      "provenance": "documented",
+      "source": "src/init.mjs publishToGitHub comment"
+    }
+  ],
+  "properties_not_provided": [
+    {
+      "property": "D-NOT-A-SANDBOX",
+      "reason": "silence. Commands run with the rights of the person or job; a mapping file's via may name any .yaml file the user can read; check --base runs git in the node folder; a node or mapping file from someone else is configuration, not data you can open safely",
+      "false_friend": false,
+      "provenance": "inferred",
+      "source": "open question Q2"
+    },
+    {
+      "property": "D-VALIDATION-NOT-TRUTH",
+      "reason": "stated. They check the JSON Schema, the NGSI-LD and JSON-LD rules and the @context terms; not truth, safety for HTML or SQL, licences, or personal data",
+      "false_friend": true,
+      "provenance": "documented",
+      "source": "datamodels.jp/en/toolkit/check \"What check checks\""
+    },
+    {
+      "property": "D-NO-INPUT-LIMITS",
+      "reason": "silence. A CSV is read whole; parsers run with their defaults; the process is the user's own",
+      "false_friend": false,
+      "provenance": "inferred",
+      "source": "open question Q7"
+    },
+    {
+      "property": "D-SCHEMA-COMPILE-COST",
+      "reason": "silence. Schemas are compiled by Ajv; pattern becomes a JavaScript regular expression (ReDoS); in check a $ref to another public site is compiled too",
+      "false_friend": false,
+      "provenance": "inferred",
+      "source": "open question Q9"
+    },
+    {
+      "property": "D-OUTPUT-TEXT-AS-INPUT",
+      "reason": "silence. Entities carry CSV text as it is after the transforms, json cells as parsed JSON; validated, not sanitised",
+      "false_friend": false,
+      "provenance": "inferred",
+      "source": "open question Q19"
+    },
+    {
+      "property": "D-OWN-SITE-READS",
+      "reason": "silence. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site)",
+      "false_friend": false,
+      "provenance": "inferred",
+      "source": "open question Q14"
+    },
+    {
+      "property": "D-CALLER-FETCH",
+      "reason": "silence. The caller's fetch is used as it is; URL and redirect checks remain",
+      "false_friend": false,
+      "provenance": "inferred",
+      "source": "open question Q3"
+    },
+    {
+      "property": "D-OTHER-NODES-NOTED",
+      "reason": "stated. Another node that cannot be read, or does not answer within 20 seconds, is only noted; a node that is down never fails someone else's check",
+      "false_friend": true,
+      "provenance": "documented",
+      "source": "datamodels.jp/en/toolkit/check: \"a node that is down never fails someone else's check\""
+    },
+    {
+      "property": "D-REMOTE-CONTENT-UNREVIEWED",
+      "reason": "silence. Names, URLs and shape are checked; the schema, example and texts are copied as the other node publishes them",
+      "false_friend": false,
+      "provenance": "inferred",
+      "source": "open question Q15"
+    },
+    {
+      "property": "D-PRERELEASE-CORRECTIONS",
+      "reason": "stated. While prerelease: true is in node.yaml at the base ref and in the change, check --base notes changed and removed snapshot files of **any** version, and the online comparison notes changed files; a stricter rule (only the current version) is the node's own policy, kept by review",
+      "false_friend": false,
+      "provenance": "documented",
+      "source": "datamodels.jp/en/toolkit/versions \"Before the launch\": \"An earlier version that should not have been published can be removed\""
+    },
+    {
+      "property": "D-TOKEN-IN-STEP-ENV",
+      "reason": "silence. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event",
+      "false_friend": false,
+      "provenance": "inferred",
+      "source": "open question Q17"
+    },
+    {
+      "property": "D-AGENT-TEXT",
+      "reason": "silence. Model titles and descriptions reach llms.txt, catalog.json, pages and the AI adapter's schema descriptions as written; the skill sends agents to read such text",
+      "false_friend": false,
+      "provenance": "inferred",
+      "source": "open question Q21"
+    },
+    {
+      "property": "D-SKILL-GUIDANCE-ONLY",
+      "reason": "silence. The skill is instructions; an agent may ignore them, and it runs commands with the user's rights",
+      "false_friend": true,
+      "provenance": "inferred",
+      "source": "open question Q21"
+    },
+    {
+      "property": "D-RELEASE-SINGLE-GATE",
+      "reason": "stated. Publishing the GitHub release is the only gate",
+      "false_friend": false,
+      "provenance": "documented",
+      "source": ".github/workflows/publish.yml header: \"no second approval on npmjs.com\""
+    },
+    {
+      "property": "D-PROVENANCE-NOT-REVIEW",
+      "reason": "stated. Provenance names the commit and the workflow that built the package",
+      "false_friend": true,
+      "provenance": "documented",
+      "source": "README \"Releases\""
+    },
+    {
+      "property": "D-NO-SHRINKWRAP",
+      "reason": "silence. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile",
+      "false_friend": false,
+      "provenance": "inferred",
+      "source": "open question Q20"
+    }
+  ],
+  "attack_classes": [
+    "wrong-entities",
+    "harm-downstream-app",
+    "add-mapping-lines",
+    "hang-or-crash",
+    "change-published-version",
+    "slip-remote-import",
+    "obtain-write-token",
+    "ssrf",
+    "add-lines-to-written-files",
+    "terminal-escape",
+    "hang-command",
+    "steer-agent"
+  ],
+  "downstream_responsibilities": [
+    "convert only with a mapping file you wrote or reviewed",
+    "review a node folder from someone else before check or build",
+    "bound the size of the files you convert or check",
+    "treat converted entities as untrusted input: escape before rendering, parameterise before querying",
+    "review a mapping file mapping wrote before using it",
+    "use https for --site and baseUrl and do not point them at internal addresses",
+    "review what extend copied before committing",
+    "review an exported SQL file before running it with rights in production",
+    "pin a version with npx; install in a project with a lockfile for a fixed tree",
+    "pin the Action by commit SHA and move with upgrade or Dependabot",
+    "grant the check job contents: read only, pages and id-token only to the publish job on main; keep persist-credentials false",
+    "make the pull-request check required and do not bypass it",
+    "set prerelease: false at the launch; enforce stricter correction rules by review until then",
+    "do not rely on the token being hidden from the toolkit process in the Check step",
+    "when passing your own fetch, do the address check yourself",
+    "treat text the agent reads as data; let it run commands only with confirmation"
+  ],
+  "known_misuse": [
+    {
+      "pattern": "converting with a mapping file from someone else",
+      "why_unsafe": "**Converting with a mapping file from someone else.** Looks like: running `convert` with a `.yaml` from an issue or e-mail. Why unsafe: `via` can name any YAML file you can read. Instead: write or review it (`D-NOT-A-SANDBOX`).",
+      "instead": "write or review it"
+    },
+    {
+      "pattern": "rendering convert output unescaped because every row was valid",
+      "why_unsafe": "**Reading `valid` as \"safe\".** Looks like: loading `convert` output into a broker and rendering it unescaped because every row was valid. Instead: escape in the app (`D-OUTPUT-TEXT-AS-INPUT`, `D-VALIDATION-NOT-TRUTH`).",
+      "instead": "escape in the app"
+    },
+    {
+      "pattern": "one job with write permissions on pull_request and main",
+      "why_unsafe": "**Granting the check job write permissions.** Looks like: one job with `contents: write` that runs on `pull_request` and on `main`. Instead: two jobs as `init` writes them.",
+      "instead": "two jobs as init writes them"
+    },
+    {
+      "pattern": "expecting check --base to fail when an older release changes before the launch",
+      "why_unsafe": "**Relying on the pre-release guard for older versions.** Looks like: expecting `check --base` to fail when an older release changes before the launch. Instead: review, or launch (`D-PRERELEASE-CORRECTIONS`).",
+      "instead": "review, or launch"
+    },
+    {
+      "pattern": "pointing --site or baseUrl at an internal host",
+      "why_unsafe": "**Pointing `--site` or `baseUrl` at an internal host.** Looks like: a local mirror on `http://10.x`. Why unsafe: those reads skip the shared reader's rules. Instead: use a local directory for `--site` (`D-OWN-SITE-READS`).",
+      "instead": "use a local directory for --site"
+    },
+    {
+      "pattern": "an agent following an instruction in a model description",
+      "why_unsafe": "**Letting an agent act on catalogue text.** Looks like: an agent that follows an instruction found in a model description. Instead: treat it as data (`D-AGENT-TEXT`).",
+      "instead": "treat it as data"
+    },
+    {
+      "pattern": "npx @geolonia/datamodels without a version in CI",
+      "why_unsafe": "**Unpinned `npx`.** Looks like: `npx @geolonia/datamodels check` in CI. Instead: pin `@X.Y.Z`.",
+      "instead": "pin @X.Y.Z"
+    }
+  ],
+  "known_non_findings": [
+    {
+      "reported_as": "check --base passes although a released snapshot file changed or was removed",
+      "why_safe": "Covers node-tools, action; symptom 'integrity-change'. Exact-match conditions (§1.15): `node.yaml` has `prerelease: true` at the base ref and in the change; the output lists the file as a note \"corrected in place during the pre-release\".",
+      "cites": "properties_not_provided[9]",
+      "suppression": "node.yaml has prerelease: true at the base ref and in the change; the output lists the file as a note \"corrected in place during the pre-release\""
+    },
+    {
+      "reported_as": "the Action reads github.token\" or \"passes a token to git",
+      "why_safe": "Covers action; symptom 'credential-exposure'. Exact-match conditions (§1.15): the token is used only in the \"Check\" step's `git fetch` of the base branch, through `GIT_CONFIG_*` environment variables, masked, with `persist-credentials: false` on the checkout.",
+      "cites": "properties_provided[13]",
+      "suppression": "the token is used only in the \"Check\" step's git fetch of the base branch, through GIT_CONFIG_* environment variables, masked, with persist-credentials: false on the checkout"
+    },
+    {
+      "reported_as": "check exits 0 although an extended model or a remote context could not be read",
+      "why_safe": "Covers node-tools, remote-reads; symptom 'missing-failure'. Exact-match conditions (§1.15): the output has a note for that URL; the URL belongs to another node.",
+      "cites": "properties_not_provided[7]",
+      "suppression": "the output has a note for that URL; the URL belongs to another node"
+    },
+    {
+      "reported_as": "the publish workflow has id-token: write",
+      "why_safe": "Covers release-pipeline; symptom 'excessive-permission'. Exact-match conditions (§1.15): the job is `publish` in `publish.yml`, runs on a published non-pre-release, installs with `--ignore-scripts`.",
+      "cites": "properties_provided[15]",
+      "suppression": "the job is publish in publish.yml, runs on a published non-pre-release, installs with --ignore-scripts"
+    }
+  ],
+  "dispositions": [
+    "valid",
+    "valid_hardening",
+    "out_of_model_trusted_input",
+    "out_of_model_adversary",
+    "out_of_model_unsupported_component",
+    "out_of_model_non_default_build",
+    "by_design_disclaimed",
+    "known_non_finding",
+    "model_gap"
+  ],
+  "open_questions": [
+    {
+      "claim": "Q1: Is the scope right: one model with eight families (`convert`, `node-tools`, `remote-reads`, `init-github`, `action`, `library`, `agent-skill`, `release-pipeline`); tests, `scripts/`, `changes/`, the toolkit pages on datamodels.jp, users' nodes and the catalogue out (the catalogue as a sibling model)? The person running the command line and the repository owner using the Action are the trusted integrators, with their command line, options, node folder and mapping files; the authors of CSV files, contributors to a node and operators of other nodes are untrusted; datamodels.jp is trusted for the content `convert` reads.",
+      "field": "description",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q2: The toolkit is not a sandbox. Node folders and mapping files are the user's configuration and are processed as data: no template, script or configuration from a node folder runs (the pages use the toolkit's own templates and Eleventy configuration; only a `.eleventyignore` in the current directory is read). Choose: (a) claim \"nothing in a node folder runs as code in `check` or `build`\", security-critical, with the `.eleventyignore` exception named, so a report of code execution from node files is `VALID`; or (b) disclaim it under `D-NOT-A-SANDBOX`.",
+      "field": "properties_provided",
+      "proposed": "(a), and keep `D-NOT-A-SANDBOX` for file access with the user's rights (a mapping's `via`, `git` in the folder)."
+    },
+    {
+      "claim": "Q3: Configuration support: `--site` and `--index` are chosen by the user and trusted; `--site http://…` is supported only as the user's choice (a network attacker on plain http is out of scope); a library caller's own `fetch` is supported and replaces `publicFetch`, so the caller owns the address check (`D-CALLER-FETCH`, correctness-only).",
+      "field": "build_variants",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q4: Side effects: network only as listed in §1.5; child processes only `git` (for `--base`, `init --github`) and `gh` (`init --github`), plus `npm ci` and `git fetch` in the Action; writes only to the named outputs, the node folder and a temporary folder that `check` removes; the toolkit's code reads no environment variables.",
+      "field": "environment",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q5: Reporting and coexistence: the repository has no `SECURITY.md` of its own; the organisation's default `SECURITY.md` and GitHub's private vulnerability reporting (enabled) are the channel; there is no earlier threat-model content to absorb; the catalogue's model is a sibling and treats the toolkit as a dependency.",
+      "field": "§1.1",
+      "proposed": "yes; the model sits alongside the organisation policy and replaces nothing."
+    },
+    {
+      "claim": "Q6: During a node's pre-release (`prerelease: true` at the base ref and in the change), `check --base` notes a change or removal of **any** release snapshot, not only the current version's. The toolkit's documentation allows that (\"An earlier version that should not have been published can be removed as a whole\"); the catalogue's README is stricter (only the current version is corrected). Is the toolkit's behaviour by design, with a stricter rule left to each node's review, so that the catalogue pilot's point (its Q4) is the catalogue's policy and not a toolkit defect?",
+      "field": "properties_not_provided",
+      "proposed": "yes, by design. An option for \"current version only\" is a candidate feature, not a fix."
+    },
+    {
+      "claim": "Q7: No size, row, column, nesting or count limit on CSV, YAML, JSON, schemas, contexts or data passed to the library; a CSV is read whole. Should that be a stated limit, correctness-only, because the files are the user's choice and the process is the user's own?",
+      "field": "properties_not_provided",
+      "proposed": "yes, stated, correctness-only."
+    },
+    {
+      "claim": "Q8: YAML is parsed with `yaml` 2.x defaults (YAML 1.2 core schema, no custom tags, no file or code access, a default limit on alias expansion); JSON with `JSON.parse`. A report about a YAML feature that runs code or reads a file is `OUT-OF-MODEL: dependency-contract`; deep nesting that throws is an error message, not a vulnerability.",
+      "field": "properties_not_provided",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q9: JSON Schemas are compiled by Ajv, which documents that schemas are trusted like code. The toolkit compiles the node's own schemas, the catalogue's (in `convert`), and in `check` any schema another public site serves for a `$ref` a node file names. Is a slow `pattern` (ReDoS) or a huge schema a stated limit, correctness-only, with the owner responsible for the `$ref`s they write?",
+      "field": "properties_not_provided",
+      "proposed": "yes, stated, correctness-only."
+    },
+    {
+      "claim": "Q10: JSON-LD: examples and contexts are expanded with `jsonld` and a document loader that answers the node's own files from the build, the NGSI-LD core context from a bundled copy, and any other https URL through the shared reader (not only listed nodes). A context that cannot be read is a note. Is that the intended contract?",
+      "field": "entry_points",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q11: A mapping file of the user's own is trusted configuration: its `via` may name any `.yaml` or `.yml` file relative to it, inside or outside the folder, and `convert` reads it. A report that a mapping file reads a file outside its folder is `OUT-OF-MODEL: trusted-input`.",
+      "field": "entry_points",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q12: Text from a CSV is not filtered where it is echoed. `mapping` writes unused header names into comments of the mapping file with their line breaks, so a header such as `\"extra⏎fields: …\"` adds a line to the YAML (tried on the bound commit); the summary on standard error prints header names and cell values as they are. Choose: (a) claim \"text from a CSV never adds lines to the mapping file\", correctness-only, so the current behaviour is `VALID` and gets a fix; or (b) disclaim it and leave the review of the generated file to the user.",
+      "field": "properties_provided",
+      "proposed": "(a); terminal output of local files stays disclaimed (the file is the user's)."
+    },
+    {
+      "claim": "Q13: `P-PUBLIC-READS` is security-critical and covers every read of another node: `check`, `build`, `search`, `nodes`, `export`, `extend`. Its only off-switch is a library caller's own `fetch`.",
+      "field": "properties_provided",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q14: Three reads do not use the shared reader: `--site` in `convert` and `mapping` (global `fetch`, redirects followed, no address check, no size cap, no deadline); the node's own published files in `check` and `release` (global `fetch` under `baseUrl`, redirects followed, `http://` allowed, 20 seconds, no size cap); `upgrade`'s read of GitHub's API. Their URLs are trusted input (the user's option, the owner's `baseUrl`, a fixed GitHub URL), so an SSRF report through them is `OUT-OF-MODEL: trusted-input`, and `P-PUBLISHED-COMPARISON` is correctness-only. In a node's pull request a contributor can change `baseUrl`, but already runs code in that job (Q18).",
+      "field": "trust_boundaries",
+      "proposed": "yes; state it as `D-OWN-SITE-READS`."
+    },
+    {
+      "claim": "Q15: What is trusted as data from the network: datamodels.jp for the content `convert` reads; GitHub's API for the release SHA in `upgrade`; other nodes for nothing, with names, URLs and shape checked. `extend` copies another node's schema, example and texts as published; reviewing them before a commit is the owner's job.",
+      "field": "entry_points",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q16: Resource bounds of reads of other nodes: 5 MB per answer, one deadline per read (20 s, 5 s for the type IRI's own index), depth 5 and 50 nodes. `P-REMOTE-READS-BOUNDED` is correctness-only, threshold \"more than 5 MB from one answer or reading past the deadline is a bug; slow is not\". Notes and errors of `check`, `extend` and `export` may carry URLs and messages from other nodes as they are; only the `search` and `nodes` listings are reduced to plain text.",
+      "field": "properties_provided",
+      "proposed": "yes to both."
+    },
+    {
+      "claim": "Q17: In the Action, `TOKEN` is set from `github.token` for the whole \"Check\" step on every event, so the `node` process and its dependencies run with the token in their environment (the toolkit's code does not read it). On a pull request the token is read-only for forks; on `main` it has the publish job's permissions. Is that a stated limit (`D-TOKEN-IN-STEP-ENV`, security-critical), with `P-ACTION-TOKEN-USE` claimed for what the Action itself does?",
+      "field": "properties_not_provided",
+      "proposed": "yes. Moving the token into the fetch alone is a hardening candidate."
+    },
+    {
+      "claim": "Q18: On `pull_request`, GitHub runs the contributor's merge commit, workflow file included, with that job's token. The toolkit adds no capability beyond that, so a contributor's report of code execution or a token in the check job is `OUT-OF-MODEL: adversary-not-in-scope`; the publish job runs only on `main` after the owner merged. Making the check required and not bypassing it is the owner's job.",
+      "field": "description",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q19: Outputs: `convert` output is exactly as untrusted as the CSV (`D-OUTPUT-TEXT-AS-INPUT`, security-critical, stated); `P-PAGES-ESCAPED` and `P-CONTEXT-IMPORTS-LISTED` are correctness-only because the text is the owner's and reviewed; `P-SQL-QUOTED` is security-critical because a model from another node reaches a database.",
+      "field": "properties_provided",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q20: Publish path: anyone who may publish a GitHub release publishes to npm, with no second approval (stated); `v*.*.*` tags cannot be moved or deleted by the organisation ruleset, which the operations team can bypass; the npm package ships no lockfile; GitHub, npm and Node.js are trusted. Is `D-NO-SHRINKWRAP` a stated limit (security-critical), and is a malicious transitive version `OUT-OF-MODEL: dependency-contract`?",
+      "field": "entry_points",
+      "proposed": "yes to both."
+    },
+    {
+      "claim": "Q21: The agent skill is guidance copied from the repository, not in the npm package; it tells agents to read `llms.txt`, `catalog.json` and MCP answers and to run commands. Nothing filters instructions in that text, and the toolkit writes model text into `llms.txt` and the AI adapter's descriptions as it is. Should `D-AGENT-TEXT` (security-critical) and `D-SKILL-GUIDANCE-ONLY` (correctness-only, false friend) be stated limits?",
+      "field": "entry_points",
+      "proposed": "yes to both."
+    },
+    {
+      "claim": "Q22: `init --github` always creates a **public** repository, commits only the files `init` wrote, and turns on Pages with the user's `gh` account. A private node is not supported by `init` (the user can create the repository themselves).",
+      "field": "environment",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q23: `P-PUBLISHED-COMPARISON` holds only online and only as far as the node's site answers; with `--offline` or an unreachable site it is a note. Is correctness-only the right tier?",
+      "field": "properties_provided",
+      "proposed": "yes."
+    },
+    {
+      "claim": "Q24: Bind this model to commit `4d88e4e` (release `v0.3.16` plus the pin commit), keep the triage policy `strict`, and re-run it at the next minor release or on any §1.16 trigger.",
+      "field": "§1.1",
+      "proposed": "yes."
+    }
+  ]
+}
