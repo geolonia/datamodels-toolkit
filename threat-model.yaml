@@ -1,14 +1,14 @@
 # threat-model.yaml — derived index; the prose threat model (threat-model.md) is canonical.
 schema: threat-model-sidecar/v2
 project: datamodels-toolkit
-prose_version: "threat-model.md@sha256:661667d7aee2695463070164ef91d318f407bf53ba9f17e0fb22dcc8e927fc15"
-model_status: unratified-draft
+prose_version: "threat-model.md@sha256:f8ad9859ca6c6befbdb8d080211ac4d4ddd8deef34e023d50d40d24161f3a9cd"
+model_status: accepted
 triage_policy: strict
 confidence:
-  documented: 192
-  maintainer: 0
-  inferred: 65
-  assumption: 26
+  documented: 193
+  maintainer: 97
+  inferred: 0
+  assumption: 0
 generation:
   model: Claude Opus 5.5 (claude-opus-5-5)
   effort: session default
@@ -79,20 +79,20 @@ components:
   scope: out
   reason: "maintained in geolonia/datamodels; cited where they state a promise, per §1.3"
   provenance:
-    kind: assumption
-    question_id: Q1
+    kind: maintainer
+    date: 2026-10
 - name: catalogue
   scope: out
   reason: "datamodels.jp has its own sibling model, per §1.1 and §1.3"
   provenance:
-    kind: assumption
-    question_id: Q1
+    kind: maintainer
+    date: 2026-10
 - name: user-nodes
   scope: out
   reason: "sites built with the toolkit belong to their owners, per §1.3"
   provenance:
-    kind: assumption
-    question_id: Q18
+    kind: maintainer
+    date: 2026-10
 host_side_effects:
 - effect: outbound-network-shared-reader
   stance: present
@@ -110,8 +110,8 @@ host_side_effects:
   - node-tools
   conditions: "convert and mapping read --site (default https://datamodels.jp) with the global fetch; check and release read the node's own published files under baseUrl; upgrade reads https://api.github.com/repos/geolonia/datamodels-toolkit/"
   provenance:
-    kind: assumption
-    question_id: Q4
+    kind: maintainer
+    date: 2026-10
 - effect: child-processes
   stance: present
   components:
@@ -120,8 +120,8 @@ host_side_effects:
   - action
   conditions: "git rev-parse, git show, git diff for check --base; gh and git for init --github; the Action runs npm ci and git fetch. Search: grep -rn \"execFile\" src bin — 2 files, src/build/published.mjs and bin/datamodels.mjs (for init)"
   provenance:
-    kind: assumption
-    question_id: Q4
+    kind: maintainer
+    date: 2026-10
 - effect: filesystem-writes
   stance: present
   components:
@@ -131,8 +131,8 @@ host_side_effects:
   - init-github
   conditions: "only the named outputs: --out of convert (overwrites), mapping (never overwrites), export (overwrites files of the same name), build into _site/ or --out; init, add, extend, release, bump, upgrade write into the node folder; check builds into a temporary folder and removes it"
   provenance:
-    kind: assumption
-    question_id: Q4
+    kind: maintainer
+    date: 2026-10
 - effect: environment-variables
   stance: absent
   components:
@@ -142,8 +142,8 @@ host_side_effects:
   - init-github
   conditions: "grep -rn \"process.env\" src bin — 0 hits. Dependencies may read their own (Eleventy, Node.js)"
   provenance:
-    kind: assumption
-    question_id: Q4
+    kind: maintainer
+    date: 2026-10
 - effect: code-from-node-folder
   stance: absent
   components:
@@ -189,8 +189,8 @@ entry_points:
     obligation_id: review-generated-mapping
     caller_must_enforce: review the generated mapping file before use (Q12)
     provenance:
-      kind: inferred
-      question_id: Q12
+      kind: maintainer
+      date: 2026-10
   - name: cell_values
     attacker_controllable: true
     control_kinds:
@@ -230,8 +230,8 @@ entry_points:
     obligation_id: review-own-config
     caller_must_enforce: write or review the mapping file (D-NOT-A-SANDBOX)
     provenance:
-      kind: inferred
-      question_id: Q11
+      kind: maintainer
+      date: 2026-10
   - name: site_option
     attacker_controllable: false
     control_kinds:
@@ -288,8 +288,8 @@ entry_points:
     obligation_id: trusted-urls-only
     caller_must_enforce: use https or a local directory (D-OWN-SITE-READS)
     provenance:
-      kind: inferred
-      question_id: Q14
+      kind: maintainer
+      date: 2026-10
   - name: subject_context
     attacker_controllable: true
     control_kinds:
@@ -308,8 +308,8 @@ entry_points:
     obligation_id: review-node-changes
     caller_must_enforce: review node.yaml before merge
     provenance:
-      kind: inferred
-      question_id: Q9
+      kind: maintainer
+      date: 2026-10
   - name: examples
     attacker_controllable: true
     control_kinds:
@@ -343,8 +343,8 @@ entry_points:
     obligation_id: review-node-changes
     caller_must_enforce: review node.yaml before merge
     provenance:
-      kind: assumption
-      question_id: Q2
+      kind: maintainer
+      date: 2026-10
 - id: check --base
   component: node-tools
   parameters:
@@ -377,8 +377,8 @@ entry_points:
     obligation_id: trusted-urls-only
     caller_must_enforce: use https or a local directory (D-OWN-SITE-READS)
     provenance:
-      kind: inferred
-      question_id: Q14
+      kind: maintainer
+      date: 2026-10
 - id: upgrade
   component: node-tools
   parameters:
@@ -452,8 +452,8 @@ entry_points:
     obligation_id: review-extend-copy
     caller_must_enforce: review what extend copied before committing (D-REMOTE-CONTENT-UNREVIEWED)
     provenance:
-      kind: assumption
-      question_id: Q15
+      kind: maintainer
+      date: 2026-10
 - id: "shared reader: any read of another node"
   component: remote-reads
   parameters:
@@ -492,8 +492,8 @@ entry_points:
     obligation_id: choose-refs
     caller_must_enforce: choose the $refs you write (D-SCHEMA-COMPILE-COST)
     provenance:
-      kind: inferred
-      question_id: Q9
+      kind: maintainer
+      date: 2026-10
 - id: "export: output options"
   component: remote-reads
   parameters:
@@ -573,8 +573,8 @@ entry_points:
     obligation_id: scope-job-permissions
     caller_must_enforce: "grant the check job contents: read only; make the check required"
     provenance:
-      kind: assumption
-      question_id: Q18
+      kind: maintainer
+      date: 2026-10
   - name: github_token
     attacker_controllable: false
     control_kinds:
@@ -594,8 +594,8 @@ entry_points:
     obligation_id: caller-address-check
     caller_must_enforce: do the address check your own fetch skips (D-CALLER-FETCH)
     provenance:
-      kind: inferred
-      question_id: Q3
+      kind: maintainer
+      date: 2026-10
 - id: "agent-skill: text read by the agent"
   component: agent-skill
   parameters:
@@ -606,8 +606,8 @@ entry_points:
     obligation_id: agent-text-as-data
     caller_must_enforce: treat text as data; confirm commands (D-AGENT-TEXT)
     provenance:
-      kind: inferred
-      question_id: Q21
+      kind: maintainer
+      date: 2026-10
 contract_dimensions:
 - component: convert
   dimension: numeric-domain
@@ -668,24 +668,24 @@ contract_dimensions:
   conditions: "no limit on file size, rows or columns; the whole CSV is in memory"
   property_id: D-NO-INPUT-LIMITS
   provenance:
-    kind: inferred
-    question_id: Q7
+    kind: maintainer
+    date: 2026-10
 - component: convert
   dimension: x-outbound-requests
   status: disclaimed
   conditions: "--site is read with the global fetch: redirects followed, no address check, no deadline"
   property_id: D-OWN-SITE-READS
   provenance:
-    kind: inferred
-    question_id: Q14
+    kind: maintainer
+    date: 2026-10
 - component: convert
   dimension: x-agent-instructions
-  status: unresolved
-  conditions: "CSV header text is written into the comments of the generated mapping file with line breaks kept, so it can add lines that an agent or convert reads"
-  question_id: Q12
+  status: claimed
+  conditions: "text from a CSV never adds lines to the mapping file mapping writes; violated at the bound commit by unused header names, a VALID finding"
+  property_id: P-CSV-TEXT-NO-NEW-LINES
   provenance:
-    kind: inferred
-    question_id: Q12
+    kind: maintainer
+    date: 2026-10
 - component: node-tools
   dimension: numeric-domain
   status: claimed
@@ -712,20 +712,20 @@ contract_dimensions:
     source: "src/build/check.mjs resolveContext comment: \"only an import of itself is refused\""
 - component: node-tools
   dimension: callback-execution
-  status: unresolved
-  conditions: "node files are read as data and pages use the toolkit's own templates and configuration; no written promise that nothing in a node folder runs as code"
-  question_id: Q2
+  status: claimed
+  conditions: "node files are read as data; pages use the toolkit's own templates and Eleventy configuration; a .eleventyignore in the current directory is the one file Eleventy reads"
+  property_id: P-NODE-FILES-ARE-DATA
   provenance:
-    kind: inferred
-    question_id: Q2
+    kind: maintainer
+    date: 2026-10
 - component: node-tools
   dimension: serialization-reconstruction
   status: disclaimed
   conditions: "schemas are compiled by Ajv, which treats a schema like code; pattern becomes a regular expression"
   property_id: D-SCHEMA-COMPILE-COST
   provenance:
-    kind: inferred
-    question_id: Q9
+    kind: maintainer
+    date: 2026-10
 - component: node-tools
   dimension: reference-lifecycle
   status: claimed
@@ -748,16 +748,16 @@ contract_dimensions:
   conditions: no limit on node files; reads of other nodes bounded as in remote-reads
   property_id: D-NO-INPUT-LIMITS
   provenance:
-    kind: inferred
-    question_id: Q7
+    kind: maintainer
+    date: 2026-10
 - component: node-tools
   dimension: x-outbound-requests
   status: disclaimed
   conditions: "the node's own published files are read under baseUrl with the global fetch"
   property_id: D-OWN-SITE-READS
   provenance:
-    kind: inferred
-    question_id: Q14
+    kind: maintainer
+    date: 2026-10
 - component: node-tools
   dimension: x-version-immutability
   status: claimed
@@ -772,8 +772,8 @@ contract_dimensions:
   conditions: "model text goes unfiltered into llms.txt, catalog.json and the AI adapter's schema descriptions"
   property_id: D-AGENT-TEXT
   provenance:
-    kind: inferred
-    question_id: Q21
+    kind: maintainer
+    date: 2026-10
 - component: remote-reads
   dimension: numeric-domain
   status: claimed
@@ -953,8 +953,8 @@ contract_dimensions:
   conditions: "the token is in the environment of the whole \"Check\" step, so the toolkit process and its dependencies run with it"
   property_id: D-TOKEN-IN-STEP-ENV
   provenance:
-    kind: inferred
-    question_id: Q17
+    kind: maintainer
+    date: 2026-10
 - component: action
   dimension: concurrency-reentrancy
   status: not-applicable
@@ -1007,16 +1007,16 @@ contract_dimensions:
   conditions: toNormalized and toKeyValues walk the data the caller passes; no depth limit
   property_id: D-NO-INPUT-LIMITS
   provenance:
-    kind: inferred
-    question_id: Q7
+    kind: maintainer
+    date: 2026-10
 - component: library
   dimension: callback-execution
   status: disclaimed
   conditions: "a caller's own fetch replaces publicFetch and is trusted"
   property_id: D-CALLER-FETCH
   provenance:
-    kind: inferred
-    question_id: Q3
+    kind: maintainer
+    date: 2026-10
 - component: library
   dimension: serialization-reconstruction
   status: claimed
@@ -1045,8 +1045,8 @@ contract_dimensions:
   conditions: no limit on the data the caller passes
   property_id: D-NO-INPUT-LIMITS
   provenance:
-    kind: inferred
-    question_id: Q7
+    kind: maintainer
+    date: 2026-10
 - component: agent-skill
   dimension: numeric-domain
   status: not-applicable
@@ -1074,8 +1074,8 @@ contract_dimensions:
   conditions: "the agent runs the commands the skill names with the user's rights; the skill does not limit it"
   property_id: D-SKILL-GUIDANCE-ONLY
   provenance:
-    kind: inferred
-    question_id: Q21
+    kind: maintainer
+    date: 2026-10
 - component: agent-skill
   dimension: serialization-reconstruction
   status: not-applicable
@@ -1110,8 +1110,8 @@ contract_dimensions:
   conditions: "the skill sends agents to read llms.txt, catalog.json and MCP answers; nothing filters instructions in them"
   property_id: D-AGENT-TEXT
   provenance:
-    kind: inferred
-    question_id: Q21
+    kind: maintainer
+    date: 2026-10
 - component: release-pipeline
   dimension: numeric-domain
   status: claimed
@@ -1149,16 +1149,16 @@ contract_dimensions:
   conditions: the package pins its direct dependencies exactly but ships no lockfile; npx resolves the rest at install time
   property_id: D-NO-SHRINKWRAP
   provenance:
-    kind: inferred
-    question_id: Q20
+    kind: maintainer
+    date: 2026-10
 - component: release-pipeline
   dimension: reference-lifecycle
   status: claimed
   conditions: "v*.*.* tags cannot be moved or deleted (organisation ruleset, bypass for the operations team); init pins the Action by commit SHA"
   property_id: P-RELEASE-GATED
   provenance:
-    kind: inferred
-    question_id: Q20
+    kind: maintainer
+    date: 2026-10
 - component: release-pipeline
   dimension: concurrency-reentrancy
   status: not-applicable
@@ -1178,8 +1178,8 @@ outputs:
   channel: converted-entities
   taint: same-as-input
   taint_provenance: &id001
-    kind: inferred
-    question_id: Q19
+    kind: maintainer
+    date: 2026-10
   invariants: []
   downstream_must_not_assume:
   - id: converted-text-safe
@@ -1189,8 +1189,8 @@ outputs:
   channel: convert-summary-stderr
   taint: same-as-input
   taint_provenance: &id002
-    kind: inferred
-    question_id: Q12
+    kind: maintainer
+    date: 2026-10
   invariants: []
   downstream_must_not_assume:
   - id: summary-constant-text
@@ -1200,8 +1200,8 @@ outputs:
   channel: generated-mapping-file
   taint: constrained
   taint_provenance: &id003
-    kind: inferred
-    question_id: Q12
+    kind: maintainer
+    date: 2026-10
   invariants: []
   downstream_must_not_assume:
   - id: mapping-lines-from-model
@@ -1273,8 +1273,8 @@ outputs:
   channel: extend-written-files
   taint: same-as-input
   taint_provenance: &id008
-    kind: assumption
-    question_id: Q15
+    kind: maintainer
+    date: 2026-10
   invariants:
   - id: remote-names-checked
     statement: type and version names checked; comments on one line
@@ -1318,8 +1318,8 @@ outputs:
   channel: notes-and-problems
   taint: same-as-input
   taint_provenance: &id011
-    kind: inferred
-    question_id: Q16
+    kind: maintainer
+    date: 2026-10
   invariants: []
   downstream_must_not_assume:
   - id: notes-constant-text
@@ -1399,8 +1399,8 @@ adversaries:
   - add-mapping-lines
   - hang-or-crash
   provenance:
-    kind: assumption
-    question_id: Q1
+    kind: maintainer
+    date: 2026-10
 - name: node-contributor
   scope: in
   capabilities:
@@ -1416,8 +1416,8 @@ adversaries:
   - slip-remote-import
   - obtain-write-token
   provenance:
-    kind: assumption
-    question_id: Q18
+    kind: maintainer
+    date: 2026-10
 - name: other-node-operator
   scope: in
   capabilities:
@@ -1449,8 +1449,8 @@ adversaries:
   goals:
   - steer-agent
   provenance:
-    kind: inferred
-    question_id: Q21
+    kind: maintainer
+    date: 2026-10
 - name: integrator
   scope: out
   capabilities:
@@ -1463,16 +1463,16 @@ adversaries:
   excluded_capabilities: []
   goals: []
   provenance:
-    kind: assumption
-    question_id: Q1
+    kind: maintainer
+    date: 2026-10
 - name: catalogue-operator
   scope: out
   capabilities: []
   excluded_capabilities: []
   goals: []
   provenance:
-    kind: assumption
-    question_id: Q15
+    kind: maintainer
+    date: 2026-10
 - name: toolkit-maintainers
   scope: out
   capabilities:
@@ -1490,24 +1490,24 @@ adversaries:
   excluded_capabilities: []
   goals: []
   provenance:
-    kind: assumption
-    question_id: Q20
+    kind: maintainer
+    date: 2026-10
 - name: network-attacker-https
   scope: out
   capabilities: []
   excluded_capabilities: []
   goals: []
   provenance:
-    kind: assumption
-    question_id: Q3
+    kind: maintainer
+    date: 2026-10
 - name: network-attacker-plain-http
   scope: out
   capabilities: []
   excluded_capabilities: []
   goals: []
   provenance:
-    kind: inferred
-    question_id: Q3
+    kind: maintainer
+    date: 2026-10
 dependency_policy:
   zero_runtime_dependencies: false
   provenance:
@@ -1538,8 +1538,8 @@ dependencies:
   covered_here: false
   violation_disposition: "OUT-OF-MODEL: dependency-contract"
   provenance:
-    kind: inferred
-    question_id: Q9
+    kind: maintainer
+    date: 2026-10
 - name: jsonld
   relied_on_for: "expansion and compaction with the toolkit's document loader"
   relied_on_properties:
@@ -1563,8 +1563,8 @@ dependencies:
   covered_here: false
   violation_disposition: "OUT-OF-MODEL: dependency-contract"
   provenance:
-    kind: inferred
-    question_id: Q8
+    kind: maintainer
+    date: 2026-10
 - name: eleventy-nunjucks
   relied_on_for: "rendering the toolkit's own templates with autoescape"
   relied_on_properties:
@@ -1741,8 +1741,8 @@ build_flags:
   - property_id: P-PUBLIC-READS
     effect: narrows
   provenance:
-    kind: inferred
-    question_id: Q3
+    kind: maintainer
+    date: 2026-10
 - name: index
   default: "https://datamodels.jp/catalog.json"
   security_relevant: false
@@ -1761,8 +1761,8 @@ build_flags:
   - property_id: P-REMOTE-READS-BOUNDED
     effect: narrows
   provenance:
-    kind: inferred
-    question_id: Q3
+    kind: maintainer
+    date: 2026-10
 - name: github
   default: "off"
   security_relevant: false
@@ -1867,6 +1867,17 @@ properties_claimed:
   provenance:
     kind: documented
     source: src/convert.mjs decodeCsv and parseCsv comments
+- id: P-CSV-TEXT-NO-NEW-LINES
+  kind: integrity
+  components:
+  - convert
+  tier: correctness-only
+  conditions: "text from a CSV never adds lines to the mapping file mapping writes; violated at the bound commit by unused header names (src/mapping.mjs:444)"
+  violation_symptoms:
+  - x-file-injection
+  provenance:
+    kind: maintainer
+    date: 2026-10
 - id: P-ROWS-VALIDATED
   kind: correctness
   components:
@@ -1890,6 +1901,17 @@ properties_claimed:
   provenance:
     kind: documented
     source: "CHANGELOG.md 0.3.16 \"Fixed\""
+- id: P-NODE-FILES-ARE-DATA
+  kind: integrity
+  components:
+  - node-tools
+  tier: security-critical
+  conditions: check and build read node files as data; own templates and Eleventy configuration; a .eleventyignore in the current directory is still read
+  violation_symptoms:
+  - x-code-execution
+  provenance:
+    kind: maintainer
+    date: 2026-10
 - id: P-PAGES-ESCAPED
   kind: output-sanitization
   components:
@@ -1970,12 +1992,12 @@ properties_disclaimed:
   components:
   - convert
   - node-tools
-  conditions: "silence. Commands run with the rights of the person or job; a mapping file's via may name any .yaml file the user can read; check --base runs git in the node folder; a node or mapping file from someone else is configuration, not data you can open safely"
+  conditions: "stated by the maintainer. Commands run with the rights of the person or job; a mapping file's via may name any .yaml file the user can read; check --base runs git in the node folder. Not covered: code execution from a node folder, which P-NODE-FILES-ARE-DATA claims"
   tier: security-critical
   false_friend: false
   provenance:
-    kind: inferred
-    question_id: Q2
+    kind: maintainer
+    date: 2026-10
 - id: D-VALIDATION-NOT-TRUTH
   components:
   - convert
@@ -1991,50 +2013,60 @@ properties_disclaimed:
   - convert
   - node-tools
   - library
-  conditions: "silence. A CSV is read whole; parsers run with their defaults; the process is the user's own"
+  conditions: "stated by the maintainer. A CSV is read whole; parsers run with their defaults; the process is the user's own"
   tier: correctness-only
   false_friend: false
   provenance:
-    kind: inferred
-    question_id: Q7
+    kind: maintainer
+    date: 2026-10
 - id: D-SCHEMA-COMPILE-COST
   components:
   - node-tools
   - convert
-  conditions: silence. Schemas are compiled by Ajv; pattern becomes a JavaScript regular expression (ReDoS); in check a $ref to another public site is compiled too
+  conditions: stated by the maintainer. Schemas are compiled by Ajv; pattern becomes a JavaScript regular expression (ReDoS); in check a $ref to another public site is compiled too
   tier: correctness-only
   false_friend: false
   provenance:
-    kind: inferred
-    question_id: Q9
+    kind: maintainer
+    date: 2026-10
 - id: D-OUTPUT-TEXT-AS-INPUT
   components:
   - convert
-  conditions: "silence. Entities carry CSV text as it is after the transforms, json cells as parsed JSON; validated, not sanitised"
+  conditions: "stated by the maintainer. Entities carry CSV text as it is after the transforms, json cells as parsed JSON; validated, not sanitised"
   tier: security-critical
   false_friend: false
   provenance:
-    kind: inferred
-    question_id: Q19
+    kind: maintainer
+    date: 2026-10
+- id: D-LOCAL-TEXT-ECHOED
+  components:
+  - convert
+  - node-tools
+  conditions: "stated by the maintainer. The summary, notes and errors print header names, cell values and paths as they are; the file is the user's"
+  tier: correctness-only
+  false_friend: false
+  provenance:
+    kind: maintainer
+    date: 2026-10
 - id: D-OWN-SITE-READS
   components:
   - convert
   - node-tools
-  conditions: "silence. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site)"
+  conditions: "stated by the maintainer. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site)"
   tier: security-critical
   false_friend: false
   provenance:
-    kind: inferred
-    question_id: Q14
+    kind: maintainer
+    date: 2026-10
 - id: D-CALLER-FETCH
   components:
   - library
-  conditions: "silence. The caller's fetch is used as it is; URL and redirect checks remain"
+  conditions: "stated by the maintainer. The caller's fetch is used as it is; URL and redirect checks remain"
   tier: correctness-only
   false_friend: false
   provenance:
-    kind: inferred
-    question_id: Q3
+    kind: maintainer
+    date: 2026-10
 - id: D-OTHER-NODES-NOTED
   components:
   - node-tools
@@ -2048,12 +2080,12 @@ properties_disclaimed:
 - id: D-REMOTE-CONTENT-UNREVIEWED
   components:
   - remote-reads
-  conditions: "silence. Names, URLs and shape are checked; the schema, example and texts are copied as the other node publishes them"
+  conditions: "stated by the maintainer. Names, URLs and shape are checked; the schema, example and texts are copied as the other node publishes them"
   tier: correctness-only
   false_friend: false
   provenance:
-    kind: assumption
-    question_id: Q15
+    kind: maintainer
+    date: 2026-10
 - id: D-PRERELEASE-CORRECTIONS
   components:
   - node-tools
@@ -2067,31 +2099,31 @@ properties_disclaimed:
 - id: D-TOKEN-IN-STEP-ENV
   components:
   - action
-  conditions: "silence. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event"
+  conditions: "stated by the maintainer. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event"
   tier: security-critical
   false_friend: false
   provenance:
-    kind: inferred
-    question_id: Q17
+    kind: maintainer
+    date: 2026-10
 - id: D-AGENT-TEXT
   components:
   - node-tools
   - agent-skill
-  conditions: "silence. Model titles and descriptions reach llms.txt, catalog.json, pages and the AI adapter's schema descriptions as written; the skill sends agents to read such text"
+  conditions: "stated by the maintainer. Model titles and descriptions reach llms.txt, catalog.json, pages and the AI adapter's schema descriptions as written; the skill sends agents to read such text"
   tier: security-critical
   false_friend: false
   provenance:
-    kind: inferred
-    question_id: Q21
+    kind: maintainer
+    date: 2026-10
 - id: D-SKILL-GUIDANCE-ONLY
   components:
   - agent-skill
-  conditions: "silence. The skill is instructions; an agent may ignore them, and it runs commands with the user's rights"
+  conditions: "stated by the maintainer. The skill is instructions; an agent may ignore them, and it runs commands with the user's rights"
   tier: correctness-only
   false_friend: true
   provenance:
-    kind: inferred
-    question_id: Q21
+    kind: maintainer
+    date: 2026-10
 - id: D-RELEASE-SINGLE-GATE
   components:
   - release-pipeline
@@ -2113,12 +2145,12 @@ properties_disclaimed:
 - id: D-NO-SHRINKWRAP
   components:
   - release-pipeline
-  conditions: "silence. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile"
+  conditions: "stated by the maintainer. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile"
   tier: security-critical
   false_friend: false
   provenance:
-    kind: inferred
-    question_id: Q20
+    kind: maintainer
+    date: 2026-10
 downstream_responsibilities:
 - id: R-REVIEW-MAPPING-FILES
   component: convert
@@ -2126,8 +2158,8 @@ downstream_responsibilities:
   enforces:
   - review-own-config
   provenance:
-    kind: inferred
-    question_id: Q11
+    kind: maintainer
+    date: 2026-10
 - id: R-REVIEW-NODE-FOLDER
   component: node-tools
   statement: review a node folder from someone else before check or build
@@ -2135,16 +2167,16 @@ downstream_responsibilities:
   - review-node-changes
   - D-NOT-A-SANDBOX
   provenance:
-    kind: inferred
-    question_id: Q2
+    kind: maintainer
+    date: 2026-10
 - id: R-BOUND-INPUT
   component: convert
   statement: bound the size of the files you convert or check
   enforces:
   - bound-input-size
   provenance:
-    kind: inferred
-    question_id: Q7
+    kind: maintainer
+    date: 2026-10
 - id: R-ESCAPE-ENTITIES
   component: convert
   statement: "treat converted entities as untrusted input: escape before rendering, parameterise before querying"
@@ -2152,8 +2184,8 @@ downstream_responsibilities:
   - escape-converted-values
   - converted-text-safe
   provenance:
-    kind: inferred
-    question_id: Q19
+    kind: maintainer
+    date: 2026-10
 - id: R-REVIEW-GENERATED-MAPPING
   component: convert
   statement: review a mapping file mapping wrote before using it
@@ -2161,16 +2193,16 @@ downstream_responsibilities:
   - review-generated-mapping
   - mapping-lines-from-model
   provenance:
-    kind: inferred
-    question_id: Q12
+    kind: maintainer
+    date: 2026-10
 - id: R-TRUSTED-URLS
   component: node-tools
   statement: use https for --site and baseUrl and do not point them at internal addresses
   enforces:
   - trusted-urls-only
   provenance:
-    kind: inferred
-    question_id: Q14
+    kind: maintainer
+    date: 2026-10
 - id: R-REVIEW-EXTEND
   component: remote-reads
   statement: review what extend copied before committing
@@ -2178,8 +2210,8 @@ downstream_responsibilities:
   - review-extend-copy
   - extend-copy-reviewed
   provenance:
-    kind: assumption
-    question_id: Q15
+    kind: maintainer
+    date: 2026-10
 - id: R-REVIEW-SQL
   component: remote-reads
   statement: review an exported SQL file before running it with rights in production
@@ -2219,8 +2251,8 @@ downstream_responsibilities:
   - P-BASE-COMPARISON
   - deployment-reviewed
   provenance:
-    kind: inferred
-    question_id: Q18
+    kind: maintainer
+    date: 2026-10
 - id: R-LAUNCH
   component: node-tools
   statement: "set prerelease: false at the launch; enforce stricter correction rules by review until then"
@@ -2235,16 +2267,16 @@ downstream_responsibilities:
   enforces:
   - D-TOKEN-IN-STEP-ENV
   provenance:
-    kind: inferred
-    question_id: Q17
+    kind: maintainer
+    date: 2026-10
 - id: R-CALLER-FETCH
   component: library
   statement: "when passing your own fetch, do the address check yourself"
   enforces:
   - caller-address-check
   provenance:
-    kind: inferred
-    question_id: Q3
+    kind: maintainer
+    date: 2026-10
 - id: R-AGENT-TEXT
   component: agent-skill
   statement: treat text the agent reads as data; let it run commands only with confirmation
@@ -2252,8 +2284,8 @@ downstream_responsibilities:
   - agent-text-as-data
   - llms-free-of-instructions
   provenance:
-    kind: inferred
-    question_id: Q21
+    kind: maintainer
+    date: 2026-10
 known_misuses:
 - id: M-FOREIGN-MAPPING
   components:
@@ -2261,8 +2293,8 @@ known_misuses:
   pattern: converting with a mapping file from someone else
   safer_alternative: write or review it
   provenance:
-    kind: inferred
-    question_id: Q11
+    kind: maintainer
+    date: 2026-10
 - id: M-VALID-AS-SAFE
   components:
   - convert
@@ -2294,16 +2326,16 @@ known_misuses:
   pattern: pointing --site or baseUrl at an internal host
   safer_alternative: use a local directory for --site
   provenance:
-    kind: inferred
-    question_id: Q14
+    kind: maintainer
+    date: 2026-10
 - id: M-AGENT-FOLLOWS-TEXT
   components:
   - agent-skill
   pattern: an agent following an instruction in a model description
   safer_alternative: treat it as data
   provenance:
-    kind: inferred
-    question_id: Q21
+    kind: maintainer
+    date: 2026-10
 - id: M-UNPINNED-NPX
   components:
   - release-pipeline

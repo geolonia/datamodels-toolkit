@@ -2,12 +2,12 @@
   "spec_version": 1,
   "repository": "https://github.com/geolonia/datamodels-toolkit",
   "commit": "4d88e4e57fa5225f5069ce481ec0ccc45d1f69bd",
-  "date": "2026-10-16",
+  "date": "2026-10-17",
   "scope_subpath": null,
   "description": "datamodels-toolkit is a command line and a GitHub Action for data models in the style of datamodels.jp. People use it to turn a CSV list into NGSI-LD entities, to start and maintain a *node* (a site of their own that publishes JSON Schemas, JSON-LD @context files and vocabularies at fixed URLs), to find models on other nodes, and to export a model for other tools (a CSV template, a Table Schema, a JSON Schema for AI output, a PostgreSQL table). It runs on the user's machine or in the user's GitHub Actions job, with the user's rights. It has no server, stores nothing of its own and holds no credential except the job token the Action is given.",
   "confidence": {
-    "documented": 192,
-    "inferred": 91
+    "documented": 290,
+    "inferred": 0
   },
   "components": [
     {
@@ -112,27 +112,27 @@
     {
       "item": "toolkit-docs",
       "reason": "maintained in geolonia/datamodels; cited where they state a promise, per §1.3",
-      "provenance": "inferred",
-      "source": "open question Q1"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "item": "catalogue",
       "reason": "datamodels.jp has its own sibling model, per §1.1 and §1.3",
-      "provenance": "inferred",
-      "source": "open question Q1"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "item": "user-nodes",
       "reason": "sites built with the toolkit belong to their owners, per §1.3",
-      "provenance": "inferred",
-      "source": "open question Q18"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     }
   ],
   "trust_boundaries": [
     {
       "component": "convert",
       "boundary": "Command-line boundary: the person running datamodels chooses the command, the options, the mapping file and the site; the content of a CSV is untrusted.",
-      "provenance": "inferred",
+      "provenance": "documented",
       "reachability_precondition": "it is reachable from the bytes of a CSV the user converts, with a mapping file and a site the user chose"
     },
     {
@@ -162,13 +162,13 @@
     {
       "component": "library",
       "boundary": "Caller boundary: the calling program passes the data and may pass its own fetch, which then replaces the address check.",
-      "provenance": "inferred",
+      "provenance": "documented",
       "reachability_precondition": "it is reachable through an exported function from the data its caller passes"
     },
     {
       "component": "agent-skill",
       "boundary": "Agent boundary: the skill is guidance; text the agent reads is data, and the user confirms the commands it runs.",
-      "provenance": "inferred",
+      "provenance": "documented",
       "reachability_precondition": "it is reachable from text an agent reads while following the skill, and changes what the agent does beyond what the user asked"
     },
     {
@@ -194,8 +194,8 @@
       "attacker_controllable": "yes",
       "component": "convert",
       "caller_must_enforce": "review the generated mapping file before use (Q12)",
-      "provenance": "inferred",
-      "source": "open question Q12"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "entry_point": "convert / mapping: CSV file",
@@ -230,8 +230,8 @@
       "attacker_controllable": "no",
       "component": "convert",
       "caller_must_enforce": "write or review the mapping file (D-NOT-A-SANDBOX)",
-      "provenance": "inferred",
-      "source": "open question Q11"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "entry_point": "convert / mapping: options and mapping",
@@ -284,8 +284,8 @@
       "attacker_controllable": "yes",
       "component": "node-tools",
       "caller_must_enforce": "use https or a local directory (D-OWN-SITE-READS)",
-      "provenance": "inferred",
-      "source": "open question Q14"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "entry_point": "check / build / release / bump / add: node folder",
@@ -302,8 +302,8 @@
       "attacker_controllable": "yes",
       "component": "node-tools",
       "caller_must_enforce": "review node.yaml before merge",
-      "provenance": "inferred",
-      "source": "open question Q9"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "entry_point": "check / build / release / bump / add: node folder",
@@ -338,8 +338,8 @@
       "attacker_controllable": "yes",
       "component": "node-tools",
       "caller_must_enforce": "review node.yaml before merge",
-      "provenance": "inferred",
-      "source": "open question Q2"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "entry_point": "check --base",
@@ -365,8 +365,8 @@
       "attacker_controllable": "yes",
       "component": "node-tools",
       "caller_must_enforce": "use https or a local directory (D-OWN-SITE-READS)",
-      "provenance": "inferred",
-      "source": "open question Q14"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "entry_point": "upgrade",
@@ -428,8 +428,8 @@
       "attacker_controllable": "yes",
       "component": "remote-reads",
       "caller_must_enforce": "review what extend copied before committing (D-REMOTE-CONTENT-UNREVIEWED)",
-      "provenance": "inferred",
-      "source": "open question Q15"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "entry_point": "shared reader: any read of another node",
@@ -464,8 +464,8 @@
       "attacker_controllable": "yes",
       "component": "remote-reads",
       "caller_must_enforce": "choose the $refs you write (D-SCHEMA-COMPILE-COST)",
-      "provenance": "inferred",
-      "source": "open question Q9"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "entry_point": "export: output options",
@@ -536,8 +536,8 @@
       "attacker_controllable": "yes",
       "component": "action",
       "caller_must_enforce": "grant the check job contents: read only; make the check required",
-      "provenance": "inferred",
-      "source": "open question Q18"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "entry_point": "action.yml",
@@ -554,8 +554,8 @@
       "attacker_controllable": "no",
       "component": "library",
       "caller_must_enforce": "do the address check your own fetch skips (D-CALLER-FETCH)",
-      "provenance": "inferred",
-      "source": "open question Q3"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "entry_point": "agent-skill: text read by the agent",
@@ -563,8 +563,8 @@
       "attacker_controllable": "yes",
       "component": "agent-skill",
       "caller_must_enforce": "treat text as data; confirm commands (D-AGENT-TEXT)",
-      "provenance": "inferred",
-      "source": "open question Q21"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     }
   ],
   "environment": {
@@ -577,7 +577,7 @@
       "**Host.** Any machine the user runs it on, or a GitHub-hosted runner for the Action. No platform is singled out.",
       "**Exit codes.** 0 success, 1 a problem, 2 a usage error; the command line never calls `process.exit()` \")*."
     ],
-    "provenance": "inferred"
+    "provenance": "documented"
   },
   "build_variants": [
     {
@@ -625,8 +625,8 @@
       "default": "https://datamodels.jp",
       "effect": "narrows P-PUBLIC-READS",
       "discouraged": false,
-      "provenance": "inferred",
-      "source": "open question Q3"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "name": "index",
@@ -641,8 +641,8 @@
       "default": "global fetch, replaced by publicFetch",
       "effect": "narrows P-PUBLIC-READS; narrows P-REMOTE-READS-BOUNDED",
       "discouraged": false,
-      "provenance": "inferred",
-      "source": "open question Q3"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "name": "github",
@@ -676,7 +676,7 @@
       "network-attacker-https",
       "network-attacker-plain-http"
     ],
-    "provenance": "inferred"
+    "provenance": "documented"
   },
   "properties_provided": [
     {
@@ -744,6 +744,14 @@
       "source": "src/convert.mjs decodeCsv and parseCsv comments"
     },
     {
+      "property": "P-CSV-TEXT-NO-NEW-LINES",
+      "violation_symptom": "x-file-injection",
+      "severity_tier": "correctness",
+      "conditions": "text from a CSV never adds lines to the mapping file mapping writes; violated at the bound commit by unused header names (src/mapping.mjs:444)",
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
+    },
+    {
       "property": "P-ROWS-VALIDATED",
       "violation_symptom": "bad-data-accepted",
       "severity_tier": "correctness",
@@ -758,6 +766,14 @@
       "conditions": "an attribute named __proto__ stays an own property",
       "provenance": "documented",
       "source": "CHANGELOG.md 0.3.16 \"Fixed\""
+    },
+    {
+      "property": "P-NODE-FILES-ARE-DATA",
+      "violation_symptom": "x-code-execution",
+      "severity_tier": "security",
+      "conditions": "check and build read node files as data; own templates and Eleventy configuration; a .eleventyignore in the current directory is still read",
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "P-PAGES-ESCAPED",
@@ -819,10 +835,10 @@
   "properties_not_provided": [
     {
       "property": "D-NOT-A-SANDBOX",
-      "reason": "silence. Commands run with the rights of the person or job; a mapping file's via may name any .yaml file the user can read; check --base runs git in the node folder; a node or mapping file from someone else is configuration, not data you can open safely",
+      "reason": "stated by the maintainer. Commands run with the rights of the person or job; a mapping file's via may name any .yaml file the user can read; check --base runs git in the node folder. Not covered: code execution from a node folder, which P-NODE-FILES-ARE-DATA claims",
       "false_friend": false,
-      "provenance": "inferred",
-      "source": "open question Q2"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "D-VALIDATION-NOT-TRUTH",
@@ -833,38 +849,45 @@
     },
     {
       "property": "D-NO-INPUT-LIMITS",
-      "reason": "silence. A CSV is read whole; parsers run with their defaults; the process is the user's own",
+      "reason": "stated by the maintainer. A CSV is read whole; parsers run with their defaults; the process is the user's own",
       "false_friend": false,
-      "provenance": "inferred",
-      "source": "open question Q7"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "D-SCHEMA-COMPILE-COST",
-      "reason": "silence. Schemas are compiled by Ajv; pattern becomes a JavaScript regular expression (ReDoS); in check a $ref to another public site is compiled too",
+      "reason": "stated by the maintainer. Schemas are compiled by Ajv; pattern becomes a JavaScript regular expression (ReDoS); in check a $ref to another public site is compiled too",
       "false_friend": false,
-      "provenance": "inferred",
-      "source": "open question Q9"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "D-OUTPUT-TEXT-AS-INPUT",
-      "reason": "silence. Entities carry CSV text as it is after the transforms, json cells as parsed JSON; validated, not sanitised",
+      "reason": "stated by the maintainer. Entities carry CSV text as it is after the transforms, json cells as parsed JSON; validated, not sanitised",
       "false_friend": false,
-      "provenance": "inferred",
-      "source": "open question Q19"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
+    },
+    {
+      "property": "D-LOCAL-TEXT-ECHOED",
+      "reason": "stated by the maintainer. The summary, notes and errors print header names, cell values and paths as they are; the file is the user's",
+      "false_friend": false,
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "D-OWN-SITE-READS",
-      "reason": "silence. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site)",
+      "reason": "stated by the maintainer. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site)",
       "false_friend": false,
-      "provenance": "inferred",
-      "source": "open question Q14"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "D-CALLER-FETCH",
-      "reason": "silence. The caller's fetch is used as it is; URL and redirect checks remain",
+      "reason": "stated by the maintainer. The caller's fetch is used as it is; URL and redirect checks remain",
       "false_friend": false,
-      "provenance": "inferred",
-      "source": "open question Q3"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "D-OTHER-NODES-NOTED",
@@ -875,10 +898,10 @@
     },
     {
       "property": "D-REMOTE-CONTENT-UNREVIEWED",
-      "reason": "silence. Names, URLs and shape are checked; the schema, example and texts are copied as the other node publishes them",
+      "reason": "stated by the maintainer. Names, URLs and shape are checked; the schema, example and texts are copied as the other node publishes them",
       "false_friend": false,
-      "provenance": "inferred",
-      "source": "open question Q15"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "D-PRERELEASE-CORRECTIONS",
@@ -889,24 +912,24 @@
     },
     {
       "property": "D-TOKEN-IN-STEP-ENV",
-      "reason": "silence. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event",
+      "reason": "stated by the maintainer. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event",
       "false_friend": false,
-      "provenance": "inferred",
-      "source": "open question Q17"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "D-AGENT-TEXT",
-      "reason": "silence. Model titles and descriptions reach llms.txt, catalog.json, pages and the AI adapter's schema descriptions as written; the skill sends agents to read such text",
+      "reason": "stated by the maintainer. Model titles and descriptions reach llms.txt, catalog.json, pages and the AI adapter's schema descriptions as written; the skill sends agents to read such text",
       "false_friend": false,
-      "provenance": "inferred",
-      "source": "open question Q21"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "D-SKILL-GUIDANCE-ONLY",
-      "reason": "silence. The skill is instructions; an agent may ignore them, and it runs commands with the user's rights",
+      "reason": "stated by the maintainer. The skill is instructions; an agent may ignore them, and it runs commands with the user's rights",
       "false_friend": true,
-      "provenance": "inferred",
-      "source": "open question Q21"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     },
     {
       "property": "D-RELEASE-SINGLE-GATE",
@@ -924,10 +947,10 @@
     },
     {
       "property": "D-NO-SHRINKWRAP",
-      "reason": "silence. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile",
+      "reason": "stated by the maintainer. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile",
       "false_friend": false,
-      "provenance": "inferred",
-      "source": "open question Q20"
+      "provenance": "documented",
+      "source": "maintainer ruling, 2026-10"
     }
   ],
   "attack_classes": [
@@ -1003,25 +1026,25 @@
     {
       "reported_as": "check --base passes although a released snapshot file changed or was removed",
       "why_safe": "Covers node-tools, action; symptom 'integrity-change'. Exact-match conditions (§1.15): `node.yaml` has `prerelease: true` at the base ref and in the change; the output lists the file as a note \"corrected in place during the pre-release\".",
-      "cites": "properties_not_provided[9]",
+      "cites": "properties_not_provided[10]",
       "suppression": "node.yaml has prerelease: true at the base ref and in the change; the output lists the file as a note \"corrected in place during the pre-release\""
     },
     {
       "reported_as": "the Action reads github.token\" or \"passes a token to git",
       "why_safe": "Covers action; symptom 'credential-exposure'. Exact-match conditions (§1.15): the token is used only in the \"Check\" step's `git fetch` of the base branch, through `GIT_CONFIG_*` environment variables, masked, with `persist-credentials: false` on the checkout.",
-      "cites": "properties_provided[13]",
+      "cites": "properties_provided[15]",
       "suppression": "the token is used only in the \"Check\" step's git fetch of the base branch, through GIT_CONFIG_* environment variables, masked, with persist-credentials: false on the checkout"
     },
     {
       "reported_as": "check exits 0 although an extended model or a remote context could not be read",
       "why_safe": "Covers node-tools, remote-reads; symptom 'missing-failure'. Exact-match conditions (§1.15): the output has a note for that URL; the URL belongs to another node.",
-      "cites": "properties_not_provided[7]",
+      "cites": "properties_not_provided[8]",
       "suppression": "the output has a note for that URL; the URL belongs to another node"
     },
     {
       "reported_as": "the publish workflow has id-token: write",
       "why_safe": "Covers release-pipeline; symptom 'excessive-permission'. Exact-match conditions (§1.15): the job is `publish` in `publish.yml`, runs on a published non-pre-release, installs with `--ignore-scripts`.",
-      "cites": "properties_provided[15]",
+      "cites": "properties_provided[17]",
       "suppression": "the job is publish in publish.yml, runs on a published non-pre-release, installs with --ignore-scripts"
     }
   ],
@@ -1036,126 +1059,5 @@
     "known_non_finding",
     "model_gap"
   ],
-  "open_questions": [
-    {
-      "claim": "Q1: Is the scope right: one model with eight families (`convert`, `node-tools`, `remote-reads`, `init-github`, `action`, `library`, `agent-skill`, `release-pipeline`); tests, `scripts/`, `changes/`, the toolkit pages on datamodels.jp, users' nodes and the catalogue out (the catalogue as a sibling model)? The person running the command line and the repository owner using the Action are the trusted integrators, with their command line, options, node folder and mapping files; the authors of CSV files, contributors to a node and operators of other nodes are untrusted; datamodels.jp is trusted for the content `convert` reads.",
-      "field": "description",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q2: The toolkit is not a sandbox. Node folders and mapping files are the user's configuration and are processed as data: no template, script or configuration from a node folder runs (the pages use the toolkit's own templates and Eleventy configuration; only a `.eleventyignore` in the current directory is read). Choose: (a) claim \"nothing in a node folder runs as code in `check` or `build`\", security-critical, with the `.eleventyignore` exception named, so a report of code execution from node files is `VALID`; or (b) disclaim it under `D-NOT-A-SANDBOX`.",
-      "field": "properties_provided",
-      "proposed": "(a), and keep `D-NOT-A-SANDBOX` for file access with the user's rights (a mapping's `via`, `git` in the folder)."
-    },
-    {
-      "claim": "Q3: Configuration support: `--site` and `--index` are chosen by the user and trusted; `--site http://…` is supported only as the user's choice (a network attacker on plain http is out of scope); a library caller's own `fetch` is supported and replaces `publicFetch`, so the caller owns the address check (`D-CALLER-FETCH`, correctness-only).",
-      "field": "build_variants",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q4: Side effects: network only as listed in §1.5; child processes only `git` (for `--base`, `init --github`) and `gh` (`init --github`), plus `npm ci` and `git fetch` in the Action; writes only to the named outputs, the node folder and a temporary folder that `check` removes; the toolkit's code reads no environment variables.",
-      "field": "environment",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q5: Reporting and coexistence: the repository has no `SECURITY.md` of its own; the organisation's default `SECURITY.md` and GitHub's private vulnerability reporting (enabled) are the channel; there is no earlier threat-model content to absorb; the catalogue's model is a sibling and treats the toolkit as a dependency.",
-      "field": "§1.1",
-      "proposed": "yes; the model sits alongside the organisation policy and replaces nothing."
-    },
-    {
-      "claim": "Q6: During a node's pre-release (`prerelease: true` at the base ref and in the change), `check --base` notes a change or removal of **any** release snapshot, not only the current version's. The toolkit's documentation allows that (\"An earlier version that should not have been published can be removed as a whole\"); the catalogue's README is stricter (only the current version is corrected). Is the toolkit's behaviour by design, with a stricter rule left to each node's review, so that the catalogue pilot's point (its Q4) is the catalogue's policy and not a toolkit defect?",
-      "field": "properties_not_provided",
-      "proposed": "yes, by design. An option for \"current version only\" is a candidate feature, not a fix."
-    },
-    {
-      "claim": "Q7: No size, row, column, nesting or count limit on CSV, YAML, JSON, schemas, contexts or data passed to the library; a CSV is read whole. Should that be a stated limit, correctness-only, because the files are the user's choice and the process is the user's own?",
-      "field": "properties_not_provided",
-      "proposed": "yes, stated, correctness-only."
-    },
-    {
-      "claim": "Q8: YAML is parsed with `yaml` 2.x defaults (YAML 1.2 core schema, no custom tags, no file or code access, a default limit on alias expansion); JSON with `JSON.parse`. A report about a YAML feature that runs code or reads a file is `OUT-OF-MODEL: dependency-contract`; deep nesting that throws is an error message, not a vulnerability.",
-      "field": "properties_not_provided",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q9: JSON Schemas are compiled by Ajv, which documents that schemas are trusted like code. The toolkit compiles the node's own schemas, the catalogue's (in `convert`), and in `check` any schema another public site serves for a `$ref` a node file names. Is a slow `pattern` (ReDoS) or a huge schema a stated limit, correctness-only, with the owner responsible for the `$ref`s they write?",
-      "field": "properties_not_provided",
-      "proposed": "yes, stated, correctness-only."
-    },
-    {
-      "claim": "Q10: JSON-LD: examples and contexts are expanded with `jsonld` and a document loader that answers the node's own files from the build, the NGSI-LD core context from a bundled copy, and any other https URL through the shared reader (not only listed nodes). A context that cannot be read is a note. Is that the intended contract?",
-      "field": "entry_points",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q11: A mapping file of the user's own is trusted configuration: its `via` may name any `.yaml` or `.yml` file relative to it, inside or outside the folder, and `convert` reads it. A report that a mapping file reads a file outside its folder is `OUT-OF-MODEL: trusted-input`.",
-      "field": "entry_points",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q12: Text from a CSV is not filtered where it is echoed. `mapping` writes unused header names into comments of the mapping file with their line breaks, so a header such as `\"extra⏎fields: …\"` adds a line to the YAML (tried on the bound commit); the summary on standard error prints header names and cell values as they are. Choose: (a) claim \"text from a CSV never adds lines to the mapping file\", correctness-only, so the current behaviour is `VALID` and gets a fix; or (b) disclaim it and leave the review of the generated file to the user.",
-      "field": "properties_provided",
-      "proposed": "(a); terminal output of local files stays disclaimed (the file is the user's)."
-    },
-    {
-      "claim": "Q13: `P-PUBLIC-READS` is security-critical and covers every read of another node: `check`, `build`, `search`, `nodes`, `export`, `extend`. Its only off-switch is a library caller's own `fetch`.",
-      "field": "properties_provided",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q14: Three reads do not use the shared reader: `--site` in `convert` and `mapping` (global `fetch`, redirects followed, no address check, no size cap, no deadline); the node's own published files in `check` and `release` (global `fetch` under `baseUrl`, redirects followed, `http://` allowed, 20 seconds, no size cap); `upgrade`'s read of GitHub's API. Their URLs are trusted input (the user's option, the owner's `baseUrl`, a fixed GitHub URL), so an SSRF report through them is `OUT-OF-MODEL: trusted-input`, and `P-PUBLISHED-COMPARISON` is correctness-only. In a node's pull request a contributor can change `baseUrl`, but already runs code in that job (Q18).",
-      "field": "trust_boundaries",
-      "proposed": "yes; state it as `D-OWN-SITE-READS`."
-    },
-    {
-      "claim": "Q15: What is trusted as data from the network: datamodels.jp for the content `convert` reads; GitHub's API for the release SHA in `upgrade`; other nodes for nothing, with names, URLs and shape checked. `extend` copies another node's schema, example and texts as published; reviewing them before a commit is the owner's job.",
-      "field": "entry_points",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q16: Resource bounds of reads of other nodes: 5 MB per answer, one deadline per read (20 s, 5 s for the type IRI's own index), depth 5 and 50 nodes. `P-REMOTE-READS-BOUNDED` is correctness-only, threshold \"more than 5 MB from one answer or reading past the deadline is a bug; slow is not\". Notes and errors of `check`, `extend` and `export` may carry URLs and messages from other nodes as they are; only the `search` and `nodes` listings are reduced to plain text.",
-      "field": "properties_provided",
-      "proposed": "yes to both."
-    },
-    {
-      "claim": "Q17: In the Action, `TOKEN` is set from `github.token` for the whole \"Check\" step on every event, so the `node` process and its dependencies run with the token in their environment (the toolkit's code does not read it). On a pull request the token is read-only for forks; on `main` it has the publish job's permissions. Is that a stated limit (`D-TOKEN-IN-STEP-ENV`, security-critical), with `P-ACTION-TOKEN-USE` claimed for what the Action itself does?",
-      "field": "properties_not_provided",
-      "proposed": "yes. Moving the token into the fetch alone is a hardening candidate."
-    },
-    {
-      "claim": "Q18: On `pull_request`, GitHub runs the contributor's merge commit, workflow file included, with that job's token. The toolkit adds no capability beyond that, so a contributor's report of code execution or a token in the check job is `OUT-OF-MODEL: adversary-not-in-scope`; the publish job runs only on `main` after the owner merged. Making the check required and not bypassing it is the owner's job.",
-      "field": "description",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q19: Outputs: `convert` output is exactly as untrusted as the CSV (`D-OUTPUT-TEXT-AS-INPUT`, security-critical, stated); `P-PAGES-ESCAPED` and `P-CONTEXT-IMPORTS-LISTED` are correctness-only because the text is the owner's and reviewed; `P-SQL-QUOTED` is security-critical because a model from another node reaches a database.",
-      "field": "properties_provided",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q20: Publish path: anyone who may publish a GitHub release publishes to npm, with no second approval (stated); `v*.*.*` tags cannot be moved or deleted by the organisation ruleset, which the operations team can bypass; the npm package ships no lockfile; GitHub, npm and Node.js are trusted. Is `D-NO-SHRINKWRAP` a stated limit (security-critical), and is a malicious transitive version `OUT-OF-MODEL: dependency-contract`?",
-      "field": "entry_points",
-      "proposed": "yes to both."
-    },
-    {
-      "claim": "Q21: The agent skill is guidance copied from the repository, not in the npm package; it tells agents to read `llms.txt`, `catalog.json` and MCP answers and to run commands. Nothing filters instructions in that text, and the toolkit writes model text into `llms.txt` and the AI adapter's descriptions as it is. Should `D-AGENT-TEXT` (security-critical) and `D-SKILL-GUIDANCE-ONLY` (correctness-only, false friend) be stated limits?",
-      "field": "entry_points",
-      "proposed": "yes to both."
-    },
-    {
-      "claim": "Q22: `init --github` always creates a **public** repository, commits only the files `init` wrote, and turns on Pages with the user's `gh` account. A private node is not supported by `init` (the user can create the repository themselves).",
-      "field": "environment",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q23: `P-PUBLISHED-COMPARISON` holds only online and only as far as the node's site answers; with `--offline` or an unreachable site it is a note. Is correctness-only the right tier?",
-      "field": "properties_provided",
-      "proposed": "yes."
-    },
-    {
-      "claim": "Q24: Bind this model to commit `4d88e4e` (release `v0.3.16` plus the pin commit), keep the triage policy `strict`, and re-run it at the next minor release or on any §1.16 trigger.",
-      "field": "§1.1",
-      "proposed": "yes."
-    }
-  ]
+  "open_questions": []
 }

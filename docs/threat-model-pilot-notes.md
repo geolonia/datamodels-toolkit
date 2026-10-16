@@ -8,9 +8,10 @@ as the two earlier pilots (Pointsman, geolonia/pointsman#96, and the
 datamodels.jp catalogue, geolonia/datamodels#290), in draft-first mode: the
 agent wrote version 1 from the public artifacts and collected 24 questions for
 the maintainer in §1.18. This run used Claude Opus 5.5 for the draft, as the
-catalogue pilot did (the Pointsman pilot used Claude Fable 5.1). Nothing has
-been answered yet; the model's status is *unratified draft* and its triage
-policy is `strict`. The catalogue is a separate model and is named as a
+catalogue pilot did (the Pointsman pilot used Claude Fable 5.1). The
+maintainer answered all 24 questions in one batch on 2026-10-17, accepting
+every proposed answer; the model's status is now *accepted* and its triage
+policy stays `strict`. The catalogue is a separate model and is named as a
 sibling in §1.1.
 
 ## Time spent
@@ -25,12 +26,15 @@ draft pull request.
 | Draft the prose | about 7 min | 16,900 words; the validator warns about length, as in both earlier pilots. |
 | Backtest, sidecar, JSON export, validator loop | about 9 min | Four validator rounds; the sidecar was generated from the prose tables by a script this time (see below). |
 | Lessons note, commit, draft pull request | about 5 min | |
-| **Total** | **about 32 min agent time** | The maintainer's reading and answers are still to come. |
+| Maintainer: answer the 24 questions | one batch on 2026-10-17 | Every proposed answer accepted, as in the Pointsman pilot. |
+| Apply the wave: promote tags, two new claims (Q2, Q12), retire §1.18, re-run the backtest, `SECURITY.md`, regenerate the companions | about 10 min | Two validator rounds: the worked-examples table allows at most four rows, and the JSON schema has no `maintainer` value for a trust boundary (a maintainer ruling is exported as `documented`). The first attempt was stopped by the agent's permission mode, because the request to record the answers came from another session; the maintainer confirmed in this session. |
+| **Total** | **about 42 min agent time**, plus the maintainer's reading | |
 
 As in both earlier pilots, the source comments and the toolkit pages already
 state much of the contract, so many claims could be tagged **documented**.
 The share of open claims is higher than in the catalogue pilot: the draft
-counts 192 documented, 0 maintainer, 65 inferred and 26 assumption tags,
+counted 192 documented, 0 maintainer, 65 inferred and 26 assumption tags;
+after the wave 193 documented and 97 maintainer (0 inferred, 0 assumption),
 counted as the validator counts. A command line promises less in writing than
 a catalogue does about resource limits, sandboxing and what its output may
 contain, and those are exactly the dimensions the skill asks about.
@@ -142,10 +146,18 @@ the Geolonia question-bank extension, same proposed-answer style):
   no line with "password", and writes `TOKEN` without its `${{ }}` value in
   prose. The pull request's checks are the real test.
 
-## The questions of the first draft and their proposed answers
+## The questions of the first draft and their answers
 
-All 24 are open. Answer them in one batch, for example "Q3 yes, Q9 no,
-because …"; a "yes" accepts the proposed answer.
+All 24 were answered on 2026-10-17 with the proposed answer; the ratified
+claims carry *(maintainer, 2026-10)* in `threat-model.md`, and §1.18 is now
+marked not applicable. The list is kept here as the record of what was
+asked, since the skill deletes answered questions from the model. Two answers
+added claims: Q2 (`P-NODE-FILES-ARE-DATA`, security-critical) and Q12
+(`P-CSV-TEXT-NO-NEW-LINES`, correctness-only, with `D-LOCAL-TEXT-ECHOED` for
+terminal output). The second is violated at the bound commit: the model
+records that a report of it is `VALID`, and the fix stays candidate issue 1.
+The backtest re-run turns the two former `MODEL-GAP`s into `VALID` and the
+eleven escalated closes into closes; fail-safe figure still 0 of 9.
 
 **Wave 1 — scope, roles, configuration, side effects**
 
@@ -250,8 +262,8 @@ belong in issues, not in the threat model:
    that the transitive tree is resolved at install time (Q20).
 6. Consider a release environment with a required reviewer for `publish.yml`,
    or keep the single gate and say so in a `SECURITY.md` (Q20).
-7. A `SECURITY.md` in the repository that links this model, as Pointsman did
-   after its pilot (Q5).
+7. ~~A `SECURITY.md` in the repository that links this model, as Pointsman
+   did after its pilot (Q5).~~ Done in this PR.
 8. Document in the README that a mapping file is trusted configuration and
    that `via` can read any YAML file (Q11).
 9. Upstream to Alpha-Omega: a sidecar generator from the prose tables, the
@@ -269,6 +281,8 @@ belong in issues, not in the threat model:
   prose by SHA-256.
 - `threat-model.json` — the flat export (`schema.json`, spec 1), with
   `description` and `trust_boundaries` completed by hand.
+- `SECURITY.md` — the reporting channel and how reports are triaged against
+  the model.
 - `.threat-model/backtest.md` — producer-side routing table, ignored by git
   and not in the repository, as the skill asks; only the aggregate figures in
   §1.1 are published.

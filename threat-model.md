@@ -13,26 +13,29 @@
   one commit that only changes the version `init` pins and the README. A report
   against another release is triaged against the model as it stood at that
   release, not against this model.
-- **Date / author**: 2026-10-16, drafted for the maintainer, Daniel Kastl, who
-  ratifies the claims in §1.18.
+- **Date / author**: drafted 2026-10-16; ratified by the maintainer, Daniel
+  Kastl, on 2026-10-17, who accepted every proposed answer of the 24 questions
+  of the first draft in one batch.
 - **Generation metadata**: produced with AI assistance. Model/agent: Claude
   Opus 5.5 (`claude-opus-5-5`) in Claude Code; effort: session default.
   Skills used: the Alpha-Omega `threat-model` plugin, version 1.2.1 at commit
   `192fd60cd0afe8851128ce4c68ed68c174c11948` (orchestrator plus
   `threat-model-recon`, `threat-model-surface`, `threat-model-interview` in
   draft-first mode, `threat-model-authoring`, `threat-model-backtest`,
-  `threat-model-sidecar`). No MCP servers were used. Questions were adapted
+  `threat-model-sidecar`). No MCP servers were used. The maintainer's answers
+  were applied on 2026-10-17 by the same process. Questions were adapted
   from the two earlier Geolonia pilots (Pointsman and the datamodels.jp
   catalogue); the others were written for a command line and an Action.
 - **Reporting cross-reference**: a finding that violates a §1.11 claimed
   property is reported through GitHub's private vulnerability reporting for
-  this repository, which is enabled, as the organisation's default
-  `SECURITY.md` (geolonia/.github) asks. A finding that lands in §1.3 or §1.12
+  this repository, which is enabled, as [`SECURITY.md`](SECURITY.md) asks. A finding that lands in §1.3 or §1.12
   is closed citing this document.
-- **Status**: unratified draft, 2026-10-16. No maintainer answer has been
-  recorded yet; the questions are in §1.18. Closure constraint: an
-  **inferred** claim may escalate a report but never close it, and an
-  **assumption** closes only what the triage policy below permits.
+- **Status**: accepted, 2026-10-17. Every claim is **documented** or
+  **maintainer**; no **inferred** or **assumption** claim remains, and §1.18
+  has no open question. Closure constraint: an **inferred** claim may escalate
+  a report but never close it, and an **assumption** closes only what the
+  triage policy below permits; a later revision that adds either kind returns
+  the model to review.
 - **Triage policy**: `strict`. An **assumption** escalates and never closes.
   See §1.17.
 - **Provenance legend**: *(documented, source)* = stated in the named public
@@ -45,7 +48,7 @@
   default, open as question `QN` in §1.18.
 - **Glossary**: a short plain-language glossary is at the end of this document
   (Appendix A).
-- **Draft confidence**: 192 documented / 0 maintainer / 65 inferred / 26 assumption.
+- **Draft confidence**: 193 documented / 97 maintainer / 0 inferred / 0 assumption.
   Counted as the plugin's validator counts, over §1.2 to §1.19: one count per
   parenthesised tag, by its first kind; the tags in this header and its legend
   are not counted.
@@ -53,15 +56,18 @@
   items and 20 synthesized. The real items are the fixed defects in
   `CHANGELOG.md` ("Security" and "Fixed" of 0.3.15 and 0.3.16) and issue #93;
   there are no advisories and no issues labelled security. The cases cover all
-  eight in-scope families. Dispositions: 12 `VALID`, 4 `KNOWN-NON-FINDING`
-  (closed), 7 `BY-DESIGN: property-disclaimed` (1 closed, 6 escalated on Q7,
-  Q9, Q15, Q17, Q19, Q21), 2 `OUT-OF-MODEL: trusted-input` (escalated, Q11,
-  Q14), 1 `OUT-OF-MODEL: adversary-not-in-scope` (escalated, Q18), 1
-  `OUT-OF-MODEL: dependency-contract` (escalated, Q20), 2 `MODEL-GAP` (the
-  unresolved rows of Q2 and Q12), 0 `VALID-HARDENING`. Fail-safe figure: 0 of
-  9 historically-fixed items route to a closing disposition; all 9 route
-  `VALID`. 5 of 29 close outright, each licensed by a **documented** claim. No
-  contradictions with a historical call. The routing table is producer-side
+  eight in-scope families. Re-run on 2026-10-17 after the maintainer's answers,
+  for every case whose route depended on an answered question. Dispositions:
+  14 `VALID`, 4 `KNOWN-NON-FINDING` (closed), 7 `BY-DESIGN:
+  property-disclaimed` (closed), 2 `OUT-OF-MODEL: trusted-input` (closed), 1
+  `OUT-OF-MODEL: adversary-not-in-scope` (closed), 1 `OUT-OF-MODEL:
+  dependency-contract` (closed), 0 `MODEL-GAP`, 0 `VALID-HARDENING`. The two
+  former `MODEL-GAP`s now route `VALID` against the two new claims
+  (`P-NODE-FILES-ARE-DATA`, `P-CSV-TEXT-NO-NEW-LINES`); the eleven escalated
+  closes now close. Fail-safe figure: 0 of 9 historically-fixed items route to
+  a closing disposition; all 9 route `VALID`. 15 of 29 close outright, each
+  licensed by a **documented** or **maintainer** claim. No contradictions with
+  a historical call. The routing table is producer-side
   (`.threat-model/backtest.md`, ignored by git), as the skill asks; the figures
   here are the only published part.
 - **Sibling models**: the datamodels.jp catalogue (geolonia/datamodels) has
@@ -148,15 +154,15 @@ Worker" *(documented, README "Build library")*.
 - **Person running the command line (integrator).** Runs `datamodels` on their
   own machine, on files they chose, with their own rights. Trusted for the
   command line, the options, the node folder and any mapping file they pass
-  *(assumption, Q1)*.
+  *(maintainer, 2026-10)*.
 - **Repository owner using the Action (integrator).** Writes the workflow
   (usually the one `init` writes), grants the job its permissions, and decides
   what is merged into `main` *(documented, README "The workflow")*. Trusted.
 - **Author of an input file.** Whoever wrote the CSV list being converted: a
   municipality's open-data list, a list someone sent. Untrusted for the
-  content *(assumption, Q1)*.
+  content *(maintainer, 2026-10)*.
 - **Contributor to a node.** Anyone who sends a pull request to a node's
-  repository. Untrusted until the owner merges *(assumption, Q18)*.
+  repository. Untrusted until the owner merges *(maintainer, 2026-10)*.
 - **Operator of another node.** Whoever runs a site the toolkit reads:
   another node's `catalog.json`, schemas, contexts and examples. Untrusted
   *(documented, src/discover.mjs `plain` comment: "Text from another site, for a terminal")*.
@@ -182,14 +188,15 @@ Worker" *(documented, README "Build library")*.
 
 The split follows the principle that a family with its own release cadence and
 adversary gets its own document: the catalogue is a separate model
-*(assumption, Q1)*.
+*(maintainer, 2026-10)*.
 
 ## 1.3 Out of scope (explicit non-goals)
 
 - **Sandboxing.** The toolkit runs with the rights of the person or job that
-  starts it and reads the files it is given. It does not isolate a node
+  starts it and reads the files it is given. Nothing in a node folder runs as
+  code (`P-NODE-FILES-ARE-DATA`), but the toolkit does not isolate a node
   folder, a mapping file or a CSV from the rest of the machine
-  (`D-NOT-A-SANDBOX`) *(inferred, Q2)*.
+  (`D-NOT-A-SANDBOX`) *(maintainer, 2026-10)*.
 - **Judging truth.** `check` and `convert` check shape: JSON Schema, NGSI-LD
   rules, JSON-LD expansion, the `@context` terms. They do not judge whether a
   value is true, safe to render, lawful to publish or personal data
@@ -205,11 +212,11 @@ adversary gets its own document: the catalogue is a separate model
   `release-pipeline` only as the path code takes into `main`.
 - **`toolkit-docs`.** The pages are maintained in geolonia/datamodels. They
   are cited where they state what a command does; a mistake in their prose is
-  a documentation bug there *(assumption, Q1)*.
+  a documentation bug there *(maintainer, 2026-10)*.
 - **`catalogue`.** Modelled separately (§1.1).
 - **`user-nodes`.** A site built with the toolkit belongs to its owner, who
   hosts, reviews and merges it. The toolkit's output is in scope (§1.8); the
-  owner's hosting, branch rules and domain are not *(assumption, Q18)*.
+  owner's hosting, branch rules and domain are not *(maintainer, 2026-10)*.
 - **Threats not defended against:** a compromised account of a toolkit
   maintainer, a compromised GitHub or npm, a malicious Node.js, `git` or `gh`,
   and an attacker who already controls the machine or the job that runs the
@@ -238,13 +245,13 @@ There are five boundaries:
 
 1. **Command-line boundary.** The person running `datamodels` chooses the
    command, the options and the folder. These are trusted. The *content* of a
-   CSV is not *(assumption, Q1)*.
+   CSV is not *(maintainer, 2026-10)*.
 2. **Network boundary.** Files of other nodes are read only through the
    shared reader: https, a public host name, an address checked when
    connecting, every redirect checked again *(documented, src/adapters/net.mjs header: "only https, and only to a public address")*.
    Three other reads do not use it: `convert`'s `--site`, the comparison of
    `check` and `release` with the node's own published files, and `upgrade`'s
-   read of GitHub's API (§1.7) *(inferred, Q14)*.
+   read of GitHub's API (§1.7) *(maintainer, 2026-10)*.
 3. **Pull-request boundary of a node.** On `pull_request` the Action runs the
    contributor's merge commit with the job's token. GitHub gives a pull
    request from a fork a read-only token and no secrets; the workflow `init`
@@ -289,10 +296,10 @@ Reachability preconditions:
 | Effect | Stance | Components | Conditions | Provenance |
 | --- | --- | --- | --- | --- |
 | Outbound network through the shared reader | present | `remote-reads`, `node-tools` | `search`, `nodes`, `export`, `extend`; `check` and `build` for other nodes' schemas, contexts and indexes; none with `--offline` | *(documented, src/adapters/index.mjs `getter` comment: "with the global fetch (the default everywhere), it reads through publicFetch")* |
-| Outbound network outside the shared reader | present | `convert`, `node-tools` | `convert` and `mapping` read `--site` (default `https://datamodels.jp`) with the global `fetch`; `check` and `release` read the node's own published files under `baseUrl`; `upgrade` reads `https://api.github.com/repos/geolonia/datamodels-toolkit/` | *(assumption, Q4)* |
-| Child processes | present | `node-tools`, `init-github`, `action` | `git rev-parse`, `git show`, `git diff` for `check --base`; `gh` and `git` for `init --github`; the Action runs `npm ci` and `git fetch`. Search: `grep -rn "execFile" src bin` — 2 files, `src/build/published.mjs` and `bin/datamodels.mjs` (for `init`) | *(assumption, Q4)* |
-| Filesystem writes | present | all command families | only the named outputs: `--out` of `convert` (overwrites), `mapping` (never overwrites), `export` (overwrites files of the same name), `build` into `_site/` or `--out`; `init`, `add`, `extend`, `release`, `bump`, `upgrade` write into the node folder; `check` builds into a temporary folder and removes it | *(assumption, Q4)* |
-| Environment variables | absent in the toolkit's code | all | `grep -rn "process.env" src bin` — 0 hits. Dependencies may read their own (Eleventy, Node.js) | *(assumption, Q4)* |
+| Outbound network outside the shared reader | present | `convert`, `node-tools` | `convert` and `mapping` read `--site` (default `https://datamodels.jp`) with the global `fetch`; `check` and `release` read the node's own published files under `baseUrl`; `upgrade` reads `https://api.github.com/repos/geolonia/datamodels-toolkit/` | *(maintainer, 2026-10)* |
+| Child processes | present | `node-tools`, `init-github`, `action` | `git rev-parse`, `git show`, `git diff` for `check --base`; `gh` and `git` for `init --github`; the Action runs `npm ci` and `git fetch`. Search: `grep -rn "execFile" src bin` — 2 files, `src/build/published.mjs` and `bin/datamodels.mjs` (for `init`) | *(maintainer, 2026-10)* |
+| Filesystem writes | present | all command families | only the named outputs: `--out` of `convert` (overwrites), `mapping` (never overwrites), `export` (overwrites files of the same name), `build` into `_site/` or `--out`; `init`, `add`, `extend`, `release`, `bump`, `upgrade` write into the node folder; `check` builds into a temporary folder and removes it | *(maintainer, 2026-10)* |
+| Environment variables | absent in the toolkit's code | all | `grep -rn "process.env" src bin` — 0 hits. Dependencies may read their own (Eleventy, Node.js) | *(maintainer, 2026-10)* |
 | Code from the node folder | absent, with one named exception | `node-tools` | pages use the toolkit's own templates and its own Eleventy configuration; Eleventy still reads a `.eleventyignore` in the current directory | *(documented, src/build/pages.mjs `writePages` comment: "A .eleventyignore in the current directory is still read")* |
 | Writes to the user's GitHub | present | `init-github` | only with `--github`: creates a public repository, pushes the first commit, turns on Pages | *(documented, src/init.mjs `publishToGitHub` comment: "create the public repository `repo`")* |
 | Writes to the node repository from the Action | absent | `action` | the Action pushes nothing and calls no GitHub API with the token; it uploads a Pages artifact and deploys it | *(documented, action.yml header comment: "check the node, build its files and pages, and deploy them")* |
@@ -306,9 +313,9 @@ Reachability preconditions:
 | `prerelease: true` in `node.yaml` | absent | while true at the base ref and in the change, changes and removals of published files are notes; voids `P-BASE-COMPARISON` for that time | supported until a node's launch; once false at the base it cannot become true again | *(documented, datamodels.jp/en/toolkit/versions "Before the launch")* |
 | `--all-released` on `check` | off | requires a snapshot of each subject's current version | supported | *(documented, datamodels.jp/en/toolkit/versions: "`--all-released` also requires a snapshot of each subject's current version")* |
 | Action input `deploy` | `'true'` | `'false'` only checks and builds; nothing is deployed | supported | *(documented, action.yml input `deploy` description)* |
-| `--site <URL or dir>` on `convert`, `mapping` | `https://datamodels.jp` | another site or a local copy of it; `http://` is accepted | supported; the user chooses it (trusted input) | *(inferred, Q3)* |
+| `--site <URL or dir>` on `convert`, `mapping` | `https://datamodels.jp` | another site or a local copy of it; `http://` is accepted | supported; the user chooses it (trusted input) | *(maintainer, 2026-10)* |
 | `--index <URL>` on `search`, `nodes`, `export`, `extend` | `https://datamodels.jp/catalog.json`, or the index of the node that made a type IRI | where models are read from; always through the shared reader | supported | *(documented, datamodels.jp/en/toolkit/reference `--index` rows)* |
-| `fetch` option of the library functions (`getter`, `checkNode`, `buildNode`, `exportModel`, …) | the global `fetch`, which the reader replaces with `publicFetch` | a caller's own `fetch` is used as it is: the address check at connection and the 5 MB cap no longer apply; the URL and redirect checks still do | supported for tests and library callers, who then own the address check | *(inferred, Q3)* |
+| `fetch` option of the library functions (`getter`, `checkNode`, `buildNode`, `exportModel`, …) | the global `fetch`, which the reader replaces with `publicFetch` | a caller's own `fetch` is used as it is: the address check at connection and the 5 MB cap no longer apply; the URL and redirect checks still do | supported for tests and library callers, who then own the address check | *(maintainer, 2026-10)* |
 | `--github owner/name` on `init` | off | creates a public repository and turns on Pages with the user's `gh` account | supported | *(documented, bin/datamodels.mjs header: "With --github owner/name it also creates the repository and turns on Pages")* |
 | `--yes` on `init` | off | never asks; a missing answer is a usage error | supported | *(documented, bin/datamodels.mjs `init`: "Questions only in a terminal")* |
 
@@ -328,37 +335,37 @@ line, and the individual fields of `catalog.yaml`, `notes.yaml`,
 | Entry point | Input operand | Attacker-controllable? | Control kind | Caller must enforce | Provenance |
 | --- | --- | --- | --- | --- | --- |
 | `convert`, `mapping` | the CSV bytes | **yes**, the file's author | data, size | nothing for shape: UTF-8 or Shift_JIS decoded strictly, RFC 4180 parsed strictly; the user bounds the size (`D-NO-INPUT-LIMITS`) | *(documented, src/convert.mjs `parseCsv` comment: "Throws on what would otherwise shift or merge values silently")* |
-| `convert`, `mapping` | CSV header names | **yes** | data | nothing for conversion; written into the generated mapping file's comments as they are (Q12) | *(inferred, Q12)* |
+| `convert`, `mapping` | CSV header names | **yes** | data | nothing; text from a CSV may not add lines to the generated mapping file (`P-CSV-TEXT-NO-NEW-LINES`, violated at the bound commit); echoed to the terminal as it is (`D-LOCAL-TEXT-ECHOED`) | *(maintainer, 2026-10)* |
 | `convert` | cell values | **yes** | data | the user checks the entities; every entity is validated against the schema; values are not escaped for any later use (`D-OUTPUT-TEXT-AS-INPUT`) | *(documented, bin/datamodels.mjs header: "validates every entity against the model's schema")* |
 | `convert` | a cell read with the `json` transform | **yes** | data, object-topology | the value is parsed with `JSON.parse` and placed into the entity; the schema decides what is allowed | *(documented, src/convert.mjs `apply` case `json`)* |
 | `convert` | the mapping argument: a catalogue mapping name, `csv-template` or a path | no — the user chooses it | resource-name | n/a | *(documented, bin/datamodels.mjs header: "The mapping may also be a file of your own")* |
-| `convert`, `mapping` | a mapping file of the user's own and the files its `via` names | no — trusted configuration; `via` may name any `.yaml` file relative to it | resource-name, data | the user writes or reviews the mapping file (`D-NOT-A-SANDBOX`) | *(inferred, Q11)* |
+| `convert`, `mapping` | a mapping file of the user's own and the files its `via` names | no — trusted configuration; `via` may name any `.yaml` file relative to it | resource-name, data | the user writes or reviews the mapping file (`D-NOT-A-SANDBOX`) | *(maintainer, 2026-10)* |
 | `convert`, `mapping` | `--site` | no — the user chooses it | resource-name | n/a; a local directory is read only inside it | *(documented, src/catalog.mjs `siteReader` comment: "the file must stay inside the site directory")* |
 | `convert`, `mapping` | `catalog.json`, schemas and mapping files read from the site | no — the catalogue is trusted for content (§1.9); only `https://datamodels.jp` URLs are read, by path | data | n/a | *(documented, src/catalog.mjs header: "URLs in the catalog always name https://datamodels.jp")* |
 | `convert` | `--set attribute=value` | no — command line | data | n/a | *(documented, bin/datamodels.mjs header: "--set attribute=value (for what the list does not carry")* |
 | `convert`, `mapping` | `--out` path | no — command line | resource-name | `convert` overwrites it; `mapping` never does | *(documented, bin/datamodels.mjs `mapping`: "A mapping someone has filled in is work: never write over it")* |
 | `check`, `build`, `release`, `bump`, `add` | `node.yaml` | **yes**, a contributor to the node | data, resource-name | the owner reviews it; settings are checked (URLs http(s) without credentials, `nodes` https only) | *(documented, src/build/node.mjs `settingsProblems` and `httpUrl` comment: "Every URL here is published")* |
-| `check`, `release` | `baseUrl` in `node.yaml`, as the address of the node's published files | **yes**, a contributor; trusted once merged | resource-name | the owner reviews it; the toolkit reads under it with the global `fetch` (§1.6, Q14) | *(inferred, Q14)* |
+| `check`, `release` | `baseUrl` in `node.yaml`, as the address of the node's published files | **yes**, a contributor; trusted once merged | resource-name | the owner reviews it; the toolkit reads under it with the global `fetch` (§1.6, `D-OWN-SITE-READS`) | *(maintainer, 2026-10)* |
 | `check`, `build` | `models/<subject>/context.jsonld` | **yes**, a contributor | data, resource-name | review; imports by URL only from the node's own or a listed node's `/context/` | *(documented, src/build/load.mjs import check: "only catalog contexts may be imported by URL")* |
-| `check`, `build` | `models/<subject>/<Type>/schema.json` | **yes** | data, size, resource-name (`$ref`) | review; compiled by Ajv in `check` (Q9); `$ref` to another site read only through the shared reader | *(inferred, Q9)* |
+| `check`, `build` | `models/<subject>/<Type>/schema.json` | **yes** | data, size, resource-name (`$ref`) | review; compiled by Ajv in `check` (`D-SCHEMA-COMPILE-COST`); `$ref` to another site read only through the shared reader | *(maintainer, 2026-10)* |
 | `check`, `build` | examples (`example.json`, `example-normalized.jsonld`) | **yes** | data | review; validated, expanded and compacted; an example's own `@context` URL is read through the shared reader | *(documented, datamodels.jp/en/toolkit/check "What check checks")* |
 | `check`, `build` | `catalog.yaml`, `notes.yaml`, `subject.yaml`, mapping tables, `ADOPTERS.yaml`, `extensions/*.yaml` | **yes** | data, x-agent-text | review of wording; escaped on pages (`P-PAGES-ESCAPED`); unfiltered in `llms.txt`, `catalog.json` and the AI adapter (`D-AGENT-TEXT`) | *(documented, src/build/pages.mjs `setNunjucksEnvironmentOptions({ autoescape: true` )* |
 | `check`, `build` | `extends[].index` in `catalog.yaml` | **yes** | resource-name | must be https; read through the shared reader | *(documented, src/build/node.mjs `loadNode` comment: "extends goes into catalog.json as written, so it is checked here")* |
-| `check`, `build` | the folder and file names under `models/` | **yes** | resource-name | names become URL paths and file names of the site; subject and type names are checked by the model rules | *(assumption, Q2)* |
+| `check`, `build` | the folder and file names under `models/` | **yes** | resource-name | names become URL paths and file names of the site; subject and type names are checked by the model rules | *(maintainer, 2026-10)* |
 | `check --base` | the git ref | no — command line (the Action passes `origin/<base>`) | resource-name | n/a | *(documented, src/build/published.mjs `compareWithBase` comment)* |
 | `check --base` | `node.yaml` and the release snapshots at the ref | no — the base branch, already merged | data | n/a | *(documented, src/build/published.mjs header: "The base branch decides")* |
-| `check`, `release` | the node's published files, as its site answers | **yes**, whoever controls the site or its DNS; normally the owner | data, size | n/a; compared byte for byte; no size cap | *(inferred, Q14)* |
+| `check`, `release` | the node's published files, as its site answers | **yes**, whoever controls the site or its DNS; normally the owner | data, size | n/a; compared byte for byte; no size cap | *(maintainer, 2026-10)* |
 | `upgrade` | GitHub API answers for the latest or named release and its commit | no — GitHub is trusted (§1.9) | data | n/a; tag must be `vX.Y.Z`, SHA 40 hex digits | *(documented, src/version.mjs `upgradeNode`: "A release, not only a tag or branch of that name")* |
 | `upgrade` | the node's workflow and Markdown files | no — the owner's | data | n/a; only the `uses:` line of this Action and `npx` lines change | *(documented, src/version.mjs `upgradeNode` comment)* |
 | `search`, `nodes` | `--index` and `--depth` | no — command line | resource-name, size | n/a; depth 0 to 5 | *(documented, src/discover.mjs `MAX_DEPTH` comment: "a large network cannot keep the command busy")* |
 | `search`, `nodes` | each linked node's `catalog.json` (`nodes`, `extends`, models, titles) | **yes**, the other node's operator | data, size, resource-name | nothing; read through the shared reader; at most 50 nodes; text printed as plain text | *(documented, src/discover.mjs header: "Every read goes through the adapters' getter")* |
 | `export`, `extend` | the model argument (`subject/Type` or a type IRI) | no — command line | resource-name | n/a; a type IRI selects the index of the node that made it | *(documented, src/discover.mjs `indexForModel` comment)* |
 | `export`, `extend` | the other node's catalog entry (type, version, URLs, texts) | **yes** | data, resource-name | nothing; type must be UpperCamelCase and version `x.y.z`; schema and example only under that node's `schema/` and `examples/` | *(documented, CHANGELOG.md 0.3.15 "Security": "so a catalog cannot add lines to the files they write")* |
-| `extend` | the other node's schema and example | **yes** | data, size | the owner reviews what `extend` copied before committing (`D-REMOTE-CONTENT-UNREVIEWED`) | *(assumption, Q15)* |
+| `extend` | the other node's schema and example | **yes** | data, size | the owner reviews what `extend` copied before committing (`D-REMOTE-CONTENT-UNREVIEWED`) | *(maintainer, 2026-10)* |
 | all reads of other nodes | HTTP status, headers, redirects, body size, timing | **yes** | data, size, rate | nothing; at most 5 redirects, each checked; 5 MB; one deadline per read | *(documented, src/adapters/index.mjs `getter` comment: "One deadline for the read")* |
 | all reads of other nodes | DNS answers for the other node's host | **yes** | resource-name | nothing; every address must be public, checked at connection | *(documented, src/adapters/net.mjs `publicLookup` comment: "dns.lookup that refuses a host with any non-public address")* |
 | `check` (JSON-LD) | remote `@context` documents named by examples and contexts | **yes** | data, size | nothing; read through the shared reader; an unread one is a note | *(documented, src/build/examples.mjs `contextLoader`)* |
-| `check` (Ajv) | remote schemas named by `$ref` | **yes**, if a node file names them | data, size | the owner chooses which `$ref`s to write; compiled by Ajv (Q9) | *(inferred, Q9)* |
+| `check` (Ajv) | remote schemas named by `$ref` | **yes**, if a node file names them | data, size | the owner chooses which `$ref`s to write; compiled by Ajv (`D-SCHEMA-COMPILE-COST`) | *(maintainer, 2026-10)* |
 | `export` | `--to`, `--out` | no — command line | resource-name | `--out` files of the same name are overwritten | *(documented, src/export.mjs `writeExport` comment: "over files of the same name")* |
 | `init` | options and answers (`--base-url`, publisher, licence, subject, `--github`) | no — command line or terminal | data | n/a; checked before anything is written | *(documented, bin/datamodels.mjs `init`: "init: nothing written")* |
 | `init` | the existing content of the target folder | no — the user's | data | n/a; never overwritten; with `--github`, other files stop it | *(documented, src/init.mjs `writeNode` comment: "never over an existing file")* |
@@ -366,23 +373,23 @@ line, and the individual fields of `catalog.yaml`, `notes.yaml`,
 | Action | input `directory` | no — the owner's workflow | resource-name | n/a; passed in the environment | *(documented, action.yml header comment: "Inputs reach the shell only through environment variables")* |
 | Action | inputs `deploy`, `offline` | no — the owner's workflow | data | n/a | *(documented, action.yml header comment)* |
 | Action | `github.base_ref` | **yes** in principle, the base branch name of a pull request, chosen among existing branches | resource-name | n/a; passed in the environment, used inside a refspec | *(documented, action.yml step "Check", env `BASE_REF`)* |
-| Action | the checked-out node repository (on a pull request, the merge commit) | **yes**, a contributor | data, callback-code | the owner's workflow decides what runs; on `pull_request` the contributor's workflow file runs as well (Q18) | *(assumption, Q18)* |
+| Action | the checked-out node repository (on a pull request, the merge commit) | **yes**, a contributor | data, callback-code | the owner's workflow decides what runs; on `pull_request` the contributor's workflow file runs as well (§1.10) | *(maintainer, 2026-10)* |
 | Action | `github.token` | no — GitHub | collaborator-implementation | the owner grants the job only what it needs | *(documented, action.yml comment: "the token is passed to this one fetch in the environment")* |
-| library | the `fetch` option | no — the calling program | collaborator-implementation | the caller does the address check its own `fetch` skips (§1.6) | *(inferred, Q3)* |
-| `agent-skill` | text the agent reads while following it (`llms.txt`, `catalog.json`, MCP answers, CSV content) | **yes**, the authors of that text | x-agent-text | the user and the agent's own controls (`D-AGENT-TEXT`) | *(inferred, Q21)* |
+| library | the `fetch` option | no — the calling program | collaborator-implementation | the caller does the address check its own `fetch` skips (§1.6) | *(maintainer, 2026-10)* |
+| `agent-skill` | text the agent reads while following it (`llms.txt`, `catalog.json`, MCP answers, CSV content) | **yes**, the authors of that text | x-agent-text | the user and the agent's own controls (`D-AGENT-TEXT`) | *(maintainer, 2026-10)* |
 
 ### Size, shape and rate
 
 - **Local files.** No size, row, column, nesting or count limit on CSV, YAML,
   JSON, schemas or contexts; a CSV is read whole into memory
-  *(inferred, Q7)*. JSON is parsed with `JSON.parse`, YAML with `yaml` 2.x
-  defaults *(inferred, Q8)*.
+  *(maintainer, 2026-10)*. JSON is parsed with `JSON.parse`, YAML with `yaml` 2.x
+  defaults *(maintainer, 2026-10)*.
 - **Other nodes.** 5 MB per response, at most 5 redirects, one deadline per
   read (20 seconds; 5 seconds for the guess at a type IRI's own index), at
   most depth 5 and 50 nodes for `search` and `nodes` *(documented, src/adapters/net.mjs `MAX_BYTES` and src/discover.mjs `MAX_DEPTH`, `MAX_NODES`, `OWN_INDEX_TIMEOUT`)*.
 - **The node's own site** (`check`, `release`): 20 seconds per file, no size
-  cap *(inferred, Q14)*.
-- **`--site`** (`convert`): no deadline and no size cap *(inferred, Q14)*.
+  cap *(maintainer, 2026-10)*.
+- **`--site`** (`convert`): no deadline and no size cap *(maintainer, 2026-10)*.
 
 ### Contract-dimension matrix
 
@@ -401,20 +408,20 @@ may read as instructions).
 | `convert` | serialization and reconstruction | claimed | a `__proto__` column or attribute stays data in the NGSI-LD helpers | §1.11 `P-NGSI-PROTO-AS-DATA` | *(documented, src/ngsi.mjs `setOwn` comment: "would change the object's prototype and drop the attribute")* |
 | `convert` | reference and object lifecycle | N/A — one run, no objects outlive it | | §1.5 | *(documented, bin/datamodels.mjs header)* |
 | `convert` | concurrency and reentrancy | N/A — one process per command | | §1.5 | *(documented, bin/datamodels.mjs header)* |
-| `convert` | resource complexity | disclaimed | no limit on file size, rows or columns; the whole CSV is in memory | §1.12 `D-NO-INPUT-LIMITS` | *(inferred, Q7)* |
-| `convert` | x-outbound-requests | disclaimed | `--site` is read with the global `fetch`: redirects followed, no address check, no deadline | §1.12 `D-OWN-SITE-READS` | *(inferred, Q14)* |
-| `convert` | x-agent-instructions | unresolved | CSV header text is written into the comments of the generated mapping file with line breaks kept, so it can add lines that an agent or `convert` reads | §1.18 Q12 | *(inferred, Q12)* |
+| `convert` | resource complexity | disclaimed | no limit on file size, rows or columns; the whole CSV is in memory | §1.12 `D-NO-INPUT-LIMITS` | *(maintainer, 2026-10)* |
+| `convert` | x-outbound-requests | disclaimed | `--site` is read with the global `fetch`: redirects followed, no address check, no deadline | §1.12 `D-OWN-SITE-READS` | *(maintainer, 2026-10)* |
+| `convert` | x-agent-instructions | claimed | text from a CSV never adds lines to the mapping file `mapping` writes; violated at the bound commit by unused header names, a `VALID` finding | §1.11 `P-CSV-TEXT-NO-NEW-LINES` | *(maintainer, 2026-10)* |
 | `node-tools` | numeric domain and representational limits | claimed | versions `X.Y.Z`; URLs in `node.yaml` http(s) without credentials; other nodes https | §1.11 `P-CONTEXT-IMPORTS-LISTED` | *(documented, src/build/node.mjs `settingsProblems`)* |
 | `node-tools` | failure and exception atomicity | claimed | `check` collects every problem and exits 1; the build stops before writing a released version whose sources changed; `add` stages files and renames them | §1.11 `P-PUBLISHED-COMPARISON` | *(documented, src/build/check.mjs header and src/release.mjs `releaseSubject`: "throws on a problem")* |
 | `node-tools` | recursive or cyclic topology | claimed | a context that imports itself is an error; mapping `via` cycles are problems | §1.11 `P-CONTEXT-IMPORTS-LISTED` | *(documented, src/build/check.mjs `resolveContext` comment: "only an import of itself is refused")* |
-| `node-tools` | callback and collaborator execution | unresolved | node files are read as data and pages use the toolkit's own templates and configuration; no written promise that nothing in a node folder runs as code | §1.18 Q2 | *(inferred, Q2)* |
-| `node-tools` | serialization and reconstruction | disclaimed | schemas are compiled by Ajv, which treats a schema like code; `pattern` becomes a regular expression | §1.12 `D-SCHEMA-COMPILE-COST` | *(inferred, Q9)* |
+| `node-tools` | callback and collaborator execution | claimed | node files are read as data; pages use the toolkit's own templates and Eleventy configuration; a `.eleventyignore` in the current directory is the one file Eleventy reads | §1.11 `P-NODE-FILES-ARE-DATA` | *(maintainer, 2026-10)* |
+| `node-tools` | serialization and reconstruction | disclaimed | schemas are compiled by Ajv, which treats a schema like code; `pattern` becomes a regular expression | §1.12 `D-SCHEMA-COMPILE-COST` | *(maintainer, 2026-10)* |
 | `node-tools` | reference and object lifecycle | claimed | a released version keeps a snapshot; a published version without one is noted | §1.11 `P-PUBLISHED-COMPARISON` | *(documented, datamodels.jp/en/toolkit/versions "How a published version is kept")* |
 | `node-tools` | concurrency and reentrancy | claimed | `add` refuses a second run on the same subject while the lock file exists | §1.11 `P-PUBLISHED-COMPARISON` | *(documented, src/add.mjs lock file)* |
-| `node-tools` | resource complexity | disclaimed | no limit on node files; reads of other nodes bounded as in `remote-reads` | §1.12 `D-NO-INPUT-LIMITS` | *(inferred, Q7)* |
-| `node-tools` | x-outbound-requests | disclaimed | the node's own published files are read under `baseUrl` with the global `fetch` | §1.12 `D-OWN-SITE-READS` | *(inferred, Q14)* |
+| `node-tools` | resource complexity | disclaimed | no limit on node files; reads of other nodes bounded as in `remote-reads` | §1.12 `D-NO-INPUT-LIMITS` | *(maintainer, 2026-10)* |
+| `node-tools` | x-outbound-requests | disclaimed | the node's own published files are read under `baseUrl` with the global `fetch` | §1.12 `D-OWN-SITE-READS` | *(maintainer, 2026-10)* |
 | `node-tools` | x-version-immutability | claimed | `check --base` fails on a changed or removed snapshot file, except during the pre-release | §1.11 `P-BASE-COMPARISON`; §1.12 `D-PRERELEASE-CORRECTIONS` | *(documented, src/build/published.mjs header)* |
-| `node-tools` | x-agent-instructions | disclaimed | model text goes unfiltered into `llms.txt`, `catalog.json` and the AI adapter's schema descriptions | §1.12 `D-AGENT-TEXT` | *(inferred, Q21)* |
+| `node-tools` | x-agent-instructions | disclaimed | model text goes unfiltered into `llms.txt`, `catalog.json` and the AI adapter's schema descriptions | §1.12 `D-AGENT-TEXT` | *(maintainer, 2026-10)* |
 | `remote-reads` | numeric domain and representational limits | claimed | IPv4 and IPv6 addresses classified, IPv4 inside IPv6 included; non-public ranges refused | §1.11 `P-PUBLIC-READS` | *(documented, src/adapters/net.mjs `isPublicAddress` comment)* |
 | `remote-reads` | failure and exception atomicity | disclaimed | a node that cannot be read is a note, never a failure of someone else's command (except the starting index of `search`) | §1.12 `D-OTHER-NODES-NOTED` | *(documented, src/discover.mjs header: "A node that cannot be read is a note, never a failure")* |
 | `remote-reads` | recursive or cyclic topology | claimed | each index is read once, so a cycle of `nodes` links ends; depth at most 5 | §1.11 `P-REMOTE-READS-BOUNDED` | *(documented, src/discover.mjs header: "Each index is read once, so a cycle ends")* |
@@ -438,34 +445,34 @@ may read as instructions).
 | `action` | recursive or cyclic topology | N/A — no recursive input | | §1.7 | *(documented, action.yml `runs`)* |
 | `action` | callback and collaborator execution | claimed | inputs reach the shell only through environment variables; the token only for one `git fetch` | §1.11 `P-ACTION-INPUTS-AS-DATA`, `P-ACTION-TOKEN-USE` | *(documented, action.yml header comment)* |
 | `action` | serialization and reconstruction | N/A — no serialized state | | §1.7 | *(documented, action.yml `runs`)* |
-| `action` | reference and object lifecycle | disclaimed | the token is in the environment of the whole "Check" step, so the toolkit process and its dependencies run with it | §1.12 `D-TOKEN-IN-STEP-ENV` | *(inferred, Q17)* |
+| `action` | reference and object lifecycle | disclaimed | the token is in the environment of the whole "Check" step, so the toolkit process and its dependencies run with it | §1.12 `D-TOKEN-IN-STEP-ENV` | *(maintainer, 2026-10)* |
 | `action` | concurrency and reentrancy | N/A — the caller's `concurrency` group serialises Pages deploys | | §1.13 | *(documented, README "The whole workflow that init writes": `concurrency: group: pages`)* |
 | `action` | resource complexity | N/A — the caller's `timeout-minutes` bounds the job | | §1.13 | *(documented, README "The whole workflow that init writes": `timeout-minutes: 10`)* |
 | `action` | x-outbound-requests | claimed | `npm ci` from the lockfile with `--ignore-scripts`; one `git fetch` of the base branch; the toolkit's own reads as in `node-tools` | §1.11 `P-INSTALL-NO-SCRIPTS` | *(documented, action.yml step "Install the toolkit")* |
 | `action` | x-version-immutability | claimed | on a pull request the snapshots are compared with the base branch | §1.11 `P-BASE-COMPARISON` | *(documented, action.yml comment: "a published version is never changed or removed")* |
 | `library` | numeric domain and representational limits | claimed | the same checks as the commands; `ngsi` checks attribute types and polygon rings | §1.11 `P-NGSI-PROTO-AS-DATA` | *(documented, README "Build library")* |
 | `library` | failure and exception atomicity | claimed | `readRefs` returns problems instead of throwing, so the caller decides | §1.11 `P-PUBLIC-READS` | *(documented, src/adapters/index.mjs `readRefs` comment: "a schema that cannot be read is a problem, not an error")* |
-| `library` | recursive or cyclic topology | disclaimed | `toNormalized` and `toKeyValues` walk the data the caller passes; no depth limit | §1.12 `D-NO-INPUT-LIMITS` | *(inferred, Q7)* |
-| `library` | callback and collaborator execution | disclaimed | a caller's own `fetch` replaces `publicFetch` and is trusted | §1.12 `D-CALLER-FETCH` | *(inferred, Q3)* |
+| `library` | recursive or cyclic topology | disclaimed | `toNormalized` and `toKeyValues` walk the data the caller passes; no depth limit | §1.12 `D-NO-INPUT-LIMITS` | *(maintainer, 2026-10)* |
+| `library` | callback and collaborator execution | disclaimed | a caller's own `fetch` replaces `publicFetch` and is trusted | §1.12 `D-CALLER-FETCH` | *(maintainer, 2026-10)* |
 | `library` | serialization and reconstruction | claimed | `__proto__` keys stay own properties | §1.11 `P-NGSI-PROTO-AS-DATA` | *(documented, CHANGELOG.md 0.3.16 "Fixed")* |
 | `library` | reference and object lifecycle | N/A — pure functions return new objects | | §1.8 | *(documented, src/ngsi.mjs header)* |
 | `library` | concurrency and reentrancy | N/A — no shared mutable state | | §1.5 | *(documented, README "Build library": "It has no imports")* |
-| `library` | resource complexity | disclaimed | no limit on the data the caller passes | §1.12 `D-NO-INPUT-LIMITS` | *(inferred, Q7)* |
+| `library` | resource complexity | disclaimed | no limit on the data the caller passes | §1.12 `D-NO-INPUT-LIMITS` | *(maintainer, 2026-10)* |
 | `agent-skill` | numeric domain and representational limits | N/A — instructions, no input | | §1.7 | *(documented, skills/datamodels/SKILL.md)* |
 | `agent-skill` | failure and exception atomicity | N/A — instructions | | §1.7 | *(documented, skills/datamodels/SKILL.md)* |
 | `agent-skill` | recursive or cyclic topology | N/A — instructions | | §1.7 | *(documented, skills/datamodels/SKILL.md)* |
-| `agent-skill` | callback and collaborator execution | disclaimed | the agent runs the commands the skill names with the user's rights; the skill does not limit it | §1.12 `D-SKILL-GUIDANCE-ONLY` | *(inferred, Q21)* |
+| `agent-skill` | callback and collaborator execution | disclaimed | the agent runs the commands the skill names with the user's rights; the skill does not limit it | §1.12 `D-SKILL-GUIDANCE-ONLY` | *(maintainer, 2026-10)* |
 | `agent-skill` | serialization and reconstruction | N/A — instructions | | §1.7 | *(documented, skills/datamodels/SKILL.md)* |
 | `agent-skill` | reference and object lifecycle | N/A — copied once by the user; not updated by the package | | §1.13 | *(documented, README "Agent skill": "It is not in the npm package")* |
 | `agent-skill` | concurrency and reentrancy | N/A — instructions | | §1.7 | *(documented, skills/datamodels/SKILL.md)* |
 | `agent-skill` | resource complexity | N/A — instructions | | §1.7 | *(documented, skills/datamodels/SKILL.md)* |
-| `agent-skill` | x-agent-instructions | disclaimed | the skill sends agents to read `llms.txt`, `catalog.json` and MCP answers; nothing filters instructions in them | §1.12 `D-AGENT-TEXT` | *(inferred, Q21)* |
+| `agent-skill` | x-agent-instructions | disclaimed | the skill sends agents to read `llms.txt`, `catalog.json` and MCP answers; nothing filters instructions in them | §1.12 `D-AGENT-TEXT` | *(maintainer, 2026-10)* |
 | `release-pipeline` | numeric domain and representational limits | claimed | the release tag must be `v` plus the version in `package.json` | §1.11 `P-RELEASE-GATED` | *(documented, .github/workflows/publish.yml step "The tag is the package version")* |
 | `release-pipeline` | failure and exception atomicity | claimed | the tests run before `npm publish`; a failure publishes nothing; a GitHub pre-release publishes nothing | §1.11 `P-RELEASE-GATED` | *(documented, .github/workflows/publish.yml header: "only after the tests pass. A pre-release publishes nothing")* |
 | `release-pipeline` | recursive or cyclic topology | N/A — no recursive input | | §1.7 | *(documented, .github/workflows/publish.yml)* |
 | `release-pipeline` | callback and collaborator execution | claimed | no dependency runs install scripts while the job can get an OIDC token | §1.11 `P-INSTALL-NO-SCRIPTS` | *(documented, .github/workflows/publish.yml comment: "no dependency runs code while this job can get an")* |
-| `release-pipeline` | serialization and reconstruction | disclaimed | the package pins its direct dependencies exactly but ships no lockfile; `npx` resolves the rest at install time | §1.12 `D-NO-SHRINKWRAP` | *(inferred, Q20)* |
-| `release-pipeline` | reference and object lifecycle | claimed | `v*.*.*` tags cannot be moved or deleted (organisation ruleset, bypass for the operations team); `init` pins the Action by commit SHA | §1.11 `P-RELEASE-GATED` | *(inferred, Q20)* |
+| `release-pipeline` | serialization and reconstruction | disclaimed | the package pins its direct dependencies exactly but ships no lockfile; `npx` resolves the rest at install time | §1.12 `D-NO-SHRINKWRAP` | *(maintainer, 2026-10)* |
+| `release-pipeline` | reference and object lifecycle | claimed | `v*.*.*` tags cannot be moved or deleted (organisation ruleset, bypass for the operations team); `init` pins the Action by commit SHA | §1.11 `P-RELEASE-GATED` | *(maintainer, 2026-10)* |
 | `release-pipeline` | concurrency and reentrancy | N/A — one publish per release event | | §1.9 | *(documented, .github/workflows/publish.yml `on: release`)* |
 | `release-pipeline` | resource complexity | N/A — runner time limit of 10 minutes | | §1.9 | *(documented, .github/workflows/publish.yml `timeout-minutes: 10`)* |
 
@@ -473,17 +480,17 @@ may read as instructions).
 
 | Output channel | Component | Taint | Downstream must not assume | Provenance |
 | --- | --- | --- | --- | --- |
-| Entities from `convert` (standard output or `--out`) | `convert` | same as input: each value is the CSV cell after the mapping's transform; validated against the schema, not escaped or sanitised | that text is safe for HTML, SQL, a broker query or an agent; that a `json` cell holds only what the schema allows beyond the schema's own limits; that the values are true | *(inferred, Q19)* |
-| The summary on standard error (encoding, repairs, invalid rows) | `convert` | assembled: echoes column names and cell values from the CSV as they are | that it is constant text or free of terminal control characters | *(inferred, Q12)* |
-| The mapping file `mapping` writes | `convert` | assembled: rows from the model, comments with the CSV's header names and the CSV path | that every line comes from the model; header text with a line break adds lines (Q12) | *(inferred, Q12)* |
+| Entities from `convert` (standard output or `--out`) | `convert` | same as input: each value is the CSV cell after the mapping's transform; validated against the schema, not escaped or sanitised | that text is safe for HTML, SQL, a broker query or an agent; that a `json` cell holds only what the schema allows beyond the schema's own limits; that the values are true | *(maintainer, 2026-10)* |
+| The summary on standard error (encoding, repairs, invalid rows) | `convert` | assembled: echoes column names and cell values from the CSV as they are (`D-LOCAL-TEXT-ECHOED`) | that it is constant text or free of terminal control characters | *(maintainer, 2026-10)* |
+| The mapping file `mapping` writes | `convert` | assembled: rows from the model, comments with the CSV's header names and the CSV path; text from the CSV may not add lines (`P-CSV-TEXT-NO-NEW-LINES`) | that the property holds at the bound commit: a header with a line break still adds lines until it is fixed | *(maintainer, 2026-10)* |
 | `_site/` from `build` and the Action: exact-version contexts, vocabularies, schemas; aliases; examples; mapping files; `catalog.json`; `llms.txt`; `_headers`; `_redirects` | `node-tools` | constrained: built from the node folder; release snapshots copied byte for byte | that files without a version in their URL keep their bytes; that text in them is filtered for agents | *(documented, src/adapters/index.mjs header: "is not covered by the promise that published files never change")* |
 | Model pages (HTML) | `node-tools` | node text escaped by the template engine; links taken from model files only when http(s) | that a description is free of misleading links or text | *(documented, src/build/pages.mjs `httpOnly` comment: "A link only for an http(s) URL")* |
 | `llms.txt` | `node-tools` | node titles and descriptions, each on one line | that it is free of instructions aimed at agents | *(documented, src/build/llms.mjs `llmsTxt` comment: "on one line")* |
 | Adapter files: CSV template, Table Schema, AI JSON Schema, PostGIS SQL (from `build` and `export`) | `node-tools`, `remote-reads` | constrained: built from the model; SQL identifiers and literals quoted; AI schema descriptions carry model text | that the AI schema's descriptions are free of instructions; that the SQL is reviewed for the reader's database | *(documented, src/adapters/postgis/index.mjs `num` comment: "so a schema can never add SQL of its own")* |
-| Files `extend` writes into the node (schema, `catalog.yaml`, example, `notes.yaml`, `node.yaml`, `context.jsonld`) | `remote-reads` | the other node's schema, texts and example copied; names checked; comments on one line | that the copied schema or example was reviewed by anyone | *(assumption, Q15)* |
+| Files `extend` writes into the node (schema, `catalog.yaml`, example, `notes.yaml`, `node.yaml`, `context.jsonld`) | `remote-reads` | the other node's schema, texts and example copied; names checked; comments on one line | that the copied schema or example was reviewed by anyone | *(maintainer, 2026-10)* |
 | Files `export` writes | `remote-reads` | as adapter files; names from the adapter and the checked type name | that an existing file of the same name in `--out` is kept | *(documented, src/export.mjs `writeExport` comment)* |
 | `search` and `nodes` output | `remote-reads` | other nodes' text reduced to plain one-line text in the listing; `--json` keeps it as JSON strings | that `--json` text is plain; that a listed node is endorsed | *(documented, src/discover.mjs `plain` comment)* |
-| Notes and problems of `check`, `build`, `extend`, `export` | `node-tools`, `remote-reads` | assembled: URLs and error messages from other nodes and from node files | that they are constant text | *(inferred, Q16)* |
+| Notes and problems of `check`, `build`, `extend`, `export` | `node-tools`, `remote-reads` | assembled: URLs and error messages from other nodes and from node files | that they are constant text | *(maintainer, 2026-10)* |
 | Workflow and Markdown edits of `upgrade` | `node-tools` | the release SHA and tag from GitHub's API, checked for form | that the SHA was reviewed; it is what GitHub names for the tag | *(documented, src/version.mjs `upgradeNode`)* |
 | Files `init` writes | `init-github` | fixed templates with the user's answers; the workflow pins this Action and `actions/checkout` by SHA | n/a | *(documented, src/init.mjs `workflow`)* |
 | Action output `site` and the Pages deployment | `action` | as `_site/` | that the deployment waited for a review; that is the owner's branch rules | *(documented, action.yml outputs)* |
@@ -495,9 +502,9 @@ may read as instructions).
 | Dependency | Relied on for | Violation triaged |
 | --- | --- | --- |
 | Node.js 24 (`https`, `dns`, global `fetch`, `TextDecoder`, `child_process.execFile`) | TLS and certificate checks, the `lookup` hook used at connection, strict decoding, running `git` and `gh` without a shell | upstream (`dependency-contract`) *(documented, src/adapters/net.mjs header: "The address is checked where the connection is made")* |
-| `ajv` 8.20.0, `ajv-formats` 3.0.1 | compiling and running JSON Schemas | upstream when Ajv breaks its contract; a slow or huge schema is in §1.12 (`D-SCHEMA-COMPILE-COST`) *(inferred, Q9)* |
+| `ajv` 8.20.0, `ajv-formats` 3.0.1 | compiling and running JSON Schemas | upstream when Ajv breaks its contract; a slow or huge schema is in §1.12 (`D-SCHEMA-COMPILE-COST`) *(maintainer, 2026-10)* |
 | `jsonld` 9.0.0 | expansion and compaction with the toolkit's document loader | upstream *(documented, src/build/examples.mjs `contextLoader`)* |
-| `yaml` 2.9.1 | parsing YAML without running code or reading files; its default alias limit | upstream *(inferred, Q8)* |
+| `yaml` 2.9.1 | parsing YAML without running code or reading files; its default alias limit | upstream *(maintainer, 2026-10)* |
 | `@11ty/eleventy` 3.1.6 (with Nunjucks) | rendering the toolkit's own templates with autoescape | upstream *(documented, src/build/pages.mjs `writePages`)* |
 | `commander` 15.0.0, `@clack/prompts` 1.8.1 | parsing the command line; prompts in a terminal | upstream *(documented, bin/datamodels.mjs header comment for commander)* |
 | `git` on the user's machine or runner | `rev-parse`, `show`, `diff` for `--base`; `init`, `add`, `commit` for `init --github` | upstream *(documented, src/build/published.mjs `git`)* |
@@ -524,16 +531,16 @@ machine, or one node repository on GitHub running the Action in its own jobs.
 
 | Actor | In scope? | Capabilities held | Capabilities excluded | Goals | Provenance |
 | --- | --- | --- | --- | --- | --- |
-| Author of a CSV the user converts | yes | every byte of the CSV: header names, cell values, size, encoding | the mapping file, the command line, `--site`, the catalogue's files | wrong or misleading entities, text that harms the broker or app that stores them, lines added to the generated mapping file, a hang or crash | *(assumption, Q1)* |
-| Contributor to a node (pull request) | yes | any file of the pull request: `node.yaml`, `models/`, release snapshots, the workflow file; code execution in the `pull_request` job with that job's token (read-only from a fork) | merging; running the publish job; the publish job's `pages: write` and `id-token: write`; reading secrets | change a published version, slip a remote import or `$ref` into the node, get a token that can write | *(assumption, Q18)* |
+| Author of a CSV the user converts | yes | every byte of the CSV: header names, cell values, size, encoding | the mapping file, the command line, `--site`, the catalogue's files | wrong or misleading entities, text that harms the broker or app that stores them, lines added to the generated mapping file, a hang or crash | *(maintainer, 2026-10)* |
+| Contributor to a node (pull request) | yes | any file of the pull request: `node.yaml`, `models/`, release snapshots, the workflow file; code execution in the `pull_request` job with that job's token (read-only from a fork) | merging; running the publish job; the publish job's `pages: write` and `id-token: write`; reading secrets | change a published version, slip a remote import or `$ref` into the node, get a token that can write | *(maintainer, 2026-10)* |
 | Operator of another node | yes | the content and HTTP behaviour of their site; their DNS; redirects; a slow or large answer; text in their models | the user's files and command line; reading anything from the user except the requests the toolkit makes | make the toolkit read a private address, add lines to files `extend` or `export` writes, write escape sequences to the terminal, hang a command, steer an agent through text | *(documented, src/adapters/net.mjs header and src/discover.mjs `plain` comment)* |
-| Author of text aimed at an AI agent | yes, as a CSV author, contributor or node operator | text in any file an agent reads while following the skill | anything beyond those actors' capabilities | make an agent run a command or change data the user did not ask for | *(inferred, Q21)* |
-| Person running the command line; repository owner using the Action | no — trusted, the integrator | the command line, options, node folder, mapping files, workflow, permissions | n/a | n/a | *(assumption, Q1)* |
-| datamodels.jp operator (Geolonia) | no — trusted for the content `convert` reads | n/a | n/a | n/a | *(assumption, Q15)* |
+| Author of text aimed at an AI agent | yes, as a CSV author, contributor or node operator | text in any file an agent reads while following the skill | anything beyond those actors' capabilities | make an agent run a command or change data the user did not ask for | *(maintainer, 2026-10)* |
+| Person running the command line; repository owner using the Action | no — trusted, the integrator | the command line, options, node folder, mapping files, workflow, permissions | n/a | n/a | *(maintainer, 2026-10)* |
+| datamodels.jp operator (Geolonia) | no — trusted for the content `convert` reads | n/a | n/a | n/a | *(maintainer, 2026-10)* |
 | Toolkit maintainers and the operations team | no — trusted | merge, publish a release, bypass the tag rules | n/a | n/a | *(documented, README "Releases")* |
-| GitHub, npm, the Node.js project | no — trusted platforms | n/a | n/a | n/a | *(assumption, Q20)* |
-| Network attacker on the path to an https host | no | n/a | n/a | n/a | *(assumption, Q3)* |
-| Network attacker on an `http://` `--site` or `baseUrl` the user chose | no — the user chose plain http | n/a | n/a | n/a | *(inferred, Q3)* |
+| GitHub, npm, the Node.js project | no — trusted platforms | n/a | n/a | n/a | *(maintainer, 2026-10)* |
+| Network attacker on the path to an https host | no | n/a | n/a | n/a | *(maintainer, 2026-10)* |
+| Network attacker on an `http://` `--site` or `baseUrl` the user chose | no — the user chose plain http | n/a | n/a | n/a | *(maintainer, 2026-10)* |
 
 ## 1.11 Security properties the project provides
 
@@ -571,9 +578,9 @@ are listed; candidates that rest only on code are §1.18 questions.
   `nodes` follow links at most 5 deep and read at most 50 nodes; each index is
   read once *(documented, src/adapters/net.mjs `MAX_BYTES`, src/adapters/index.mjs `getter` comment: "One deadline for the read", src/discover.mjs `MAX_DEPTH` comment)*.
   - Threshold: a command that reads more than 5 MB from one answer or keeps
-    reading past the deadline is a bug; slow is not *(inferred, Q16)*.
+    reading past the deadline is a bug; slow is not *(maintainer, 2026-10)*.
   - Symptom: `hang` or `unbounded-allocation`.
-  - Tier: correctness-only *(inferred, Q16)*.
+  - Tier: correctness-only *(maintainer, 2026-10)*.
   - *Voided by*: a caller's own `fetch` (no 5 MB cap) —
     `src/adapters/index.mjs:59`. Reads outside the shared reader have no size
     cap (`D-OWN-SITE-READS`).
@@ -597,7 +604,7 @@ are listed; candidates that rest only on code are §1.18 questions.
   - Symptom: `x-terminal-injection`.
   - Tier: security-critical.
   - Covers: the listing of `search` and `nodes`. Not `--json` (JSON-escaped,
-    not shortened), and not the notes and errors of other commands (Q16).
+    not shortened), and not the notes and errors of other commands (§1.8).
   - *Voided by*: `--json` — `bin/datamodels.mjs:482`.
 
 - **`P-CONTEXT-IMPORTS-LISTED` — a node's context imports only known
@@ -607,7 +614,7 @@ are listed; candidates that rest only on code are §1.18 questions.
   *(documented, CHANGELOG.md 0.3.15 "Security": "The build checks a `@context` imported by URL after")*.
   - Symptom: `bad-data-accepted` (a node publishes a context whose meaning
     another site controls).
-  - Tier: correctness-only *(assumption, Q19)*.
+  - Tier: correctness-only *(maintainer, 2026-10)*.
   - *Voided by*: listing a node in `node.yaml` allows its contexts; that is
     the owner's choice. The check is `src/build/load.mjs:58`.
 
@@ -637,7 +644,7 @@ are listed; candidates that rest only on code are §1.18 questions.
   from its snapshot *(documented, datamodels.jp/en/toolkit/versions "How a published version is kept": "Three checks guard them")*.
   - Symptom: `integrity-bypass`.
   - Tier: correctness-only: the guard reads what a site answers, which the
-    owner controls *(assumption, Q14)*.
+    owner controls *(maintainer, 2026-10)*.
   - *Voided by*: `--offline` (also the Action input) —
     `src/build/check.mjs:339`; a site that cannot be reached is a note.
 
@@ -649,6 +656,19 @@ are listed; candidates that rest only on code are §1.18 questions.
   - Symptom: `bad-data-accepted` (values shifted between columns).
   - Tier: correctness-only.
   - Voided by: nothing. Search: `grep -n "throw new Error" src/convert.mjs`.
+
+- **`P-CSV-TEXT-NO-NEW-LINES` — text from a CSV never adds lines to the
+  mapping file `mapping` writes.** Header names and the file name appear in
+  the generated file only inside comments or as values, each on its own line
+  *(maintainer, 2026-10)*.
+  - Symptom: `x-file-injection` (a line chosen by the CSV's author, such as a
+    `fields:` rule, appears in the mapping file).
+  - Tier: correctness-only *(maintainer, 2026-10)*: the user reviews the
+    generated file before converting with it.
+  - Known violation at the bound commit: unused header names are written into
+    comments with their line breaks — `src/mapping.mjs:444`. A report of it is
+    `VALID`; the fix is tracked outside this model.
+  - *Voided by*: nothing. Search: `grep -n "comment(\|lines.push(" src/mapping.mjs`.
 
 - **`P-ROWS-VALIDATED` — every converted entity is checked against its
   schema.** `convert` validates each entity against the model's JSON Schema,
@@ -669,6 +689,22 @@ are listed; candidates that rest only on code are §1.18 questions.
   - Tier: correctness-only.
   - Voided by: nothing. The setter is `src/ngsi.mjs:25`.
 
+- **`P-NODE-FILES-ARE-DATA` — nothing in a node folder runs as code.**
+  `check` and `build` read node files as data; the pages are rendered with the
+  toolkit's own templates and its own Eleventy configuration, not one from the
+  current directory *(documented, src/build/pages.mjs `CONFIG` comment: "without it Eleventy loads eleventy.config.js from the current directory")*.
+  The maintainer made it a promise *(maintainer, 2026-10)*.
+  - Symptom: `x-code-execution` (a file of a node folder runs as code in
+    `check` or `build`).
+  - Tier: security-critical *(maintainer, 2026-10)*.
+  - Covers: `check`, `build`, `release`, `bump`, `add`. Not file access with
+    the user's rights (`D-NOT-A-SANDBOX`).
+  - *Voided by*: nothing in the toolkit. The own configuration is passed at
+    `src/build/pages.mjs:144`. Eleventy still reads a `.eleventyignore` in the
+    current directory, which can only leave templates out. Search:
+    `grep -rn "import(" src bin` — 3 hits, all fixed package names
+    (`@clack/prompts` twice, `@11ty/eleventy`).
+
 - **`P-PAGES-ESCAPED` — node text cannot add markup to the model pages.**
   Pages are rendered with the toolkit's templates, autoescape on; links from
   model files are kept only when http(s); URLs in `node.yaml` must be http(s)
@@ -676,7 +712,7 @@ are listed; candidates that rest only on code are §1.18 questions.
   - Symptom: `x-markup-injection` (HTML or a script from node text on the
     node's site).
   - Tier: correctness-only, because the text is the node owner's, reviewed
-    before merge *(assumption, Q19)*.
+    before merge *(maintainer, 2026-10)*.
   - Voided by: nothing. Autoescape is set at `src/build/pages.mjs:152`.
 
 - **`P-SQL-QUOTED` — model text cannot add SQL to the PostGIS file.**
@@ -754,36 +790,38 @@ are listed; candidates that rest only on code are §1.18 questions.
 | --- | --- | --- | --- | --- | --- |
 | A redirect from another node's index to a 6to4 address reaches a service on the runner's loopback | shared reader | control of another node's host | x-ssrf | `VALID` | `P-PUBLIC-READS` |
 | During a node's pre-release, `check --base` passes although an older release folder was removed | `compareWithBase` | a pull request to a node whose base and change both have `prerelease: true` | integrity-bypass | `KNOWN-NON-FINDING` **(closed)** | `KNF-PRERELEASE-NOTE` |
-| A scanner flags that the Action reads `github.token` | `action.yml` "Check" step | n/a | info-leak | `KNOWN-NON-FINDING` **(closed)** | `KNF-TOKEN-BASE-FETCH` |
-| `convert` writes a cell's `<script>` into an entity; an app rendered it | `convert` output | the CSV content | x-markup-injection downstream | `BY-DESIGN: property-disclaimed` **(escalated)** | `D-OUTPUT-TEXT-AS-INPUT`, silence basis, Q19 |
+| `convert` writes a cell's `<script>` into an entity; an app rendered it | `convert` output | the CSV content | x-markup-injection downstream | `BY-DESIGN: property-disclaimed` **(closed)** | `D-OUTPUT-TEXT-AS-INPUT` |
+| A CSV header with a line break adds a `fields:` rule to the mapping file `mapping` writes | `mapping` | the CSV content | x-file-injection | `VALID` | `P-CSV-TEXT-NO-NEW-LINES` |
 
 The second row also matches `D-PRERELEASE-CORRECTIONS`; the exact §1.15 match
 fires first.
 
 ## 1.12 Security properties the project does *not* provide
 
-The basis column says whether a disclaimer rests on a **stated** limit or on
-**silence** (nothing promises it). A silence-based disclaimer never closes a
-security-critical report (§1.17).
+The conditions column says what each disclaimer rests on. Every one rests on
+a stated limit: either the documentation states it, or the maintainer stated
+it on 2026-10-17. A disclaimer that rested only on **silence** (nothing
+promises it) would never close a security-critical report (§1.17).
 
 | ID | The project does not provide | Conditions / boundary | Tier | False friend? | Provenance |
 | --- | --- | --- | --- | --- | --- |
-| `D-NOT-A-SANDBOX` | isolation of the files it processes from the rest of the machine | silence. Commands run with the rights of the person or job; a mapping file's `via` may name any `.yaml` file the user can read; `check --base` runs `git` in the node folder; a node or mapping file from someone else is configuration, not data you can open safely | security-critical | no | *(inferred, Q2)* |
+| `D-NOT-A-SANDBOX` | isolation of the files it processes from the rest of the machine | stated by the maintainer. Commands run with the rights of the person or job; a mapping file's `via` may name any `.yaml` file the user can read; `check --base` runs `git` in the node folder. Not covered: code execution from a node folder, which `P-NODE-FILES-ARE-DATA` claims | security-critical | no | *(maintainer, 2026-10)* |
 | `D-VALIDATION-NOT-TRUTH` | any statement beyond shape from `check` or `convert` | stated. They check the JSON Schema, the NGSI-LD and JSON-LD rules and the `@context` terms; not truth, safety for HTML or SQL, licences, or personal data | correctness-only | yes: "valid" is not "safe" or "true" | *(documented, datamodels.jp/en/toolkit/check "What check checks")* |
-| `D-NO-INPUT-LIMITS` | limits on the size, nesting or number of items of local input (CSV, YAML, JSON, schemas, contexts) and of data passed to the library | silence. A CSV is read whole; parsers run with their defaults; the process is the user's own | correctness-only | no | *(inferred, Q7)* |
-| `D-SCHEMA-COMPILE-COST` | protection from slow or huge JSON Schemas | silence. Schemas are compiled by Ajv; `pattern` becomes a JavaScript regular expression (ReDoS); in `check` a `$ref` to another public site is compiled too | correctness-only | no | *(inferred, Q9)* |
-| `D-OUTPUT-TEXT-AS-INPUT` | escaping or sanitising of converted values | silence. Entities carry CSV text as it is after the transforms, `json` cells as parsed JSON; validated, not sanitised | security-critical | no | *(inferred, Q19)* |
-| `D-OWN-SITE-READS` | the shared reader's rules for three other reads | silence. `--site` of `convert`, the node's own published files in `check` and `release`, and GitHub's API in `upgrade` are read with the global `fetch`: redirects followed, no address check, no size cap (and no deadline for `--site`) | security-critical | no | *(inferred, Q14)* |
-| `D-CALLER-FETCH` | the address check and size cap for a library caller's own `fetch` | silence. The caller's `fetch` is used as it is; URL and redirect checks remain | correctness-only | no | *(inferred, Q3)* |
+| `D-NO-INPUT-LIMITS` | limits on the size, nesting or number of items of local input (CSV, YAML, JSON, schemas, contexts) and of data passed to the library | stated by the maintainer. A CSV is read whole; parsers run with their defaults; the process is the user's own | correctness-only | no | *(maintainer, 2026-10)* |
+| `D-SCHEMA-COMPILE-COST` | protection from slow or huge JSON Schemas | stated by the maintainer. Schemas are compiled by Ajv; `pattern` becomes a JavaScript regular expression (ReDoS); in `check` a `$ref` to another public site is compiled too | correctness-only | no | *(maintainer, 2026-10)* |
+| `D-OUTPUT-TEXT-AS-INPUT` | escaping or sanitising of converted values | stated by the maintainer. Entities carry CSV text as it is after the transforms, `json` cells as parsed JSON; validated, not sanitised | security-critical | no | *(maintainer, 2026-10)* |
+| `D-LOCAL-TEXT-ECHOED` | filtering of text from local files in terminal output | stated by the maintainer. The summary, notes and errors print header names, cell values and paths as they are; the file is the user's | correctness-only | no | *(maintainer, 2026-10)* |
+| `D-OWN-SITE-READS` | the shared reader's rules for three other reads | stated by the maintainer. `--site` of `convert`, the node's own published files in `check` and `release`, and GitHub's API in `upgrade` are read with the global `fetch`: redirects followed, no address check, no size cap (and no deadline for `--site`) | security-critical | no | *(maintainer, 2026-10)* |
+| `D-CALLER-FETCH` | the address check and size cap for a library caller's own `fetch` | stated by the maintainer. The caller's `fetch` is used as it is; URL and redirect checks remain | correctness-only | no | *(maintainer, 2026-10)* |
 | `D-OTHER-NODES-NOTED` | a failure when another node is down, slow or refused | stated. Another node that cannot be read, or does not answer within 20 seconds, is only noted; a node that is down never fails someone else's check | correctness-only | yes: a passing `check` is not proof that every extended model was compared | *(documented, datamodels.jp/en/toolkit/check: "a node that is down never fails someone else's check")* |
-| `D-REMOTE-CONTENT-UNREVIEWED` | review of what `extend` copies or `export` reads from another node | silence. Names, URLs and shape are checked; the schema, example and texts are copied as the other node publishes them | correctness-only | no | *(assumption, Q15)* |
+| `D-REMOTE-CONTENT-UNREVIEWED` | review of what `extend` copies or `export` reads from another node | stated by the maintainer. Names, URLs and shape are checked; the schema, example and texts are copied as the other node publishes them | correctness-only | no | *(maintainer, 2026-10)* |
 | `D-PRERELEASE-CORRECTIONS` | immutability of a node's published versions during its pre-release | stated. While `prerelease: true` is in `node.yaml` at the base ref and in the change, `check --base` notes changed and removed snapshot files of **any** version, and the online comparison notes changed files; a stricter rule (only the current version) is the node's own policy, kept by review | security-critical | no | *(documented, datamodels.jp/en/toolkit/versions "Before the launch": "An earlier version that should not have been published can be removed")* |
-| `D-TOKEN-IN-STEP-ENV` | isolation of the job token from the toolkit process | silence. In the Action's "Check" step the token is in the environment of the `node` process and every dependency it loads, on every event | security-critical | no | *(inferred, Q17)* |
-| `D-AGENT-TEXT` | filtering of text meant to steer AI agents | silence. Model titles and descriptions reach `llms.txt`, `catalog.json`, pages and the AI adapter's schema descriptions as written; the skill sends agents to read such text | security-critical | no | *(inferred, Q21)* |
-| `D-SKILL-GUIDANCE-ONLY` | any control over what an agent does | silence. The skill is instructions; an agent may ignore them, and it runs commands with the user's rights | correctness-only | yes: "the skill says never invent values" is not a guarantee that the agent will not | *(inferred, Q21)* |
+| `D-TOKEN-IN-STEP-ENV` | isolation of the job token from the toolkit process | stated by the maintainer. In the Action's "Check" step the token is in the environment of the `node` process and every dependency it loads, on every event | security-critical | no | *(maintainer, 2026-10)* |
+| `D-AGENT-TEXT` | filtering of text meant to steer AI agents | stated by the maintainer. Model titles and descriptions reach `llms.txt`, `catalog.json`, pages and the AI adapter's schema descriptions as written; the skill sends agents to read such text | security-critical | no | *(maintainer, 2026-10)* |
+| `D-SKILL-GUIDANCE-ONLY` | any control over what an agent does | stated by the maintainer. The skill is instructions; an agent may ignore them, and it runs commands with the user's rights | correctness-only | yes: "the skill says never invent values" is not a guarantee that the agent will not | *(maintainer, 2026-10)* |
 | `D-RELEASE-SINGLE-GATE` | a second approval before a version reaches npm | stated. Publishing the GitHub release is the only gate | security-critical | no | *(documented, .github/workflows/publish.yml header: "no second approval on npmjs.com")* |
 | `D-PROVENANCE-NOT-REVIEW` | review or audit evidence from npm provenance | stated. Provenance names the commit and the workflow that built the package | correctness-only | yes: provenance says where a package was built, not that it was reviewed | *(documented, README "Releases")* |
-| `D-NO-SHRINKWRAP` | a fixed dependency tree for `npx` and `npm install` users | silence. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile | security-critical | no | *(inferred, Q20)* |
+| `D-NO-SHRINKWRAP` | a fixed dependency tree for `npx` and `npm install` users | stated by the maintainer. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile | security-critical | no | *(maintainer, 2026-10)* |
 
 Well-known attack classes for a tool of this kind that the project leaves to
 the user:
@@ -809,20 +847,22 @@ the user:
 
 - Convert only with a mapping file you wrote or reviewed; a mapping file can
   make `convert` read any YAML file you can read (`D-NOT-A-SANDBOX`)
-  *(inferred, Q11)*.
-- Treat a node folder from someone else like code you are about to run:
-  review it before `check` or `build` (`D-NOT-A-SANDBOX`) *(inferred, Q2)*.
+  *(maintainer, 2026-10)*.
+- Review a node folder from someone else before `check` or `build`: nothing
+  in it runs as code, but it is read with your rights and `check --base` runs
+  `git` in it (`D-NOT-A-SANDBOX`) *(maintainer, 2026-10)*.
 - Bound the size of the files you convert or check (`D-NO-INPUT-LIMITS`)
-  *(inferred, Q7)*.
+  *(maintainer, 2026-10)*.
 - Treat converted entities as untrusted input in the broker or app that
   stores them: escape before rendering, parameterise before querying
-  (`D-OUTPUT-TEXT-AS-INPUT`) *(inferred, Q19)*.
-- Review a mapping file `mapping` wrote before you use it; header text can add
-  lines to it (Q12) *(inferred, Q12)*.
+  (`D-OUTPUT-TEXT-AS-INPUT`) *(maintainer, 2026-10)*.
+- Review a mapping file `mapping` wrote before you use it; until
+  `P-CSV-TEXT-NO-NEW-LINES` is fixed, a header with a line break adds lines to
+  it *(maintainer, 2026-10)*.
 - Use `https://` for `--site` and `baseUrl`, and do not point them at
-  internal addresses (`D-OWN-SITE-READS`) *(inferred, Q14)*.
+  internal addresses (`D-OWN-SITE-READS`) *(maintainer, 2026-10)*.
 - Review what `extend` copied before you commit it
-  (`D-REMOTE-CONTENT-UNREVIEWED`) *(assumption, Q15)*.
+  (`D-REMOTE-CONTENT-UNREVIEWED`) *(maintainer, 2026-10)*.
 - Review an exported SQL file before running it with rights in a production
   database; the quoting guards against model text, not against a model you
   should not create *(documented, src/adapters/postgis/index.mjs header)*.
@@ -840,31 +880,31 @@ the user:
 - Keep `persist-credentials: false` on `actions/checkout`
   *(documented, README "The whole workflow that init writes")*.
 - Make the pull-request check required and do not bypass it, or
-  `P-BASE-COMPARISON` holds only by habit *(inferred, Q18)*.
+  `P-BASE-COMPARISON` holds only by habit *(maintainer, 2026-10)*.
 - At the node's launch, set `prerelease: false`; until then, enforce any
   stricter correction rule by review (`D-PRERELEASE-CORRECTIONS`)
   *(documented, datamodels.jp/en/toolkit/versions "Before the launch")*.
 - Do not add steps after the Action that need a token the toolkit should not
   see in the same step; the token is in the "Check" step's environment
-  (`D-TOKEN-IN-STEP-ENV`) *(inferred, Q17)*.
+  (`D-TOKEN-IN-STEP-ENV`) *(maintainer, 2026-10)*.
 
 **Library caller:**
 
 - When you pass your own `fetch`, do the address check yourself
-  (`D-CALLER-FETCH`) *(inferred, Q3)*.
+  (`D-CALLER-FETCH`) *(maintainer, 2026-10)*.
 
 **Agent user:**
 
 - Treat text that the agent reads (catalogue, other nodes, CSV) as data; let
   the agent run commands only with your confirmation (`D-AGENT-TEXT`,
-  `D-SKILL-GUIDANCE-ONLY`) *(inferred, Q21)*.
+  `D-SKILL-GUIDANCE-ONLY`) *(maintainer, 2026-10)*.
 
 ## 1.14 Known misuse patterns
 
 - **Converting with a mapping file from someone else.** Looks like: running
   `convert` with a `.yaml` from an issue or e-mail. Why unsafe: `via` can name
   any YAML file you can read. Instead: write or review it
-  (`D-NOT-A-SANDBOX`) *(inferred, Q11)*.
+  (`D-NOT-A-SANDBOX`) *(maintainer, 2026-10)*.
 - **Reading `valid` as "safe".** Looks like: loading `convert` output into a
   broker and rendering it unescaped because every row was valid. Instead:
   escape in the app (`D-OUTPUT-TEXT-AS-INPUT`, `D-VALIDATION-NOT-TRUTH`)
@@ -879,10 +919,10 @@ the user:
 - **Pointing `--site` or `baseUrl` at an internal host.** Looks like: a local
   mirror on `http://10.x`. Why unsafe: those reads skip the shared reader's
   rules. Instead: use a local directory for `--site`
-  (`D-OWN-SITE-READS`) *(inferred, Q14)*.
+  (`D-OWN-SITE-READS`) *(maintainer, 2026-10)*.
 - **Letting an agent act on catalogue text.** Looks like: an agent that
   follows an instruction found in a model description. Instead: treat it as
-  data (`D-AGENT-TEXT`) *(inferred, Q21)*.
+  data (`D-AGENT-TEXT`) *(maintainer, 2026-10)*.
 - **Unpinned `npx`.** Looks like: `npx @geolonia/datamodels check` in CI.
   Instead: pin `@X.Y.Z` *(documented, README "Install")*.
 
@@ -912,6 +952,7 @@ Revise the model when any of these happens:
   a release environment, or publishing from another workflow.
 - The agent skill moves into the npm package or another distribution.
 - The catalogue's model changes what it relies on from the toolkit.
+- The fix of the known violation of `P-CSV-TEXT-NO-NEW-LINES`.
 - A report that cannot be routed to exactly one §1.17 disposition.
 
 ## 1.17 Triage dispositions
@@ -967,221 +1008,7 @@ Report both, as `DISPOSITION (status)`. An escalated finding is not a
 
 ## 1.18 Open questions for the maintainers
 
-Draft-first mode: every question states the answer this draft already
-applies. Answer them in one batch ("Q3 yes, Q9 no, because …"); a "yes"
-promotes the matching tags to **maintainer**, dated with the month of the
-answer. Waiting policy: the model stays an unratified draft until the waves
-are answered.
-
-**Wave 1 — scope, roles, configuration, side effects**
-
-- **Q1** — Is the scope right: one model with eight families (`convert`,
-  `node-tools`, `remote-reads`, `init-github`, `action`, `library`,
-  `agent-skill`, `release-pipeline`); tests, `scripts/`, `changes/`, the
-  toolkit pages on datamodels.jp, users' nodes and the catalogue out (the
-  catalogue as a sibling model)? The person running the command line and the
-  repository owner using the Action are the trusted integrators, with their
-  command line, options, node folder and mapping files; the authors of CSV
-  files, contributors to a node and operators of other nodes are untrusted;
-  datamodels.jp is trusted for the content `convert` reads.
-  - Proposed answer: yes.
-  - Lands in: §1.2, §1.3, §1.10; licenses `OUT-OF-MODEL: unsupported-component`
-    and `trusted-input`.
-- **Q2** — The toolkit is not a sandbox. Node folders and mapping files are
-  the user's configuration and are processed as data: no template, script or
-  configuration from a node folder runs (the pages use the toolkit's own
-  templates and Eleventy configuration; only a `.eleventyignore` in the
-  current directory is read). Choose: (a) claim "nothing in a node folder
-  runs as code in `check` or `build`", security-critical, with the
-  `.eleventyignore` exception named, so a report of code execution from node
-  files is `VALID`; or (b) disclaim it under `D-NOT-A-SANDBOX`.
-  - Proposed answer: (a), and keep `D-NOT-A-SANDBOX` for file access with the
-    user's rights (a mapping's `via`, `git` in the folder).
-  - Lands in: §1.11 (new property `P-NODE-FILES-ARE-DATA`) or §1.12; §1.7
-    matrix row `node-tools` / callback execution; §1.3.
-- **Q3** — Configuration support: `--site` and `--index` are chosen by the
-  user and trusted; `--site http://…` is supported only as the user's choice
-  (a network attacker on plain http is out of scope); a library caller's own
-  `fetch` is supported and replaces `publicFetch`, so the caller owns the
-  address check (`D-CALLER-FETCH`, correctness-only).
-  - Proposed answer: yes.
-  - Lands in: §1.6, §1.10, §1.12 `D-CALLER-FETCH`, §1.13.
-- **Q4** — Side effects: network only as listed in §1.5; child processes only
-  `git` (for `--base`, `init --github`) and `gh` (`init --github`), plus
-  `npm ci` and `git fetch` in the Action; writes only to the named outputs,
-  the node folder and a temporary folder that `check` removes; the toolkit's
-  code reads no environment variables.
-  - Proposed answer: yes.
-  - Lands in: §1.5 inventory.
-- **Q5** — Reporting and coexistence: the repository has no `SECURITY.md` of
-  its own; the organisation's default `SECURITY.md` and GitHub's private
-  vulnerability reporting (enabled) are the channel; there is no earlier
-  threat-model content to absorb; the catalogue's model is a sibling and
-  treats the toolkit as a dependency.
-  - Proposed answer: yes; the model sits alongside the organisation policy and
-    replaces nothing.
-  - Lands in: §1.1 reporting cross-reference; the back-map appendix.
-- **Q6** — During a node's pre-release (`prerelease: true` at the base ref and
-  in the change), `check --base` notes a change or removal of **any** release
-  snapshot, not only the current version's. The toolkit's documentation
-  allows that ("An earlier version that should not have been published can be
-  removed as a whole"); the catalogue's README is stricter (only the current
-  version is corrected). Is the toolkit's behaviour by design, with a stricter
-  rule left to each node's review, so that the catalogue pilot's point (its
-  Q4) is the catalogue's policy and not a toolkit defect?
-  - Proposed answer: yes, by design. An option for "current version only" is
-    a candidate feature, not a fix.
-  - Lands in: §1.12 `D-PRERELEASE-CORRECTIONS`, §1.15 `KNF-PRERELEASE-NOTE`,
-    §1.11 `P-BASE-COMPARISON` voided-by list.
-
-**Wave 2 — local input files and their parsers**
-
-- **Q7** — No size, row, column, nesting or count limit on CSV, YAML, JSON,
-  schemas, contexts or data passed to the library; a CSV is read whole.
-  Should that be a stated limit, correctness-only, because the files are the
-  user's choice and the process is the user's own?
-  - Proposed answer: yes, stated, correctness-only.
-  - Lands in: §1.12 `D-NO-INPUT-LIMITS`, §1.7, §1.13.
-- **Q8** — YAML is parsed with `yaml` 2.x defaults (YAML 1.2 core schema, no
-  custom tags, no file or code access, a default limit on alias expansion);
-  JSON with `JSON.parse`. A report about a YAML feature that runs code or
-  reads a file is `OUT-OF-MODEL: dependency-contract`; deep nesting that
-  throws is an error message, not a vulnerability.
-  - Proposed answer: yes.
-  - Lands in: §1.9, §1.12 `D-NO-INPUT-LIMITS`.
-- **Q9** — JSON Schemas are compiled by Ajv, which documents that schemas are
-  trusted like code. The toolkit compiles the node's own schemas, the
-  catalogue's (in `convert`), and in `check` any schema another public site
-  serves for a `$ref` a node file names. Is a slow `pattern` (ReDoS) or a huge
-  schema a stated limit, correctness-only, with the owner responsible for the
-  `$ref`s they write?
-  - Proposed answer: yes, stated, correctness-only.
-  - Lands in: §1.12 `D-SCHEMA-COMPILE-COST`, §1.7 rows for `schema.json` and
-    remote schemas, §1.9.
-- **Q10** — JSON-LD: examples and contexts are expanded with `jsonld` and a
-  document loader that answers the node's own files from the build, the
-  NGSI-LD core context from a bundled copy, and any other https URL through
-  the shared reader (not only listed nodes). A context that cannot be read is
-  a note. Is that the intended contract?
-  - Proposed answer: yes.
-  - Lands in: §1.7 row for remote `@context` documents, §1.9.
-- **Q11** — A mapping file of the user's own is trusted configuration: its
-  `via` may name any `.yaml` or `.yml` file relative to it, inside or outside
-  the folder, and `convert` reads it. A report that a mapping file reads a
-  file outside its folder is `OUT-OF-MODEL: trusted-input`.
-  - Proposed answer: yes.
-  - Lands in: §1.7, §1.12 `D-NOT-A-SANDBOX`, §1.13, §1.14.
-- **Q12** — Text from a CSV is not filtered where it is echoed. `mapping`
-  writes unused header names into comments of the mapping file with their
-  line breaks, so a header such as `"extra⏎fields: …"` adds a line to the YAML
-  (tried on the bound commit); the summary on standard error prints header
-  names and cell values as they are. Choose: (a) claim "text from a CSV never
-  adds lines to the mapping file", correctness-only, so the current behaviour
-  is `VALID` and gets a fix; or (b) disclaim it and leave the review of the
-  generated file to the user.
-  - Proposed answer: (a); terminal output of local files stays disclaimed
-    (the file is the user's).
-  - Lands in: §1.11 (new property) or §1.12; §1.7 matrix row `convert` /
-    `x-agent-instructions`; §1.8.
-
-**Wave 3 — network**
-
-- **Q13** — `P-PUBLIC-READS` is security-critical and covers every read of
-  another node: `check`, `build`, `search`, `nodes`, `export`, `extend`. Its
-  only off-switch is a library caller's own `fetch`.
-  - Proposed answer: yes.
-  - Lands in: §1.11 `P-PUBLIC-READS`.
-- **Q14** — Three reads do not use the shared reader: `--site` in `convert`
-  and `mapping` (global `fetch`, redirects followed, no address check, no
-  size cap, no deadline); the node's own published files in `check` and
-  `release` (global `fetch` under `baseUrl`, redirects followed, `http://`
-  allowed, 20 seconds, no size cap); `upgrade`'s read of GitHub's API. Their
-  URLs are trusted input (the user's option, the owner's `baseUrl`, a fixed
-  GitHub URL), so an SSRF report through them is
-  `OUT-OF-MODEL: trusted-input`, and `P-PUBLISHED-COMPARISON` is
-  correctness-only. In a node's pull request a contributor can change
-  `baseUrl`, but already runs code in that job (Q18).
-  - Proposed answer: yes; state it as `D-OWN-SITE-READS`.
-  - Lands in: §1.4, §1.7, §1.11 `P-PUBLISHED-COMPARISON`, §1.12
-    `D-OWN-SITE-READS`, §1.13, §1.14.
-- **Q15** — What is trusted as data from the network: datamodels.jp for the
-  content `convert` reads; GitHub's API for the release SHA in `upgrade`;
-  other nodes for nothing, with names, URLs and shape checked. `extend`
-  copies another node's schema, example and texts as published; reviewing
-  them before a commit is the owner's job.
-  - Proposed answer: yes.
-  - Lands in: §1.7, §1.8, §1.10, §1.12 `D-REMOTE-CONTENT-UNREVIEWED`, §1.13.
-- **Q16** — Resource bounds of reads of other nodes: 5 MB per answer, one
-  deadline per read (20 s, 5 s for the type IRI's own index), depth 5 and 50
-  nodes. `P-REMOTE-READS-BOUNDED` is correctness-only, threshold "more than
-  5 MB from one answer or reading past the deadline is a bug; slow is not".
-  Notes and errors of `check`, `extend` and `export` may carry URLs and
-  messages from other nodes as they are; only the `search` and `nodes`
-  listings are reduced to plain text.
-  - Proposed answer: yes to both.
-  - Lands in: §1.11 `P-REMOTE-READS-BOUNDED`, `P-TERMINAL-TEXT-PLAIN`
-    (coverage), §1.8.
-
-**Wave 4 — the Action, outputs, supply chain, agents, meta**
-
-- **Q17** — In the Action, `TOKEN` is set from `github.token` for the whole
-  "Check" step on every event, so the `node` process and its dependencies run
-  with the token in their environment (the toolkit's code does not read it).
-  On a pull request the token is read-only for forks; on `main` it has the
-  publish job's permissions. Is that a stated limit (`D-TOKEN-IN-STEP-ENV`,
-  security-critical), with `P-ACTION-TOKEN-USE` claimed for what the Action
-  itself does?
-  - Proposed answer: yes. Moving the token into the fetch alone is a
-    hardening candidate.
-  - Lands in: §1.12 `D-TOKEN-IN-STEP-ENV`, §1.11 `P-ACTION-TOKEN-USE`, §1.13.
-- **Q18** — On `pull_request`, GitHub runs the contributor's merge commit,
-  workflow file included, with that job's token. The toolkit adds no
-  capability beyond that, so a contributor's report of code execution or a
-  token in the check job is `OUT-OF-MODEL: adversary-not-in-scope`; the
-  publish job runs only on `main` after the owner merged. Making the check
-  required and not bypassing it is the owner's job.
-  - Proposed answer: yes.
-  - Lands in: §1.2, §1.3, §1.7, §1.10, §1.13.
-- **Q19** — Outputs: `convert` output is exactly as untrusted as the CSV
-  (`D-OUTPUT-TEXT-AS-INPUT`, security-critical, stated); `P-PAGES-ESCAPED` and
-  `P-CONTEXT-IMPORTS-LISTED` are correctness-only because the text is the
-  owner's and reviewed; `P-SQL-QUOTED` is security-critical because a model
-  from another node reaches a database.
-  - Proposed answer: yes.
-  - Lands in: §1.8, §1.11, §1.12, §1.13.
-- **Q20** — Publish path: anyone who may publish a GitHub release publishes to
-  npm, with no second approval (stated); `v*.*.*` tags cannot be moved or
-  deleted by the organisation ruleset, which the operations team can bypass;
-  the npm package ships no lockfile; GitHub, npm and Node.js are trusted. Is
-  `D-NO-SHRINKWRAP` a stated limit (security-critical), and is a malicious
-  transitive version `OUT-OF-MODEL: dependency-contract`?
-  - Proposed answer: yes to both.
-  - Lands in: §1.7 matrix row `release-pipeline`, §1.10, §1.12
-    `D-NO-SHRINKWRAP`, `D-RELEASE-SINGLE-GATE`.
-- **Q21** — The agent skill is guidance copied from the repository, not in the
-  npm package; it tells agents to read `llms.txt`, `catalog.json` and MCP
-  answers and to run commands. Nothing filters instructions in that text, and
-  the toolkit writes model text into `llms.txt` and the AI adapter's
-  descriptions as it is. Should `D-AGENT-TEXT` (security-critical) and
-  `D-SKILL-GUIDANCE-ONLY` (correctness-only, false friend) be stated limits?
-  - Proposed answer: yes to both.
-  - Lands in: §1.7, §1.10, §1.12, §1.13, §1.14.
-- **Q22** — `init --github` always creates a **public** repository, commits
-  only the files `init` wrote, and turns on Pages with the user's `gh` account.
-  A private node is not supported by `init` (the user can create the
-  repository themselves).
-  - Proposed answer: yes.
-  - Lands in: §1.5, §1.11 `P-INIT-ONLY-ITS-FILES`.
-- **Q23** — `P-PUBLISHED-COMPARISON` holds only online and only as far as the
-  node's site answers; with `--offline` or an unreachable site it is a note.
-  Is correctness-only the right tier?
-  - Proposed answer: yes.
-  - Lands in: §1.11 `P-PUBLISHED-COMPARISON`.
-- **Q24** — Bind this model to commit `4d88e4e` (release `v0.3.16` plus the
-  pin commit), keep the triage policy `strict`, and re-run it at the next
-  minor release or on any §1.16 trigger.
-  - Proposed answer: yes.
-  - Lands in: §1.1, §1.16.
+Not applicable — the maintainer answered all 24 questions of the first draft on 2026-10-17 by accepting every proposed answer; the ratified claims carry *(maintainer, 2026-10)* and the list of questions is kept in `docs/threat-model-pilot-notes.md`.
 
 ## 1.19 Machine-readable companions
 
@@ -1195,7 +1022,7 @@ export: `description` and `trust_boundaries`, as in the catalogue's model.
 
 ## Appendix: prior security-policy back-map
 
-Not applicable — the repository has no `SECURITY.md` and no earlier document that states a threat model at the bound commit `4d88e4e`; the organisation's default `SECURITY.md` describes only how to report, and the statements mined for this draft come from the README, `AGENTS.md`, `action.yml`, the workflow files, `CHANGELOG.md`, the toolkit pages at datamodels.jp/en/toolkit and source-file comments, each cited inline.
+Not applicable — at the bound commit `4d88e4e` the repository had no `SECURITY.md` and no earlier document that states a threat model; the organisation's default `SECURITY.md` describes only how to report. The `SECURITY.md` added with this model points to it and adds no claim of its own.
 
 ## Appendix A: glossary
 
