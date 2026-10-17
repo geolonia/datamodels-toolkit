@@ -571,11 +571,11 @@
     "assumes": [
       "**Runtime.** Node.js 24 or later. The command line is an ES module run by `node`; the Action uses `actions/setup-node` with Node 24.",
       "**Terminal.** Prompts only when both standard input and output are a terminal; in CI a missing answer is a usage error.",
-      "**Concurrency.** One command is one process; nothing is shared between runs. `add` takes a lock file in the subject folder against two runs at once ` with comment)*."
+      "**Concurrency.** One command is one process; nothing is shared between runs. `add` takes a lock file in the subject folder against two runs at once."
     ],
     "does_not": [
       "**Host.** Any machine the user runs it on, or a GitHub-hosted runner for the Action. No platform is singled out.",
-      "**Exit codes.** 0 success, 1 a problem, 2 a usage error; the command line never calls `process.exit()` \")*."
+      "**Exit codes.** 0 success, 1 a problem, 2 a usage error; the command line never calls `process.exit()`."
     ],
     "provenance": "documented"
   },
@@ -691,7 +691,7 @@
       "property": "P-REMOTE-READS-BOUNDED",
       "violation_symptom": "hang, unbounded-allocation",
       "severity_tier": "correctness",
-      "conditions": "5 MB per answer, one deadline per read (20 s, 5 s), depth 5, 50 nodes",
+      "conditions": "5 MB per answer; one deadline per read: 15 s in search and nodes, 20 s in check, build, export and extend, 5 s for the guess at a type IRI own index; depth 5, 50 nodes",
       "provenance": "documented",
       "source": "src/adapters/net.mjs MAX_BYTES; src/discover.mjs MAX_DEPTH"
     },
@@ -1031,25 +1031,25 @@
   ],
   "known_non_findings": [
     {
-      "reported_as": "check --base passes although a released snapshot file changed or was removed",
+      "reported_as": "\"check --base passes although a released snapshot file changed or was removed\"",
       "why_safe": "Covers node-tools, action; symptom 'integrity-change'. Exact-match conditions (§1.15): `node.yaml` has `prerelease: true` at the base ref and in the change; the output lists the file as a note \"corrected in place during the pre-release\".",
       "cites": "properties_not_provided[10]",
       "suppression": "node.yaml has prerelease: true at the base ref and in the change; the output lists the file as a note \"corrected in place during the pre-release\""
     },
     {
-      "reported_as": "the Action reads github.token\" or \"passes a token to git",
+      "reported_as": "\"the Action reads github.token\" or \"passes a token to git\"",
       "why_safe": "Covers action; symptom 'credential-exposure'. Exact-match conditions (§1.15): the token is used only in the \"Check\" step's `git fetch` of the base branch, through `GIT_CONFIG_*` environment variables, masked, with `persist-credentials: false` on the checkout.",
       "cites": "properties_provided[15]",
       "suppression": "the token is used only in the \"Check\" step's git fetch of the base branch, through GIT_CONFIG_* environment variables, masked, with persist-credentials: false on the checkout"
     },
     {
-      "reported_as": "check exits 0 although an extended model or a remote context could not be read",
+      "reported_as": "\"check exits 0 although an extended model or a remote context could not be read\"",
       "why_safe": "Covers node-tools, remote-reads; symptom 'missing-failure'. Exact-match conditions (§1.15): the output has a note for that URL; the URL belongs to another node.",
       "cites": "properties_not_provided[8]",
       "suppression": "the output has a note for that URL; the URL belongs to another node"
     },
     {
-      "reported_as": "the publish workflow has id-token: write",
+      "reported_as": "\"the publish workflow has id-token: write\"",
       "why_safe": "Covers release-pipeline; symptom 'excessive-permission'. Exact-match conditions (§1.15): the job is `publish` in `publish.yml`, runs on a published non-pre-release, installs with `--ignore-scripts`.",
       "cites": "properties_provided[17]",
       "suppression": "the job is publish in publish.yml, runs on a published non-pre-release, installs with --ignore-scripts"

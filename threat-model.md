@@ -286,10 +286,10 @@ Reachability preconditions:
 - **Terminal.** Prompts only when both standard input and output are a
   terminal; in CI a missing answer is a usage error *(documented, bin/datamodels.mjs header: "In a terminal it asks for what the options do not give")*.
 - **Exit codes.** 0 success, 1 a problem, 2 a usage error; the command line
-  never calls `process.exit()` *(documented, bin/datamodels.mjs `Exit` comment: "Nothing calls process.exit()")*.
+  never calls `process.exit()` *(documented, bin/datamodels.mjs `Exit` comment: "Nothing calls process.exit")*.
 - **Concurrency.** One command is one process; nothing is shared between
   runs. `add` takes a lock file in the subject folder against two runs at
-  once *(documented, src/add.mjs `writeFile(lock, '', { flag: 'wx' })` with comment)*.
+  once *(documented, src/add.mjs `addModel`, the lock file written with flag `wx`)*.
 
 ### No-surprise side-effects inventory
 
@@ -1043,7 +1043,10 @@ SHA-256 of the exact prose bytes it was derived from; the JSON is a lossy
 export bound only by commit and date and is never a triage input. Regenerate
 both whenever this file changes. Two JSON fields are completed by hand after
 export: `description` and `trust_boundaries`, as in the catalogue's model.
-The JSON has no `maintainer` kind: the exporter folds **maintainer** tags into
+The JSON's disposition list has exactly nine values and none for
+`OUT-OF-MODEL: dependency-contract`; a JSON-only consumer cannot route such a
+report, which is one more reason the JSON is never a triage input. The JSON has
+no `maintainer` kind: the exporter folds **maintainer** tags into
 `documented` (its confidence reads 291 documented, the 194 documented plus 97
 maintainer of the header), and a trust boundary resting on a maintainer
 ruling is exported as `documented`.

@@ -1,7 +1,7 @@
 # threat-model.yaml — derived index; the prose threat model (threat-model.md) is canonical.
 schema: threat-model-sidecar/v2
 project: datamodels-toolkit
-prose_version: "threat-model.md@sha256:82ee73672a4fac0c5f6ee23f49169bd2b097f0104ebc677816a74a7016dab858"
+prose_version: "threat-model.md@sha256:14698344ec7a79fe59814a6f701d62466af1698c86accb7047ac227689147836"
 model_status: accepted
 triage_policy: strict
 confidence:
@@ -1799,7 +1799,7 @@ properties_claimed:
   - remote-reads
   - node-tools
   tier: correctness-only
-  conditions: "5 MB per answer, one deadline per read (20 s, 5 s), depth 5, 50 nodes"
+  conditions: "5 MB per answer; one deadline per read: 15 s in search and nodes, 20 s in check, build, export and extend, 5 s for the guess at a type IRI own index; depth 5, 50 nodes"
   violation_symptoms:
   - hang
   - unbounded-allocation
@@ -2359,7 +2359,7 @@ known_non_findings:
   - node-tools
   - action
   symptom: integrity-change
-  tool_pattern: check --base passes although a released snapshot file changed or was removed
+  tool_pattern: "\"check --base passes although a released snapshot file changed or was removed\""
   conditions: "node.yaml has prerelease: true at the base ref and in the change; the output lists the file as a note \"corrected in place during the pre-release\""
   discharged_by:
   - D-PRERELEASE-CORRECTIONS
@@ -2370,7 +2370,7 @@ known_non_findings:
   components:
   - action
   symptom: credential-exposure
-  tool_pattern: "the Action reads github.token\" or \"passes a token to git"
+  tool_pattern: "\"the Action reads github.token\" or \"passes a token to git\""
   conditions: "the token is used only in the \"Check\" step's git fetch of the base branch, through GIT_CONFIG_* environment variables, masked, with persist-credentials: false on the checkout"
   discharged_by:
   - P-ACTION-TOKEN-USE
@@ -2382,7 +2382,7 @@ known_non_findings:
   - node-tools
   - remote-reads
   symptom: missing-failure
-  tool_pattern: check exits 0 although an extended model or a remote context could not be read
+  tool_pattern: "\"check exits 0 although an extended model or a remote context could not be read\""
   conditions: the output has a note for that URL; the URL belongs to another node
   discharged_by:
   - D-OTHER-NODES-NOTED
@@ -2393,7 +2393,7 @@ known_non_findings:
   components:
   - release-pipeline
   symptom: excessive-permission
-  tool_pattern: "the publish workflow has id-token: write"
+  tool_pattern: "\"the publish workflow has id-token: write\""
   conditions: "the job is publish in publish.yml, runs on a published non-pre-release, installs with --ignore-scripts"
   discharged_by:
   - P-RELEASE-GATED

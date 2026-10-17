@@ -136,7 +136,12 @@ the Geolonia question-bank extension, same proposed-answer style):
   when it is not security-relevant. Worth upstreaming as a generator, or at
   least documenting.
 - **The JSON exporter** again needs hand completion of `description` and
-  `trust_boundaries`, as §1.19 says.
+  `trust_boundaries`, as §1.19 says. Its schema (`spec_version` 1) allows
+  exactly nine dispositions and has no value for `OUT-OF-MODEL:
+  dependency-contract`, so a JSON-only consumer cannot route a report about a
+  dependency; the YAML has it. The exporter also cut citations that contain
+  parentheses or quotes, which left broken text in the `environment` entries;
+  the citations were reworded. Both are worth an upstream issue.
 - **The backtest** had a real corpus for the first time worth the name: nine
   fixed defects from the changelog ("Security" and "Fixed" of 0.3.15 and
   0.3.16) and issue #93. All nine route `VALID`; fail-safe figure 0 of 9. The
@@ -238,7 +243,9 @@ eleven escalated closes into closes; fail-safe figure still 0 of 9.
   (`D-AGENT-TEXT` security-critical, `D-SKILL-GUIDANCE-ONLY` correctness-only).
   Proposed: yes to both.
 - Q22 `init --github` always creates a public repository with only the files
-  it wrote. Proposed: yes.
+  it wrote. Proposed: yes. (Qualified after the self-review: in a folder that
+  is already a git repository without a remote, it pushes the whole local
+  history, older files and commits included; `D-INIT-PUSHES-HISTORY`.)
 - Q23 `P-PUBLISHED-COMPARISON` is correctness-only (online only). Proposed:
   yes.
 - Q24 Bind to `4d88e4e`, keep `strict`, re-run at the next minor release or a
@@ -278,7 +285,9 @@ belong in issues, not in the threat model:
    commits, or push only `init`'s commit (`D-INIT-PUSHES-HISTORY`).
 10. Upstream to Alpha-Omega: a sidecar generator from the prose tables, the
    `obligation_id` and `affects_properties` rules in `sidecar-schema.md`, the
-   exporter reading §1.1's description and §1.4, and question-bank entries for
+   exporter reading §1.1's description and §1.4, a JSON value for
+   `dependency-contract`, citations with parentheses kept whole by the
+   exporter, and question-bank entries for
    "the attacker already runs code next to you" and "trusted configuration
    that is also a URL".
 11. For `geolonia/skills`: the CLI and Action questions in the table above,
