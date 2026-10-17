@@ -16,7 +16,8 @@ This repository has a threat model, [`threat-model.md`](threat-model.md),
 that states what the `datamodels` command line, its GitHub Action, its
 library exports and its agent skill promise (for example, that reads of other
 nodes reach only public https hosts, and that the Action uses the job token
-only to fetch the base branch), what they deliberately do not promise, and
+for one fetch of the base branch; the token is still in the environment of
+that whole step), what they deliberately do not promise, and
 what the person running the command line and the repository owner using the
 Action own. A report is triaged against it:
 
@@ -35,8 +36,9 @@ of the conditions in its §1.16 happens. `threat-model.yaml` and
 prose is authoritative.
 
 Questions about a data model or a mapping file of datamodels.jp belong in
-[geolonia/datamodels](https://github.com/geolonia/datamodels), which has its
-own security policy and threat model.
+[geolonia/datamodels](https://github.com/geolonia/datamodels); its own
+security policy and threat model are in progress in
+[geolonia/datamodels#290](https://github.com/geolonia/datamodels/pull/290).
 
 ## Supported versions
 

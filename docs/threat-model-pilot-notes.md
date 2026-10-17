@@ -4,11 +4,11 @@ Date: 2026-10-16. The first draft of [`threat-model.md`](../threat-model.md)
 (with `threat-model.yaml` and `threat-model.json`) was produced with the
 Alpha-Omega `threat-model` plugin, version 1.2.1 at commit `192fd60`
 (https://github.com/alpha-omega-security/threat-model, MIT), the same commit
-as the two earlier pilots (Pointsman, geolonia/pointsman#96, and the
-datamodels.jp catalogue, geolonia/datamodels#290), in draft-first mode: the
+as the two earlier pilots (the first pilot, a small Cloudflare Workers
+service, and the datamodels.jp catalogue, geolonia/datamodels#290), in draft-first mode: the
 agent wrote version 1 from the public artifacts and collected 24 questions for
 the maintainer in §1.18. This run used Claude Opus 5.5 for the draft, as the
-catalogue pilot did (the Pointsman pilot used Claude Fable 5.1). The
+catalogue pilot did (the first pilot used Claude Fable 5.1). The
 maintainer answered all 24 questions in one batch on 2026-10-17, accepting
 every proposed answer; the model's status is now *accepted* and its triage
 policy stays `strict`. The catalogue is a separate model and is named as a
@@ -23,12 +23,13 @@ draft pull request.
 |---|---|---|
 | Read the plan, the two earlier notes and models; install the skill; read its references | about 5 min | The `/plugin` commands were not available in the session, so `skills/` was copied into `.claude/skills/` (not committed). HEAD of the plugin repository is still `192fd60`. |
 | Recon and surface pass (`bin/`, `src/`, `action.yml`, the workflows, the skill, `CHANGELOG.md`, the toolkit pages at datamodels.jp/en/toolkit, GitHub branch and tag rules) | about 6 min | About 7,600 lines of code. One probe run (`mapping` on a crafted CSV) to confirm Q12. |
-| Draft the prose | about 7 min | 16,900 words; the validator warns about length, as in both earlier pilots. |
+| Draft the prose | about 7 min | 16,874 words in the first draft (`wc -w`); the validator warns about length, as in both earlier pilots. |
 | Backtest, sidecar, JSON export, validator loop | about 9 min | Four validator rounds; the sidecar was generated from the prose tables by a script this time (see below). |
 | Lessons note, commit, draft pull request | about 5 min | |
-| Maintainer: answer the 24 questions | one batch on 2026-10-17 | Every proposed answer accepted, as in the Pointsman pilot. |
+| Maintainer: answer the 24 questions | one batch on 2026-10-17 | Every proposed answer accepted, as in the first pilot. |
 | Apply the wave: promote tags, two new claims (Q2, Q12), retire §1.18, re-run the backtest, `SECURITY.md`, regenerate the companions | about 10 min | Two validator rounds: the worked-examples table allows at most four rows, and the JSON schema has no `maintainer` value for a trust boundary (a maintainer ruling is exported as `documented`). The first attempt was stopped by the agent's permission mode, because the request to record the answers came from another session; the maintainer confirmed in this session. |
-| **Total** | **about 42 min agent time**, plus the maintainer's reading | |
+| Fix the findings of a self-review before ready (a fresh agent's report on the accepted model) | about 10 min | No P0. Narrowed `P-INIT-ONLY-ITS-FILES` (an existing repository's history is pushed: `D-INIT-PUSHES-HISTORY`), named Ajv's generated validators as the exception to `P-NODE-FILES-ARE-DATA`, corrected the deadlines of `search` and `nodes` (15 s, not 20 s), recorded that the check job reads a contributor's `baseUrl` before merge, a second site of the Q12 violation, the OIDC variables in the Action's step, citations, and removed the first pilot's name from this repository. |
+| **Total** | **about 52 min agent time**, plus the maintainer's reading | |
 
 As in both earlier pilots, the source comments and the toolkit pages already
 state much of the contract, so many claims could be tagged **documented**.
@@ -70,11 +71,11 @@ The earlier pilots' generic questions, and how they fitted here:
 
 | Earlier pilot's question | Used here as | Fit |
 |---|---|---|
-| Client-supplied outbound URL (Pointsman Q9) | Q13, Q14 (which reads go through the shared reader; which URLs are trusted input) | Direct fit, split in two: reads of other nodes are guarded; `--site`, `baseUrl` and GitHub's API are not. |
-| Public data as facts (Pointsman Q10, Q11) | Q15 (datamodels.jp trusted for content; other nodes for nothing; `extend` copies unreviewed) | Direct fit. |
-| Request size (Pointsman Q8, catalogue Q16, Q20) | Q7, Q16 (local files have no limits; reads of other nodes are bounded) | Direct fit, twice. |
-| A separate component family with its own adversary (Pointsman Q3, catalogue Q1) | Q1 (catalogue as sibling) | Direct fit. |
-| Attacker-controlled input to an LLM prompt (Pointsman Q7, catalogue Q17) | Q21 (`llms.txt`, AI adapter descriptions, the agent skill) | Turned around again: the toolkit writes the text agents read, and ships the skill that sends agents to read it. |
+| Client-supplied outbound URL (first pilot Q9) | Q13, Q14 (which reads go through the shared reader; which URLs are trusted input) | Direct fit, split in two: reads of other nodes are guarded; `--site`, `baseUrl` and GitHub's API are not. |
+| Public data as facts (first pilot Q10, Q11) | Q15 (datamodels.jp trusted for content; other nodes for nothing; `extend` copies unreviewed) | Direct fit. |
+| Request size (first pilot Q8, catalogue Q16, Q20) | Q7, Q16 (local files have no limits; reads of other nodes are bounded) | Direct fit, twice. |
+| A separate component family with its own adversary (first pilot Q3, catalogue Q1) | Q1 (catalogue as sibling) | Direct fit. |
+| Attacker-controlled input to an LLM prompt (first pilot Q7, catalogue Q17) | Q21 (`llms.txt`, AI adapter descriptions, the agent skill) | Turned around again: the toolkit writes the text agents read, and ships the skill that sends agents to read it. |
 | Pre-release mutability (catalogue Q3, Q4) | Q6 | Direct fit; the answer may differ (by design here, review-only there). |
 | Merge as publication, branch rules (catalogue Q7) | Q18 (the node owner's branch rules) | Moved to the integrator: the toolkit cannot see a node's branch rules. |
 | Third-party text on pages (catalogue Q18) | Q19 (`P-PAGES-ESCAPED` tier) | Direct fit. |
@@ -121,7 +122,7 @@ the Geolonia question-bank extension, same proposed-answer style):
   command line; for the agent skill six of eight are. Three project-specific
   dimensions were added: `x-outbound-requests`, `x-version-immutability` and
   `x-agent-instructions`.
-- **Length.** 16,900 words against the 3 to 8 pages the skill asks for. The
+- **Length.** 16,874 words in the first draft and 15,853 in the accepted model (`wc -w`), against the 3 to 8 pages the skill asks for. The
   matrix (8 families × 8 dimensions + 10) and the 43-row input table are most
   of it, as before. A per-family appendix would help here too.
 - **The sidecar.** The first two pilots wrote the YAML by hand. This run
@@ -212,7 +213,9 @@ eleven escalated closes into closes; fail-safe figure still 0 of 9.
 - Q15 Trusted as data: datamodels.jp for `convert`, GitHub's API for
   `upgrade`; other nodes for nothing; `extend` copies unreviewed content.
   Proposed: yes.
-- Q16 Remote reads bounded (5 MB, one deadline, depth 5, 50 nodes),
+- Q16 Remote reads bounded (5 MB, one deadline per read — 15 s in `search`
+  and `nodes`, 20 s elsewhere, as corrected after the self-review — depth 5,
+  50 nodes),
   correctness-only; only the `search`/`nodes` listing is plain text, notes and
   errors are not. Proposed: yes to both.
 
@@ -247,8 +250,11 @@ The model describes the toolkit as it is. These came up while reading and
 belong in issues, not in the threat model:
 
 1. `mapping` writes CSV header names into YAML comments with their line
-   breaks, so a header can add lines to the generated mapping file; reduce
-   header text to one line there and in the summary (Q12).
+   breaks, so a header can add lines to the generated mapping file. Two
+   places: the list of unused columns (`src/mapping.mjs:444`) and the "maybe"
+   suggestions in a row's comment (`src/mapping.mjs:426`, written at `:432`).
+   Reduce header text to one line there and in the summary (Q12,
+   `P-CSV-TEXT-NO-NEW-LINES`).
 2. Move `TOKEN` from the "Check" step's environment into the `git fetch` alone
    (for example a separate step), so the toolkit process does not carry the
    job token (Q17).
@@ -262,17 +268,21 @@ belong in issues, not in the threat model:
    that the transitive tree is resolved at install time (Q20).
 6. Consider a release environment with a required reviewer for `publish.yml`,
    or keep the single gate and say so in a `SECURITY.md` (Q20).
-7. ~~A `SECURITY.md` in the repository that links this model, as Pointsman
-   did after its pilot (Q5).~~ Done in this PR.
+7. ~~A `SECURITY.md` in the repository that links this model, as the first
+   pilot did (Q5).~~ Done in this PR.
 8. Document in the README that a mapping file is trusted configuration and
    that `via` can read any YAML file (Q11).
-9. Upstream to Alpha-Omega: a sidecar generator from the prose tables, the
+9. `init --github` in a folder that is already a git repository without a
+   remote pushes its whole local history to the new public repository;
+   checking only the working tree is not enough. Refuse a repository with earlier
+   commits, or push only `init`'s commit (`D-INIT-PUSHES-HISTORY`).
+10. Upstream to Alpha-Omega: a sidecar generator from the prose tables, the
    `obligation_id` and `affects_properties` rules in `sidecar-schema.md`, the
    exporter reading §1.1's description and §1.4, and question-bank entries for
    "the attacker already runs code next to you" and "trusted configuration
    that is also a URL".
-10. For `geolonia/skills`: the CLI and Action questions in the table above,
-    next to the Pointsman and catalogue questions.
+11. For `geolonia/skills`: the CLI and Action questions in the table above,
+    next to the first pilot's and the catalogue's questions.
 
 ## Files
 

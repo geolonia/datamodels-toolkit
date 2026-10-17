@@ -6,7 +6,7 @@
   "scope_subpath": null,
   "description": "datamodels-toolkit is a command line and a GitHub Action for data models in the style of datamodels.jp. People use it to turn a CSV list into NGSI-LD entities, to start and maintain a *node* (a site of their own that publishes JSON Schemas, JSON-LD @context files and vocabularies at fixed URLs), to find models on other nodes, and to export a model for other tools (a CSV template, a Table Schema, a JSON Schema for AI output, a PostgreSQL table). It runs on the user's machine or in the user's GitHub Actions job, with the user's rights. It has no server, stores nothing of its own and holds no credential except the job token the Action is given.",
   "confidence": {
-    "documented": 290,
+    "documented": 291,
     "inferred": 0
   },
   "components": [
@@ -357,7 +357,7 @@
       "component": "node-tools",
       "caller_must_enforce": "n/a: a trusted input the user or owner chooses",
       "provenance": "documented",
-      "source": "src/build/published.mjs header: \"The base branch decides\""
+      "source": "src/build/published.mjs header: \"this compares the snapshots with a git ref\""
     },
     {
       "entry_point": "check / release: own published files",
@@ -877,7 +877,7 @@
     },
     {
       "property": "D-OWN-SITE-READS",
-      "reason": "stated by the maintainer. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site)",
+      "reason": "stated by the maintainer. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site). In a node's pull_request job the baseUrl read happens before merge, on input the contributor chose",
       "false_friend": false,
       "provenance": "documented",
       "source": "maintainer ruling, 2026-10"
@@ -891,7 +891,7 @@
     },
     {
       "property": "D-OTHER-NODES-NOTED",
-      "reason": "stated. Another node that cannot be read, or does not answer within 20 seconds, is only noted; a node that is down never fails someone else's check",
+      "reason": "stated. Another node that cannot be read, or does not answer within the read's deadline (20 seconds in check and build, 15 in search and nodes), is only noted; a node that is down never fails someone else's check",
       "false_friend": true,
       "provenance": "documented",
       "source": "datamodels.jp/en/toolkit/check: \"a node that is down never fails someone else's check\""
@@ -912,7 +912,7 @@
     },
     {
       "property": "D-TOKEN-IN-STEP-ENV",
-      "reason": "stated by the maintainer. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event",
+      "reason": "stated by the maintainer. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event. On main, where the job has id-token: write, the runner's OIDC request variables are in that environment too",
       "false_friend": false,
       "provenance": "documented",
       "source": "maintainer ruling, 2026-10"
@@ -930,6 +930,13 @@
       "false_friend": true,
       "provenance": "documented",
       "source": "maintainer ruling, 2026-10"
+    },
+    {
+      "property": "D-INIT-PUSHES-HISTORY",
+      "reason": "silence: nothing promises it. In a folder that is already a git repository without a remote, init --github pushes the whole local history to the new public repository, older commits included; only the working tree is checked",
+      "false_friend": false,
+      "provenance": "documented",
+      "source": "src/init.mjs publishToGitHub: gh repo create with --public, --source and --push"
     },
     {
       "property": "D-RELEASE-SINGLE-GATE",

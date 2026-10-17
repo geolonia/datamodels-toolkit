@@ -1,11 +1,11 @@
 # threat-model.yaml — derived index; the prose threat model (threat-model.md) is canonical.
 schema: threat-model-sidecar/v2
 project: datamodels-toolkit
-prose_version: "threat-model.md@sha256:f8ad9859ca6c6befbdb8d080211ac4d4ddd8deef34e023d50d40d24161f3a9cd"
+prose_version: "threat-model.md@sha256:82ee73672a4fac0c5f6ee23f49169bd2b097f0104ebc677816a74a7016dab858"
 model_status: accepted
 triage_policy: strict
 confidence:
-  documented: 193
+  documented: 194
   maintainer: 97
   inferred: 0
   assumption: 0
@@ -365,7 +365,7 @@ entry_points:
     caller_must_enforce: "n/a: a trusted input the user or owner chooses"
     provenance:
       kind: documented
-      source: "src/build/published.mjs header: \"The base branch decides\""
+      source: "src/build/published.mjs header: \"this compares the snapshots with a git ref\""
 - id: "check / release: own published files"
   component: node-tools
   parameters:
@@ -862,7 +862,7 @@ contract_dimensions:
 - component: init-github
   dimension: failure-atomicity
   status: claimed
-  conditions: "settings are checked before anything is written; with --github, other files in the folder stop it before a commit"
+  conditions: "settings are checked before anything is written; with --github, other files or changes in the working tree stop it before a commit; the earlier history of an existing repository is pushed as it is (D-INIT-PUSHES-HISTORY)"
   property_id: P-INIT-ONLY-ITS-FILES
   provenance:
     kind: documented
@@ -1483,7 +1483,7 @@ adversaries:
   goals: []
   provenance:
     kind: documented
-    source: "README \"Releases\""
+    source: "GitHub organisation ruleset \"tag-rules: semver-immutability\": refs/tags/v*.*.*, operations team may bypass"
 - name: platforms
   scope: out
   capabilities: []
@@ -2052,7 +2052,7 @@ properties_disclaimed:
   components:
   - convert
   - node-tools
-  conditions: "stated by the maintainer. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site)"
+  conditions: "stated by the maintainer. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site). In a node's pull_request job the baseUrl read happens before merge, on input the contributor chose"
   tier: security-critical
   false_friend: false
   provenance:
@@ -2071,7 +2071,7 @@ properties_disclaimed:
   components:
   - node-tools
   - remote-reads
-  conditions: "stated. Another node that cannot be read, or does not answer within 20 seconds, is only noted; a node that is down never fails someone else's check"
+  conditions: "stated. Another node that cannot be read, or does not answer within the read's deadline (20 seconds in check and build, 15 in search and nodes), is only noted; a node that is down never fails someone else's check"
   tier: correctness-only
   false_friend: true
   provenance:
@@ -2099,7 +2099,7 @@ properties_disclaimed:
 - id: D-TOKEN-IN-STEP-ENV
   components:
   - action
-  conditions: "stated by the maintainer. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event"
+  conditions: "stated by the maintainer. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event. On main, where the job has id-token: write, the runner's OIDC request variables are in that environment too"
   tier: security-critical
   false_friend: false
   provenance:
@@ -2124,6 +2124,15 @@ properties_disclaimed:
   provenance:
     kind: maintainer
     date: 2026-10
+- id: D-INIT-PUSHES-HISTORY
+  components:
+  - init-github
+  conditions: "silence: nothing promises it. In a folder that is already a git repository without a remote, init --github pushes the whole local history to the new public repository, older commits included; only the working tree is checked"
+  tier: security-critical
+  false_friend: false
+  provenance:
+    kind: documented
+    source: "src/init.mjs publishToGitHub: gh repo create with --public, --source and --push"
 - id: D-RELEASE-SINGLE-GATE
   components:
   - release-pipeline

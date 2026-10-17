@@ -24,8 +24,8 @@
   draft-first mode, `threat-model-authoring`, `threat-model-backtest`,
   `threat-model-sidecar`). No MCP servers were used. The maintainer's answers
   were applied on 2026-10-17 by the same process. Questions were adapted
-  from the two earlier Geolonia pilots (Pointsman and the datamodels.jp
-  catalogue); the others were written for a command line and an Action.
+  from the two earlier Geolonia pilots (the first pilot, a small Cloudflare
+  Workers service, and the datamodels.jp catalogue); the others were written for a command line and an Action.
 - **Reporting cross-reference**: a finding that violates a §1.11 claimed
   property is reported through GitHub's private vulnerability reporting for
   this repository, which is enabled, as [`SECURITY.md`](SECURITY.md) asks. A finding that lands in §1.3 or §1.12
@@ -48,7 +48,7 @@
   default, open as question `QN` in §1.18.
 - **Glossary**: a short plain-language glossary is at the end of this document
   (Appendix A).
-- **Draft confidence**: 193 documented / 97 maintainer / 0 inferred / 0 assumption.
+- **Confidence**: 194 documented / 97 maintainer / 0 inferred / 0 assumption.
   Counted as the plugin's validator counts, over §1.2 to §1.19: one count per
   parenthesised tag, by its first kind; the tags in this header and its legend
   are not counted.
@@ -345,7 +345,7 @@ line, and the individual fields of `catalog.yaml`, `notes.yaml`,
 | `convert` | `--set attribute=value` | no — command line | data | n/a | *(documented, bin/datamodels.mjs header: "--set attribute=value (for what the list does not carry")* |
 | `convert`, `mapping` | `--out` path | no — command line | resource-name | `convert` overwrites it; `mapping` never does | *(documented, bin/datamodels.mjs `mapping`: "A mapping someone has filled in is work: never write over it")* |
 | `check`, `build`, `release`, `bump`, `add` | `node.yaml` | **yes**, a contributor to the node | data, resource-name | the owner reviews it; settings are checked (URLs http(s) without credentials, `nodes` https only) | *(documented, src/build/node.mjs `settingsProblems` and `httpUrl` comment: "Every URL here is published")* |
-| `check`, `release` | `baseUrl` in `node.yaml`, as the address of the node's published files | **yes**, a contributor; trusted once merged | resource-name | the owner reviews it; the toolkit reads under it with the global `fetch` (§1.6, `D-OWN-SITE-READS`) | *(maintainer, 2026-10)* |
+| `check`, `release` | `baseUrl` in `node.yaml`, as the address of the node's published files | **yes**, a contributor: in the `pull_request` job it is read before anyone merged it | resource-name | the owner reviews it; until then the check job reads under it with the global `fetch` (http and internal hosts allowed, status and error codes printed in notes; §1.6, `D-OWN-SITE-READS`) | *(maintainer, 2026-10)* |
 | `check`, `build` | `models/<subject>/context.jsonld` | **yes**, a contributor | data, resource-name | review; imports by URL only from the node's own or a listed node's `/context/` | *(documented, src/build/load.mjs import check: "only catalog contexts may be imported by URL")* |
 | `check`, `build` | `models/<subject>/<Type>/schema.json` | **yes** | data, size, resource-name (`$ref`) | review; compiled by Ajv in `check` (`D-SCHEMA-COMPILE-COST`); `$ref` to another site read only through the shared reader | *(maintainer, 2026-10)* |
 | `check`, `build` | examples (`example.json`, `example-normalized.jsonld`) | **yes** | data | review; validated, expanded and compacted; an example's own `@context` URL is read through the shared reader | *(documented, datamodels.jp/en/toolkit/check "What check checks")* |
@@ -353,7 +353,7 @@ line, and the individual fields of `catalog.yaml`, `notes.yaml`,
 | `check`, `build` | `extends[].index` in `catalog.yaml` | **yes** | resource-name | must be https; read through the shared reader | *(documented, src/build/node.mjs `loadNode` comment: "extends goes into catalog.json as written, so it is checked here")* |
 | `check`, `build` | the folder and file names under `models/` | **yes** | resource-name | names become URL paths and file names of the site; subject and type names are checked by the model rules | *(maintainer, 2026-10)* |
 | `check --base` | the git ref | no — command line (the Action passes `origin/<base>`) | resource-name | n/a | *(documented, src/build/published.mjs `compareWithBase` comment)* |
-| `check --base` | `node.yaml` and the release snapshots at the ref | no — the base branch, already merged | data | n/a | *(documented, src/build/published.mjs header: "The base branch decides")* |
+| `check --base` | `node.yaml` and the release snapshots at the ref | no — the base branch, already merged | data | n/a | *(documented, src/build/published.mjs header: "this compares the snapshots with a git ref")* |
 | `check`, `release` | the node's published files, as its site answers | **yes**, whoever controls the site or its DNS; normally the owner | data, size | n/a; compared byte for byte; no size cap | *(maintainer, 2026-10)* |
 | `upgrade` | GitHub API answers for the latest or named release and its commit | no — GitHub is trusted (§1.9) | data | n/a; tag must be `vX.Y.Z`, SHA 40 hex digits | *(documented, src/version.mjs `upgradeNode`: "A release, not only a tag or branch of that name")* |
 | `upgrade` | the node's workflow and Markdown files | no — the owner's | data | n/a; only the `uses:` line of this Action and `npx` lines change | *(documented, src/version.mjs `upgradeNode` comment)* |
@@ -385,8 +385,9 @@ line, and the individual fields of `catalog.yaml`, `notes.yaml`,
   *(maintainer, 2026-10)*. JSON is parsed with `JSON.parse`, YAML with `yaml` 2.x
   defaults *(maintainer, 2026-10)*.
 - **Other nodes.** 5 MB per response, at most 5 redirects, one deadline per
-  read (20 seconds; 5 seconds for the guess at a type IRI's own index), at
-  most depth 5 and 50 nodes for `search` and `nodes` *(documented, src/adapters/net.mjs `MAX_BYTES` and src/discover.mjs `MAX_DEPTH`, `MAX_NODES`, `OWN_INDEX_TIMEOUT`)*.
+  read: 15 seconds in `search` and `nodes`; 20 seconds in `check`, `build`,
+  `export` and `extend`; 5 seconds for the guess at a type IRI's own index. At
+  most depth 5 and 50 nodes for `search` and `nodes` *(documented, src/adapters/net.mjs `MAX_BYTES`; src/discover.mjs `MAX_DEPTH`, `MAX_NODES`, `OWN_INDEX_TIMEOUT` and the `timeout` default of `discoverNodes`)*.
 - **The node's own site** (`check`, `release`): 20 seconds per file, no size
   cap *(maintainer, 2026-10)*.
 - **`--site`** (`convert`): no deadline and no size cap *(maintainer, 2026-10)*.
@@ -433,7 +434,7 @@ may read as instructions).
 | `remote-reads` | x-outbound-requests | claimed | https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's `schema/` or `examples/` stay there | §1.11 `P-PUBLIC-READS` | *(documented, CHANGELOG.md 0.3.15 "Security")* |
 | `remote-reads` | x-agent-instructions | claimed | text from other nodes printed by `search` and `nodes` has no control characters or direction overrides, on one line | §1.11 `P-TERMINAL-TEXT-PLAIN` | *(documented, src/discover.mjs `plain` comment: "an escape sequence could rewrite the screen")* |
 | `init-github` | numeric domain and representational limits | claimed | `--github` must be `owner/name` of letters, digits and `._-` | §1.11 `P-INIT-ONLY-ITS-FILES` | *(documented, src/init.mjs `REPO_NAME`)* |
-| `init-github` | failure and exception atomicity | claimed | settings are checked before anything is written; with `--github`, other files in the folder stop it before a commit | §1.11 `P-INIT-ONLY-ITS-FILES` | *(documented, src/init.mjs `publishToGitHub` comment: "anything else in the folder stops it, so nothing else is published")* |
+| `init-github` | failure and exception atomicity | claimed | settings are checked before anything is written; with `--github`, other files or changes in the working tree stop it before a commit; the earlier history of an existing repository is pushed as it is (`D-INIT-PUSHES-HISTORY`) | §1.11 `P-INIT-ONLY-ITS-FILES` | *(documented, src/init.mjs `publishToGitHub` comment: "anything else in the folder stops it, so nothing else is published")* |
 | `init-github` | recursive or cyclic topology | N/A — no recursive input | | §1.7 | *(documented, src/init.mjs `nodeFiles`)* |
 | `init-github` | callback and collaborator execution | claimed | `gh` and `git` are run without a shell, with arguments as a list | §1.11 `P-INIT-ONLY-ITS-FILES` | *(documented, src/init.mjs `publishToGitHub` comment: "runs a command without a shell")* |
 | `init-github` | serialization and reconstruction | N/A — writes fixed templates with the user's answers | | §1.7 | *(documented, src/init.mjs `nodeFiles`)* |
@@ -518,8 +519,11 @@ may read as instructions).
 Routing rule: a dependency that fails its own documented contract while this
 project uses it as documented → `OUT-OF-MODEL: dependency-contract`, forwarded
 upstream. This project using a dependency against its contract (for example
-compiling a schema Ajv's documentation says must be trusted, from a source
-this model calls untrusted) → in-model. There is no vendored third-party code;
+turning off a protection the dependency documents) → in-model. Ajv's
+documentation warns that an untrusted schema can be slow to compile or to
+validate; this model accepts that risk in `D-SCHEMA-COMPILE-COST`. A schema
+that runs code through Ajv's generated validators is Ajv failing its own
+contract (`dependency-contract`). There is no vendored third-party code;
 the only bundled file is a copy of the NGSI-LD core context v1.8
 (`src/build/ngsi-ld-core-context-v1.8.jsonld`), used as data
 *(documented, src/build/check.mjs `CORE_CONTEXT` comment: "from a local copy")*.
@@ -532,12 +536,12 @@ machine, or one node repository on GitHub running the Action in its own jobs.
 | Actor | In scope? | Capabilities held | Capabilities excluded | Goals | Provenance |
 | --- | --- | --- | --- | --- | --- |
 | Author of a CSV the user converts | yes | every byte of the CSV: header names, cell values, size, encoding | the mapping file, the command line, `--site`, the catalogue's files | wrong or misleading entities, text that harms the broker or app that stores them, lines added to the generated mapping file, a hang or crash | *(maintainer, 2026-10)* |
-| Contributor to a node (pull request) | yes | any file of the pull request: `node.yaml`, `models/`, release snapshots, the workflow file; code execution in the `pull_request` job with that job's token (read-only from a fork) | merging; running the publish job; the publish job's `pages: write` and `id-token: write`; reading secrets | change a published version, slip a remote import or `$ref` into the node, get a token that can write | *(maintainer, 2026-10)* |
+| Contributor to a node (pull request) | yes | any file of the pull request: `node.yaml`, `models/`, release snapshots, the workflow file; a `baseUrl` that the check job reads before merge; code execution in the `pull_request` job with that job's token (read-only from a fork) | merging; running the publish job; the publish job's `pages: write` and `id-token: write`; reading secrets | change a published version, slip a remote import or `$ref` into the node, get a token that can write | *(maintainer, 2026-10)* |
 | Operator of another node | yes | the content and HTTP behaviour of their site; their DNS; redirects; a slow or large answer; text in their models | the user's files and command line; reading anything from the user except the requests the toolkit makes | make the toolkit read a private address, add lines to files `extend` or `export` writes, write escape sequences to the terminal, hang a command, steer an agent through text | *(documented, src/adapters/net.mjs header and src/discover.mjs `plain` comment)* |
 | Author of text aimed at an AI agent | yes, as a CSV author, contributor or node operator | text in any file an agent reads while following the skill | anything beyond those actors' capabilities | make an agent run a command or change data the user did not ask for | *(maintainer, 2026-10)* |
 | Person running the command line; repository owner using the Action | no — trusted, the integrator | the command line, options, node folder, mapping files, workflow, permissions | n/a | n/a | *(maintainer, 2026-10)* |
 | datamodels.jp operator (Geolonia) | no — trusted for the content `convert` reads | n/a | n/a | n/a | *(maintainer, 2026-10)* |
-| Toolkit maintainers and the operations team | no — trusted | merge, publish a release, bypass the tag rules | n/a | n/a | *(documented, README "Releases")* |
+| Toolkit maintainers and the operations team | no — trusted | merge, publish a release, bypass the tag rules | n/a | n/a | *(documented, GitHub organisation ruleset "tag-rules: semver-immutability": `refs/tags/v*.*.*`, operations team may bypass)* |
 | GitHub, npm, the Node.js project | no — trusted platforms | n/a | n/a | n/a | *(maintainer, 2026-10)* |
 | Network attacker on the path to an https host | no | n/a | n/a | n/a | *(maintainer, 2026-10)* |
 | Network attacker on an `http://` `--site` or `baseUrl` the user chose | no — the user chose plain http | n/a | n/a | n/a | *(maintainer, 2026-10)* |
@@ -573,12 +577,15 @@ are listed; candidates that rest only on code are §1.18 questions.
       `grep -rn "fetch:" bin/datamodels.mjs` — 0 hits.
 
 - **`P-REMOTE-READS-BOUNDED` — a read of another node is bounded.** At most
-  5 MB per answer, one deadline for the whole read with its redirects (20
-  seconds, 5 seconds for the guess at a type IRI's own index); `search` and
-  `nodes` follow links at most 5 deep and read at most 50 nodes; each index is
-  read once *(documented, src/adapters/net.mjs `MAX_BYTES`, src/adapters/index.mjs `getter` comment: "One deadline for the read", src/discover.mjs `MAX_DEPTH` comment)*.
-  - Threshold: a command that reads more than 5 MB from one answer or keeps
-    reading past the deadline is a bug; slow is not *(maintainer, 2026-10)*.
+  5 MB per answer, one deadline for the whole read with its redirects (15
+  seconds in `search` and `nodes`; 20 seconds in `check`, `build`, `export`
+  and `extend`; 5 seconds for the guess at a type IRI's own index); `search`
+  and `nodes` follow links at most 5 deep and read at most 50 nodes; each index
+  is read once *(documented, src/adapters/net.mjs `MAX_BYTES`, src/adapters/index.mjs `getter` comment: "One deadline for the read", src/discover.mjs `MAX_DEPTH` comment)*.
+  - Threshold: a command that reads more than 5 MB from one answer, or keeps
+    reading one URL past its deadline (15 s in `search` and `nodes`, 20 s in
+    `check`, `build`, `export` and `extend`, 5 s for the own-index guess), is a
+    bug; slow is not *(maintainer, 2026-10)*.
   - Symptom: `hang` or `unbounded-allocation`.
   - Tier: correctness-only *(maintainer, 2026-10)*.
   - *Voided by*: a caller's own `fetch` (no 5 MB cap) —
@@ -665,9 +672,13 @@ are listed; candidates that rest only on code are §1.18 questions.
     `fields:` rule, appears in the mapping file).
   - Tier: correctness-only *(maintainer, 2026-10)*: the user reviews the
     generated file before converting with it.
-  - Known violation at the bound commit: unused header names are written into
-    comments with their line breaks — `src/mapping.mjs:444`. A report of it is
-    `VALID`; the fix is tracked outside this model.
+  - Known violation at the bound commit, in two places: unused header names
+    are written into comments with their line breaks — `src/mapping.mjs:444`;
+    and header names suggested for an attribute ("maybe …") go into a row's
+    comment — `src/mapping.mjs:426`, written at `src/mapping.mjs:432` (the
+    matching ignores white space, so a header such as `postal⏎code` matches
+    and keeps its line break). A report of either is `VALID`; the fix is
+    tracked outside this model.
   - *Voided by*: nothing. Search: `grep -n "comment(\|lines.push(" src/mapping.mjs`.
 
 - **`P-ROWS-VALIDATED` — every converted entity is checked against its
@@ -699,6 +710,11 @@ are listed; candidates that rest only on code are §1.18 questions.
   - Tier: security-critical *(maintainer, 2026-10)*.
   - Covers: `check`, `build`, `release`, `bump`, `add`. Not file access with
     the user's rights (`D-NOT-A-SANDBOX`).
+  - Exception: JSON Schemas of the node are compiled by Ajv into JavaScript
+    validators — `src/build/check.mjs:276`. A schema that runs code through
+    Ajv's generated validators is Ajv failing its own contract
+    (`OUT-OF-MODEL: dependency-contract`, §1.9); a slow or huge schema is
+    `D-SCHEMA-COMPILE-COST`.
   - *Voided by*: nothing in the toolkit. The own configuration is passed at
     `src/build/pages.mjs:144`. Eleventy still reads a `.eleventyignore` in the
     current directory, which can only leave templates out. Search:
@@ -732,7 +748,9 @@ are listed; candidates that rest only on code are §1.18 questions.
   - Symptom: `x-command-injection`.
   - Tier: security-critical.
   - Voided by: nothing. Search: `grep -n '\${{' action.yml` — every hit is
-    in an `env:` block, a `with:` block, an `if:` or an output `value:`.
+    in an `env:` block, a `with:` block, an `if:`, an output `value:`, or the
+    `working-directory: ${{ github.action_path }}` of the install step
+    (`action.yml:47`), which is not input.
 
 - **`P-ACTION-TOKEN-USE` — the Action uses the job token for one fetch and
   writes nothing.** On a pull request the token is passed to the one
@@ -773,16 +791,21 @@ are listed; candidates that rest only on code are §1.18 questions.
     - A renamed workflow file stops publishing until the npm setting is
       changed; it does not open another path *(documented, README "Releases": "after renaming the file, change that setting too")*.
 
-- **`P-INIT-ONLY-ITS-FILES` — `init` never overwrites and publishes only what
-  it wrote.** `init` writes the node's files only where none exist; with
-  `--github` it commits only the files it wrote and stops when the folder has
-  other files or changes, so nothing else is published; `gh` and `git` run
-  without a shell *(documented, src/init.mjs `publishToGitHub` comment: "anything else in the folder stops it, so nothing else is published")*.
-  - Symptom: `info-leak` (a private file of the folder in a public
+- **`P-INIT-ONLY-ITS-FILES` — `init` never overwrites, and its commit holds
+  only what it wrote.** `init` writes the node's files only where none exist;
+  with `--github` it commits only the files it wrote and stops when the
+  working tree has other files or changes; `gh` and `git` run without a shell
+  *(documented, src/init.mjs `publishToGitHub` comment: "anything else in the folder stops it")*.
+  - Symptom: `info-leak` (a private file of the working tree in a public
     repository).
   - Tier: security-critical.
-  - Voided by: nothing. The checks are `src/init.mjs:319` and
-    `src/init.mjs:323`.
+  - Covers: the working tree and the commit `init` makes. Not the earlier
+    history of an existing repository (`D-INIT-PUSHES-HISTORY`).
+  - *Voided by*: a folder that is already a git repository without a remote,
+    on branch `main`: committed, unchanged files do not show in
+    `git status`, so the checks at `src/init.mjs:319` and `src/init.mjs:323`
+    pass, and `gh repo create --source … --push` at `src/init.mjs:331` pushes
+    the whole local history (`D-INIT-PUSHES-HISTORY`).
 
 ### Worked routing examples
 
@@ -811,14 +834,15 @@ promises it) would never close a security-critical report (§1.17).
 | `D-SCHEMA-COMPILE-COST` | protection from slow or huge JSON Schemas | stated by the maintainer. Schemas are compiled by Ajv; `pattern` becomes a JavaScript regular expression (ReDoS); in `check` a `$ref` to another public site is compiled too | correctness-only | no | *(maintainer, 2026-10)* |
 | `D-OUTPUT-TEXT-AS-INPUT` | escaping or sanitising of converted values | stated by the maintainer. Entities carry CSV text as it is after the transforms, `json` cells as parsed JSON; validated, not sanitised | security-critical | no | *(maintainer, 2026-10)* |
 | `D-LOCAL-TEXT-ECHOED` | filtering of text from local files in terminal output | stated by the maintainer. The summary, notes and errors print header names, cell values and paths as they are; the file is the user's | correctness-only | no | *(maintainer, 2026-10)* |
-| `D-OWN-SITE-READS` | the shared reader's rules for three other reads | stated by the maintainer. `--site` of `convert`, the node's own published files in `check` and `release`, and GitHub's API in `upgrade` are read with the global `fetch`: redirects followed, no address check, no size cap (and no deadline for `--site`) | security-critical | no | *(maintainer, 2026-10)* |
+| `D-OWN-SITE-READS` | the shared reader's rules for three other reads | stated by the maintainer. `--site` of `convert`, the node's own published files in `check` and `release`, and GitHub's API in `upgrade` are read with the global `fetch`: redirects followed, no address check, no size cap (and no deadline for `--site`). In a node's `pull_request` job the `baseUrl` read happens before merge, on input the contributor chose | security-critical | no | *(maintainer, 2026-10)* |
 | `D-CALLER-FETCH` | the address check and size cap for a library caller's own `fetch` | stated by the maintainer. The caller's `fetch` is used as it is; URL and redirect checks remain | correctness-only | no | *(maintainer, 2026-10)* |
-| `D-OTHER-NODES-NOTED` | a failure when another node is down, slow or refused | stated. Another node that cannot be read, or does not answer within 20 seconds, is only noted; a node that is down never fails someone else's check | correctness-only | yes: a passing `check` is not proof that every extended model was compared | *(documented, datamodels.jp/en/toolkit/check: "a node that is down never fails someone else's check")* |
+| `D-OTHER-NODES-NOTED` | a failure when another node is down, slow or refused | stated. Another node that cannot be read, or does not answer within the read's deadline (20 seconds in `check` and `build`, 15 in `search` and `nodes`), is only noted; a node that is down never fails someone else's check | correctness-only | yes: a passing `check` is not proof that every extended model was compared | *(documented, datamodels.jp/en/toolkit/check: "a node that is down never fails someone else's check")* |
 | `D-REMOTE-CONTENT-UNREVIEWED` | review of what `extend` copies or `export` reads from another node | stated by the maintainer. Names, URLs and shape are checked; the schema, example and texts are copied as the other node publishes them | correctness-only | no | *(maintainer, 2026-10)* |
 | `D-PRERELEASE-CORRECTIONS` | immutability of a node's published versions during its pre-release | stated. While `prerelease: true` is in `node.yaml` at the base ref and in the change, `check --base` notes changed and removed snapshot files of **any** version, and the online comparison notes changed files; a stricter rule (only the current version) is the node's own policy, kept by review | security-critical | no | *(documented, datamodels.jp/en/toolkit/versions "Before the launch": "An earlier version that should not have been published can be removed")* |
-| `D-TOKEN-IN-STEP-ENV` | isolation of the job token from the toolkit process | stated by the maintainer. In the Action's "Check" step the token is in the environment of the `node` process and every dependency it loads, on every event | security-critical | no | *(maintainer, 2026-10)* |
+| `D-TOKEN-IN-STEP-ENV` | isolation of the job token from the toolkit process | stated by the maintainer. In the Action's "Check" step the token is in the environment of the `node` process and every dependency it loads, on every event. On `main`, where the job has `id-token: write`, the runner's OIDC request variables are in that environment too | security-critical | no | *(maintainer, 2026-10)* |
 | `D-AGENT-TEXT` | filtering of text meant to steer AI agents | stated by the maintainer. Model titles and descriptions reach `llms.txt`, `catalog.json`, pages and the AI adapter's schema descriptions as written; the skill sends agents to read such text | security-critical | no | *(maintainer, 2026-10)* |
 | `D-SKILL-GUIDANCE-ONLY` | any control over what an agent does | stated by the maintainer. The skill is instructions; an agent may ignore them, and it runs commands with the user's rights | correctness-only | yes: "the skill says never invent values" is not a guarantee that the agent will not | *(maintainer, 2026-10)* |
+| `D-INIT-PUSHES-HISTORY` | keeping the earlier history of an existing repository private | silence: nothing promises it. In a folder that is already a git repository without a remote, `init --github` pushes the whole local history to the new public repository, older commits included; only the working tree is checked | security-critical | no | *(documented, src/init.mjs `publishToGitHub`: `gh repo create` with `--public`, `--source` and `--push`)* |
 | `D-RELEASE-SINGLE-GATE` | a second approval before a version reaches npm | stated. Publishing the GitHub release is the only gate | security-critical | no | *(documented, .github/workflows/publish.yml header: "no second approval on npmjs.com")* |
 | `D-PROVENANCE-NOT-REVIEW` | review or audit evidence from npm provenance | stated. Provenance names the commit and the workflow that built the package | correctness-only | yes: provenance says where a package was built, not that it was reviewed | *(documented, README "Releases")* |
 | `D-NO-SHRINKWRAP` | a fixed dependency tree for `npx` and `npm install` users | stated by the maintainer. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile | security-critical | no | *(maintainer, 2026-10)* |
@@ -1019,6 +1043,10 @@ SHA-256 of the exact prose bytes it was derived from; the JSON is a lossy
 export bound only by commit and date and is never a triage input. Regenerate
 both whenever this file changes. Two JSON fields are completed by hand after
 export: `description` and `trust_boundaries`, as in the catalogue's model.
+The JSON has no `maintainer` kind: the exporter folds **maintainer** tags into
+`documented` (its confidence reads 291 documented, the 194 documented plus 97
+maintainer of the header), and a trust boundary resting on a maintainer
+ruling is exported as `documented`.
 
 ## Appendix: prior security-policy back-map
 
