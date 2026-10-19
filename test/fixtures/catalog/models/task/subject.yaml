@@ -14,4 +14,4 @@ description:
 source: minted
 origin:
   repository: https://github.com/geolonia/datamodels/issues/22
-  note: Designed with the GTT project (Redmine geo task tracking, redmine_gtt_fiware) and the Takamatsu disaster-response models as the first two implementations.
+  note: Designed with the GTT project (Redmine geo task tracking, redmine_gtt_fiware) and a municipal disaster-response application's models as the first two implementations.
