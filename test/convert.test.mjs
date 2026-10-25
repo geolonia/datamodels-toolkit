@@ -583,3 +583,11 @@ test('0:00–0:00 that a via mapping and the mapping around it make together is 
   const two = convertRows([{ n: '1', o: '0:00', c: '0:00' }], plain('open'), { type: 'T', mappings: { hours: outer, inner: { convert: { allDay: 'closed' }, ...both } } })[0];
   assert.deepEqual([two.problems, two.entity.h, allDayFixes(two)], [[], { inner: { opens: '00:00', closes: '23:59' } }, [['opens', '00:00–00:00 → 00:00–23:59']]]);
 });
+
+test('parseCsv finds repeated headers in one pass, also with many columns', () => {
+  assert.throws(() => parseCsv('a,b,a,c,b\n1,2,3,4,5\n'), /header names must be present and distinct \(repeated: a, b\)/);
+  const many = Array.from({ length: 200_000 }, (_, i) => `c${i}`).join(',');
+  const start = performance.now();
+  assert.equal(parseCsv(`${many}\n`).columns.length, 200_000);
+  assert.ok(performance.now() - start < 2000, 'the header check must not be quadratic');
+});
