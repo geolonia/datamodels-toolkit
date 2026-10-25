@@ -17,7 +17,9 @@ const steps = async () => parse(await readFile(join(ROOT, 'action.yml'), 'utf8')
 // or an env entry named or valued like a token. The exact unset line names
 // tokens to drop them, so it does not count.
 const withoutUnset = (run) => (run ?? '').split('\n').filter((l) => l.trim() !== `unset ${UNSET.join(' ')}`).join('\n');
-const mentionsToken = (step) => /token|secrets\./i.test(JSON.stringify({ env: step.env, with: step.with, run: withoutUnset(step.run) }));
+// An empty `token` input (setup-node) turns the action's default off.
+const withoutEmptyToken = (w) => (w && w.token === '' ? { ...w, token: undefined } : w);
+const mentionsToken = (step) => /token|secrets\./i.test(JSON.stringify({ env: step.env, with: withoutEmptyToken(step.with), run: withoutUnset(step.run) }));
 // The shell's commands, with continued lines joined.
 const commands = (run) => run.replace(/\\\n\s*/g, ' ').split('\n').map((l) => l.trim()).filter(Boolean);
 
@@ -49,6 +51,15 @@ test('every other run step starts by dropping the runner variables and caller to
     const [first] = commands(step.run);
     assert.deepEqual(first.split(/\s+/), ['unset', ...UNSET], `${step.name}: unsets first`);
   }
+});
+
+test('setup-node gets no job token, and only the deploy actions keep theirs', async () => {
+  const uses = (await steps()).filter((s) => s.uses);
+  assert.equal(uses.find((s) => s.uses.startsWith('actions/setup-node@')).with.token, '');
+  // The deploy actions need the job token (their default) and run only when deploying.
+  const rest = uses.filter((s) => !s.uses.startsWith('actions/setup-node@'));
+  assert.deepEqual(rest.map((s) => s.uses.split('@')[0]), ['actions/upload-pages-artifact', 'actions/deploy-pages']);
+  for (const s of rest) assert.equal(s.if, "inputs.deploy == 'true'");
 });
 
 test('the check still compares with the fetched base branch', async () => {

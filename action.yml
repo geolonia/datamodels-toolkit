@@ -8,8 +8,8 @@
 # folder in the `site` output elsewhere (#51). Inputs reach the shell only
 # through environment variables, never inside a command. On a pull request it
 # fetches the base branch to compare the release snapshots with it. The job
-# token this Action passes reaches only that fetch; the toolkit itself runs
-# without it (#127). Put no secrets in the calling job's `env:`: every step of
+# token this Action passes reaches only that fetch and GitHub's Pages actions
+# that deploy; the toolkit itself runs without it (#127). Put no secrets in the calling job's `env:`: every step of
 # the job, this Action's too, inherits it.
 name: Data model node (datamodels.jp)
 description: Publish your own NGSI-LD data models as a site. Checks and builds node.yaml and models/, then deploys to GitHub Pages.
@@ -44,6 +44,9 @@ runs:
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version: '24'
+        # Not the job token, its default: setup-node uses it only to download
+        # Node.js, which works without one (#127).
+        token: ''
 
     - name: Install the toolkit
       shell: bash
@@ -108,6 +111,7 @@ runs:
       with:
         path: ${{ runner.temp }}/datamodels-site
 
+    # deploy-pages takes the job token (its default) to create the deployment.
     - name: Deploy to GitHub Pages
       id: deploy
       if: inputs.deploy == 'true'

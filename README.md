@@ -122,7 +122,7 @@ jobs:
 
 </details>
 
-Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). The Action gives the job token only to its fetch of a pull request's base branch; put no secrets in the job's `env:`, which every step inherits. Outputs: `page_url`, and `site`, the folder with the built files, for a step that publishes them on [another host](https://datamodels.jp/en/toolkit/hosts). `datamodels upgrade` moves the pin to a newer release, and Dependabot can propose it ([Checking and building](https://datamodels.jp/en/toolkit/check#action)).
+Inputs: `directory` (default `.`), `deploy` (default `true`), `offline` (default `false`). The Action gives the job token only to its fetch of a pull request's base branch and, when it deploys, to GitHub's Pages actions; put no secrets in the job's `env:`, which every step inherits. Outputs: `page_url`, and `site`, the folder with the built files, for a step that publishes them on [another host](https://datamodels.jp/en/toolkit/hosts). `datamodels upgrade` moves the pin to a newer release, and Dependabot can propose it ([Checking and building](https://datamodels.jp/en/toolkit/check#action)).
 
 ## Build library
 
