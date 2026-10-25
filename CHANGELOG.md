@@ -6,6 +6,22 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.3.17] - 2026-10-25
+
+A security release: a node's `models/` folder may no longer hold symbolic links, and `unclosedRings` can stop after a number of paths.
+
+### Added
+
+- `unclosedRings(value, { limit })` in `@geolonia/datamodels/ngsi` stops after `limit` paths. A caller that reports only the first errors of untrusted input, such as a public validation service, should pass one: each path repeats the keys above it (#137).
+
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.16 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.3.16`. The README uses 0.3.16 too.
+
+### Security
+
+- `datamodels build`, `check`, `release`, `add` and `extend` refuse a symbolic link anywhere in `models/` (and `extend` a linked `node.yaml`). Before, `build` published the file a link pointed to, a file outside the node included, for a mapping file or a file of an older release snapshot, and `release`, `add` and `extend` could write through a link. A node that uses links in `models/` must replace them with the files (#137).
+
 ## [0.3.16] - 2026-10-15
 
 Other tools can use the rules `check` applies to a normalized entity. Reads of other nodes refuse more special-purpose addresses.
@@ -338,7 +354,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.16...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.17...main
+[0.3.17]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.16...v0.3.17
 [0.3.16]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.15...v0.3.16
 [0.3.15]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.14...v0.3.15
 [0.3.14]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.13...v0.3.14
