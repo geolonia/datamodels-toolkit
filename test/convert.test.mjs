@@ -610,3 +610,7 @@ test('convertRows stops a via graph that doubles at each level, and says so', ()
   assert.ok(performance.now() - start < 2000, 'the expansion must stop early');
   assert.equal(r.problems.filter((p) => p.includes(`more than ${MAX_VIA_EXPANSIONS} via references`)).length, 1, JSON.stringify(r.problems));
 });
+
+test('parseCsv shows repeated header names as visible text', () => {
+  assert.throws(() => parseCsv('a\u001b[2K,a\u001b[2K\n1,2\n'), (e) => e.message.includes('(repeated: a\\u001b[2K)') && !e.message.includes('\u001b'));
+});

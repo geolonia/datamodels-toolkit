@@ -76,7 +76,15 @@ export const bytesReader = (fetchUrl, timeout = 20000) => {
         continue;
       }
       // The body too: a server can send its headers and then stall or break off.
-      return { status: res.status, ok: res.ok, body: res.ok ? Buffer.from(await res.arrayBuffer()) : null };
+      let body = null;
+      if (res.ok) {
+        try { body = Buffer.from(await res.arrayBuffer()); } catch (e) {
+          if (signal.aborted) throw new Error(`${url} could not be read (timed out after ${timeout / 1000} s)`);
+          const code = [e?.cause?.code, e?.code].find((c) => typeof c === 'string');
+          throw new Error(`${url} could not be read (${code ?? e.message})`, code ? { cause: typeof e.cause?.code === 'string' ? e.cause : e } : undefined);
+        }
+      }
+      return { status: res.status, ok: res.ok, body };
     }
   };
 };

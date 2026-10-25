@@ -281,10 +281,15 @@ test('--github in a repository with earlier commits: refused when they hold othe
   f = fakeRun({ answers: { ...clean, 'git log --all --name-only --format= -z': `${files.join('\0')}\0` } });
   await publishToGitHub(dir, 'example/models', { ...f, files });
   assert.ok(f.calls.includes(`gh repo create example/models --public --source ${dir} --remote origin --push`));
-  // No commits yet (git log fails): published as before.
-  f = fakeRun({ answers: clean, fail: ['git log'] });
+  // No commits yet (git log prints nothing): published as before.
+  f = fakeRun({ answers: clean });
   await publishToGitHub(dir, 'example/models', { ...f, files });
   assert.ok(f.calls.includes(`gh repo create example/models --public --source ${dir} --remote origin --push`));
+  // A git log that fails stops, rather than passing as an empty history; so does an ignored folder that was committed.
+  f = fakeRun({ answers: clean, fail: ['git log'] });
+  await assert.rejects(publishToGitHub(dir, 'example/models', { ...f, files }), /git log .* failed/);
+  f = fakeRun({ answers: { ...clean, 'git log --all --name-only --format= -z': `node_modules/x/index.js\0` } });
+  await assert.rejects(publishToGitHub(dir, 'example/models', { ...f, files }), /history included: node_modules\/x\/index\.js/);
 });
 
 test('--github with a remote: only the repository the remote points to, Pages switched to Actions', async () => {

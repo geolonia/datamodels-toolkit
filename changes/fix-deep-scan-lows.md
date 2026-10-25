@@ -1,7 +1,7 @@
 ---
 section: Security
 ---
-- `datamodels check` and `release` read the published files with the same rules as every other read of a site: https on a public host name only, redirects included (at most a few, never to a private or loopback address). A `baseUrl` or a redirect that points elsewhere is not read: `check` notes it, `release` stops (use `--offline`).
+- `datamodels check` and `release` read the published files with the same rules as every other read of a site: https on a public host name only, redirects included (at most a few, never to a private or loopback address). A `baseUrl` or a redirect that points elsewhere is not read: `check` notes it, `release` stops. So a node whose `baseUrl` is not https on a public host (an `http://` or localhost preview) needs `release --offline`.
 - `datamodels init --github` refuses an existing repository whose history holds files other than the ones init writes: before, files committed (and maybe deleted) earlier were pushed to the new public repository too.
 - `subject.yaml` may not set `dir`, `context`, `imports`, `inlineTerms` or `models`, which the toolkit sets itself: a `dir` there moved `release`, `bump` and `build` to another folder.
 - The CSV adapter encodes each column name of the header: quoted when it holds a comma, quote or line break (RFC 4180), and with a leading `'` when a spreadsheet would read it as a formula (`=`, `+`, `-`, `@`, tab or CR first). Names come from another catalog with `datamodels export`.

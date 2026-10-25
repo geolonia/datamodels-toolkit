@@ -69,7 +69,7 @@ export function parseCsv(text) {
   // One pass: indexOf inside filter was quadratic in the number of columns.
   const seen = new Set();
   const repeated = names.filter((h) => seen.has(h) || !seen.add(h));
-  if (names.some((h) => !h) || repeated.length) throw new Error(`line ${head.line}: header names must be present and distinct${repeated.length ? ` (repeated: ${[...new Set(repeated)].join(', ')})` : ''}`);
+  if (names.some((h) => !h) || repeated.length) throw new Error(`line ${head.line}: header names must be present and distinct${repeated.length ? ` (repeated: ${[...new Set(repeated)].map(visible).join(', ')})` : ''}`);
   const n = names.length;
   const bad = body.filter((r) => r.fields.length < n || r.fields.slice(n).some((v) => v.trim() !== ''));
   if (bad.length) throw new Error(`${bad.slice(0, 5).map((r) => `line ${r.line}: ${r.fields.length} fields`).join(', ')}${bad.length > 5 ? ` and ${bad.length - 5} more` : ''} (the header has ${n})`);

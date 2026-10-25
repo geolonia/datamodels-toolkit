@@ -606,3 +606,20 @@ test('strict: unions whose siblings multiply at each level stop with NotStrict, 
   // An ordinary schema still has its strict form.
   assert.deepEqual(strict({ type: 'string' }, 'y').type, 'string');
 });
+
+test('publicFetch responses carry the raw bytes, so bytesReader compares published files byte for byte', async () => {
+  const { responseOf } = await import('../src/adapters/net.mjs');
+  const { bytesReader } = await import('../src/adapters/index.mjs');
+  // Not valid UTF-8, and a BOM: a decode and re-encode would change both.
+  const bytes = Buffer.from([0xef, 0xbb, 0xbf, 0x7b, 0x7d, 0xff, 0x0a]);
+  const res = responseOf(200, { 'content-type': 'application/json' }, bytes);
+  assert.deepEqual(Object.keys(res).sort(), ['arrayBuffer', 'headers', 'json', 'ok', 'status']);
+  assert.ok(Buffer.from(await res.arrayBuffer()).equals(bytes));
+  // bytesReader with a fetch shaped exactly like publicFetch (the shape that broke before).
+  const read = bytesReader(async () => responseOf(200, {}, bytes));
+  const r = await read('https://models.example.org/context/road/v0.1.0.jsonld');
+  assert.equal(r.ok, true);
+  assert.ok(r.body.equals(bytes));
+  const missing = await bytesReader(async () => responseOf(404, {}, Buffer.from('not found')))('https://models.example.org/x');
+  assert.deepEqual([missing.status, missing.ok, missing.body], [404, false, null]);
+});

@@ -320,8 +320,10 @@ export async function publishToGitHub(dir, repo, { run, files = [] }) {
       // git status shows changes only: files committed before, and their history, would be pushed to a
       // public repository too. Every file in the history must be one init writes (a run of init that
       // stopped before the push left only those).
-      const history = await run('git', ['log', '--all', '--name-only', '--format=', '-z'], { cwd: dir }).catch(() => '');
-      const committed = [...new Set(history.split(/[\0\n]/).filter(Boolean))].filter((p) => !ours.has(p) && !ignored(p));
+      // A repository without commits prints nothing; a git log that fails stops here rather than passing as empty.
+      // .gitignore does not matter here: what was committed is pushed.
+      const history = await run('git', ['log', '--all', '--name-only', '--format=', '-z'], { cwd: dir });
+      const committed = [...new Set(history.split(/[\0\n]/).filter(Boolean))].filter((p) => !ours.has(p));
       if (committed.length) throw new Error(`earlier commits hold other files that would be published with the node, history included: ${committed.slice(0, 5).join(', ')}${committed.length > 5 ? ', …' : ''}. Run init in a new folder, or make the repository yourself`);
     } else {
       const all = (await readdir(dir, { recursive: true, withFileTypes: true })).filter((e) => e.isFile()).map((e) => relative(dir, join(e.parentPath, e.name)).split(sep).join('/'));

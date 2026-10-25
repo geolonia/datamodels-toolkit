@@ -80,9 +80,27 @@ const publicLookup = (resolve) => (host, options, callback) => {
 };
 
 /**
+ * What publicFetch resolves to, from a node:http response's status, headers
+ * and body bytes: { ok, status, headers, json, arrayBuffer }. The bytes stay
+ * as received for arrayBuffer; json decodes them as UTF-8.
+ */
+export function responseOf(statusCode, rawHeaders, bytes) {
+  const headers = new Headers(Object.entries(rawHeaders).flatMap(([k, v]) => (v === undefined ? [] : [[k, Array.isArray(v) ? v.join(', ') : String(v)]])));
+  return {
+    ok: statusCode >= 200 && statusCode < 300,
+    status: statusCode,
+    headers,
+    json: async () => JSON.parse(bytes.toString('utf8')),
+    arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+  };
+}
+
+/**
  * A fetch for what the adapters read: https only, connected to a public address,
  * redirects returned as they are (the caller decides), at most 5 MB.
- * Returns { ok, status, headers, json }. `lookup`: dns.lookup, or a stand-in for tests.
+ * Returns { ok, status, headers, json, arrayBuffer }: arrayBuffer gives the bytes as
+ * received (check and release compare published files byte for byte).
+ * `lookup`: dns.lookup, or a stand-in for tests.
  */
 export function publicFetch(url, { signal, lookup = dnsLookup } = {}) {
   return new Promise((resolve, reject) => {
@@ -95,11 +113,7 @@ export function publicFetch(url, { signal, lookup = dnsLookup } = {}) {
       const chunks = [];
       let size = 0;
       res.on('data', (c) => { size += c.length; if (size > MAX_BYTES) { req.destroy(new Error(`${url}: larger than ${MAX_BYTES} bytes`)); return; } chunks.push(c); });
-      res.on('end', () => {
-        const body = Buffer.concat(chunks).toString('utf8');
-        const headers = new Headers(Object.entries(res.headers).flatMap(([k, v]) => (v === undefined ? [] : [[k, Array.isArray(v) ? v.join(', ') : String(v)]])));
-        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, headers, json: async () => JSON.parse(body) });
-      });
+      res.on('end', () => resolve(responseOf(res.statusCode, res.headers, Buffer.concat(chunks))));
       res.on('error', reject);
     });
     req.on('error', reject);
