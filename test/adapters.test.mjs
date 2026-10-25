@@ -13,7 +13,7 @@ import { catalogUrls, loadSubjects, buildNode, nodeAdapters } from '../src/build
 import { ADAPTERS, localRefs, readRefs } from '../src/adapters/index.mjs';
 import { columnsOf, shortTitle, snake } from '../src/adapters/model.mjs';
 import { fieldsOf, tableSchemaOf, xsdPattern } from '../src/adapters/table-schema/index.mjs';
-import { csvHeader } from '../src/adapters/csv/index.mjs';
+import { csvHeader, csvField } from '../src/adapters/csv/index.mjs';
 import { structuredOutputOf, unionCount, NotStrict, strict } from '../src/adapters/ai/index.mjs';
 import { createTable, ident, literal } from '../src/adapters/postgis/index.mjs';
 import { exportModel } from '../src/export.mjs';
@@ -584,4 +584,14 @@ test('nodeAdapters (public): each bound adapter keeps its name, label and note',
     assert.equal(typeof a.urlFor, 'function');
     assert.equal(typeof a.content, 'function');
   }
+});
+
+test('csvField: plain names as they are; quotes, commas, line breaks and formula starts encoded', () => {
+  for (const name of ['id', 'name', 'addressLocality', 'location.lon', '名称']) assert.equal(csvField(name), name);
+  assert.equal(csvField('a,b'), '"a,b"');
+  assert.equal(csvField('say "hi"'), '"say ""hi"""');
+  assert.equal(csvField('two\nlines'), '"two\nlines"');
+  assert.equal(csvField('=HYPERLINK("https://evil.example","x")'), `"'=HYPERLINK(""https://evil.example"",""x"")"`);
+  for (const lead of ['+', '-', '@', '\t']) assert.equal(csvField(`${lead}1`), `'${lead}1`);
+  assert.equal(csvField('\r1'), `"'\r1"`);
 });
