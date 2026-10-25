@@ -37,7 +37,7 @@ export async function refuseLinks(modelsDir) {
   };
   await walk(modelsDir);
   links.sort();
-  if (links.length) throw new Error(`${links.length === 1 ? 'a symbolic link' : `${links.length} symbolic links`} in ${modelsDir}: ${links.slice(0, 5).join(', ')}${links.length > 5 ? ', …' : ''}. Files there are published as they are, so the folder must hold real files and folders: replace each link with the file it points to, or remove it`);
+  if (links.length) throw new Error(`${links.length === 1 ? 'a symbolic link' : `${links.length} symbolic links`} in ${modelsDir}: ${links.slice(0, 5).join(', ')}${links.length > 5 ? ', …' : ''}. Files there are published as they are, so the folder must hold real files and folders: replace each link with the file or folder it points to, or remove it`);
 }
 
 /**

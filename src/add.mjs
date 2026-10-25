@@ -7,7 +7,7 @@ import { mkdir, mkdtemp, readFile, writeFile, stat, rename, rm } from 'node:fs/p
 import { join, dirname } from 'node:path';
 import YAML from 'yaml';
 import { readNode } from './build/node.mjs';
-import { parseJson, parseYaml } from './build/load.mjs';
+import { parseJson, parseYaml, refuseLinks } from './build/load.mjs';
 import { catalogUrls } from './build/urls.mjs';
 
 const TYPE_NAME = /^[A-Z][A-Za-z0-9]*$/;
@@ -72,6 +72,8 @@ export async function addModel(dir, target, { kind = 'entity' } = {}) {
   if (!TYPE_NAME.test(type)) throw new Error(`type name "${type}" must be UpperCamelCase ASCII (letters and digits), for example RoadPatrol`);
   if (!['entity', 'value'].includes(kind)) throw new Error(`kind must be entity or value, got ${JSON.stringify(kind)}`);
   const node = await readNode(dir);
+  // add writes into the subject folder: never through a link to somewhere else.
+  await refuseLinks(join(dir, 'models'));
   const subjectDir = join(dir, 'models', subjectName);
   if (!(await exists(join(subjectDir, 'subject.yaml')))) throw new Error(`no subject ${subjectName} in ${join(dir, 'models')} (datamodels init writes the first one)`);
   const subject = await parseYaml(join(subjectDir, 'subject.yaml'), join(dir, 'models'));

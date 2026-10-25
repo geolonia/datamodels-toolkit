@@ -9,11 +9,11 @@
 //     keeps the other model's IRI (x-alias-of).
 //   - a subtype (--subclass): a type of its own in this node's namespace, with
 //     the other model as its parent (x-subclass-of).
-import { readFile, writeFile, stat } from 'node:fs/promises';
+import { readFile, writeFile, stat, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
 import { readNode } from './build/node.mjs';
-import { parseYaml } from './build/load.mjs';
+import { parseYaml, refuseLinks } from './build/load.mjs';
 import { catalogUrls } from './build/urls.mjs';
 import { placeModel } from './add.mjs';
 import { getter, normalUrl } from './adapters/index.mjs';
@@ -74,6 +74,9 @@ export async function extendModel(dir, source, target, { index, subclass = false
   if (!subjectName || !type || rest.length) throw new Error(`the new model is <subject>/<Type>, for example road/RoadTask; got ${JSON.stringify(target)}`);
   if (!TYPE_NAME.test(type)) throw new Error(`type name "${type}" must be UpperCamelCase ASCII (letters and digits), for example RoadTask`);
   const node = await readNode(dir);
+  // extend writes into the subject folder and node.yaml: never through a link to somewhere else.
+  await refuseLinks(join(dir, 'models'));
+  if ((await lstat(join(dir, 'node.yaml'))).isSymbolicLink()) throw new Error(`${join(dir, 'node.yaml')} is a symbolic link; extend writes node.yaml, so it must be a real file`);
   const subjectDir = join(dir, 'models', subjectName);
   if (!(await exists(join(subjectDir, 'subject.yaml')))) throw new Error(`no subject ${subjectName} in ${join(dir, 'models')} (datamodels init writes the first one)`);
   const subject = await parseYaml(join(subjectDir, 'subject.yaml'), join(dir, 'models'));

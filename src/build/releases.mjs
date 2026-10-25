@@ -46,6 +46,8 @@ export function releaseContents(subject, options) {
 /** Write the snapshot of the subject's current version (idempotent). `options`: { urls, languages }. */
 export async function snapshotRelease(subject, options) {
   const { dir, entries } = releaseContents(subject, options);
+  // Written only into real folders and files, also when called without loadSubjects (which refuses links).
+  for (const d of [dirname(dir), dir, join(dir, 'schema')]) await plain(d, 'dir');
   await mkdir(join(dir, 'schema'), { recursive: true });
   for (const e of entries) await writeIfAbsentOrEqual(e.file, e.content, e.what);
   return dir;
@@ -77,6 +79,7 @@ export async function verifyRelease(subject, options, { recorded = false } = {})
 }
 
 async function writeIfAbsentOrEqual(file, content, what) {
+  await plain(file, 'file');
   try {
     const existing = await readFile(file, 'utf8');
     if (existing !== content) throw new Error(`${what}: release snapshot ${file} differs from the current source. A published version never changes; bump the version instead.`);

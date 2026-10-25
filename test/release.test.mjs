@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { releaseSubject } from '../src/release.mjs';
-import { buildNode, checkNode } from '../src/build/index.mjs';
+import { buildNode, checkNode, loadNode, snapshotRelease } from '../src/build/index.mjs';
 
 const run = promisify(execFile);
 const BIN = join(import.meta.dirname, '..', 'bin', 'datamodels.mjs');
@@ -118,7 +118,7 @@ test('a symbolic link anywhere in models/ is refused, not published or written t
   const secret = join(outside, 'secret.txt');
   await writeFile(secret, 'token: not for the site\n');
   // Some systems (Windows without developer mode) cannot make links: nothing to test there.
-  try { await symlink(secret, join(outside, 'probe')); } catch (e) { if (e.code === 'EPERM') return t.skip('no symbolic links here'); throw e; }
+  try { await symlink(secret, join(outside, 'probe')); } catch { return t.skip('no symbolic links here'); }
   // A released v0.1.0 and a current v0.2.0: the old snapshot is published as it is.
   const released = async () => {
     const dir = await node();
@@ -163,4 +163,20 @@ test('a symbolic link anywhere in models/ is refused, not published or written t
   await symlink(target, join(rel(dir), 'context.jsonld'));
   await assert.rejects(releaseSubject(dir, 'road', { offline: true }), /symbolic link/);
   assert.equal(await exists(target), false);
+  // Nor does snapshotRelease, called directly as the library allows (without loadSubjects).
+  dir = await node();
+  const { subjects, urls, node: settings } = await loadNode(dir);
+  await mkdir(rel(dir), { recursive: true });
+  await symlink(target, join(rel(dir), 'context.jsonld'));
+  await assert.rejects(snapshotRelease(subjects[0], { urls, languages: settings.languages }), /context\.jsonld is a symbolic link/);
+  assert.equal(await exists(target), false);
+  // add does not write into a subject folder that is a link.
+  dir = await node();
+  await rename(join(dir, 'models', 'road'), join(dir, 'road-elsewhere'));
+  await symlink(join(dir, 'road-elsewhere'), join(dir, 'models', 'road'));
+  const r = await datamodels('add', 'road/RoadSign', dir);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /symbolic link/);
+  assert.equal(await exists(join(dir, 'road-elsewhere', 'RoadSign')), false);
+  await rm(outside, { recursive: true, force: true });
 });
