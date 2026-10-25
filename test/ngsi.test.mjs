@@ -190,6 +190,11 @@ test('unclosedRings: paths as check writes them, or as JSON pointers', () => {
   assert.deepEqual(unclosedRings({ type: 'Polygon', coordinates: [[[0, 0, 5], [1, 1], [0, 0]]] }), ['$.coordinates[0]']);
   for (const v of [null, 7, 'x', []]) assert.deepEqual(unclosedRings(v), [], String(v));
   assert.throws(() => unclosedRings(value, { style: 'xpath' }), /unknown path style "xpath": use jsonpath or pointer/);
+  // limit: at most that many paths, in the same order, and no more work than that.
+  assert.deepEqual(unclosedRings(value, { limit: 2 }), unclosedRings(value).slice(0, 2));
+  assert.deepEqual(unclosedRings(value, { limit: 0 }), []);
+  assert.deepEqual(unclosedRings(value, { limit: 99 }), unclosedRings(value));
+  for (const limit of [-1, 1.5, '2', null]) assert.throws(() => unclosedRings(value, { limit }), { name: 'TypeError', message: `unclosedRings: limit must be a whole number, got ${limit}` });
   // The old second argument, a path prefix, is refused rather than ignored.
   for (const [arg, got] of [['$', 'a string'], [null, 'null'], [['pointer'], 'an array']]) {
     assert.throws(() => unclosedRings(value, arg), { name: 'TypeError', message: `unclosedRings: the second argument is { style }, got ${got}` });
@@ -237,4 +242,13 @@ test('an attribute named __proto__ stays an own key and never changes the protot
   ]);
   // A name of Object.prototype that the schema does not declare is a plain Property.
   assert.deepEqual(toNormalized({ constructor: '2026-01-01' }, { properties: {} }), { constructor: { type: 'Property', value: '2026-01-01' } });
+});
+
+test('unclosedRings with a limit stays fast on many rings under a long key', () => {
+  const ring = { type: 'Polygon', coordinates: [[[0, 0], [1, 1]]] };
+  const value = { ['k'.repeat(100_000)]: Array.from({ length: 50_000 }, () => ring) };
+  const start = performance.now();
+  const paths = unclosedRings(value, { style: 'pointer', limit: 10 });
+  assert.equal(paths.length, 10);
+  assert.ok(performance.now() - start < 500, 'a limited call must not format every path');
 });

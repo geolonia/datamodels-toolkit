@@ -6,12 +6,24 @@
 //   <subject>/releases/v1.0.0/context.jsonld
 //   <subject>/releases/v1.0.0/vocab.jsonld
 //   <subject>/releases/v1.0.0/schema/<Type>.json
-import { mkdir, readdir, readFile, writeFile, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile, stat, lstat } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { buildVocabulary } from './vocab.mjs';
 
 const json = (o) => JSON.stringify(o, null, 2) + '\n';
 async function isDir(p) { try { return (await stat(p)).isDirectory(); } catch { return false; } }
+
+// A snapshot is published byte for byte, so each part of it must be a real
+// folder or file in the repository: a symbolic link would publish whatever it
+// points to, a file outside the node included. lstat, unlike stat, does not
+// follow the link. Returns false when the path is absent.
+async function plain(p, what) {
+  let s;
+  try { s = await lstat(p); } catch (e) { if (e.code === 'ENOENT') return false; throw e; }
+  if (s.isSymbolicLink()) throw new Error(`${p} is a symbolic link. A release snapshot is published as it is, so it must hold real files and folders: replace the link with the file it points to, or remove it`);
+  if (what === 'dir' ? !s.isDirectory() : !s.isFile()) throw new Error(`${p} is not a ${what === 'dir' ? 'folder' : 'regular file'}`);
+  return true;
+}
 
 /**
  * What the snapshot of the subject's current version must contain: { dir,
@@ -77,20 +89,26 @@ async function writeIfAbsentOrEqual(file, content, what) {
 /** All snapshots of a subject: [{ version, dir, files: [{ url, path }] }]. */
 export async function listReleases(subject, { urls }) {
   const base = join(subject.dir, 'releases');
-  if (!(await isDir(base))) return [];
+  if (!(await plain(base, 'dir'))) return [];
   const out = [];
   const bySemver = (a, b) => { const pa = a.slice(1).split('.').map(Number), pb = b.slice(1).split('.').map(Number); return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2]; };
   const names = (await readdir(base)).filter((n) => /^v\d+\.\d+\.\d+$/.test(n)).sort(bySemver);
   for (const name of names) {
     const version = name.slice(1);
     const dir = join(base, name);
+    if (!(await plain(dir, 'dir'))) continue;
     const v = urls.versionUrls(subject.name, version);
     const files = [{ url: v.context, path: join(dir, 'context.jsonld') }];
     // A version is removed as a whole (its folder), never one file of it; an older snapshot may lack vocab.jsonld.
-    try { await stat(files[0].path); } catch (e) { if (e.code !== 'ENOENT') throw e; throw new Error(`${subject.name} v${version}: ${files[0].path} is missing. A release folder needs its context.jsonld: restore it, or remove the whole folder ${dir} to remove the version (during the pre-release only)`); }
-    try { await stat(join(dir, 'vocab.jsonld')); files.push({ url: v.vocab, path: join(dir, 'vocab.jsonld') }); } catch {}
+    if (!(await plain(files[0].path, 'file'))) throw new Error(`${subject.name} v${version}: ${files[0].path} is missing. A release folder needs its context.jsonld: restore it, or remove the whole folder ${dir} to remove the version (during the pre-release only)`);
+    if (await plain(join(dir, 'vocab.jsonld'), 'file')) files.push({ url: v.vocab, path: join(dir, 'vocab.jsonld') });
     const schemaDir = join(dir, 'schema');
-    if (await isDir(schemaDir)) for (const f of (await readdir(schemaDir)).sort()) files.push({ url: v.schema(f.replace(/\.json$/, '')), path: join(schemaDir, f) });
+    if (await plain(schemaDir, 'dir')) {
+      for (const f of (await readdir(schemaDir)).sort()) {
+        await plain(join(schemaDir, f), 'file');
+        files.push({ url: v.schema(f.replace(/\.json$/, '')), path: join(schemaDir, f) });
+      }
+    }
     out.push({ version, dir, files });
   }
   return out;

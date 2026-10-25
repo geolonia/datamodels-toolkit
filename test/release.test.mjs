@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile, readFile, readdir, stat } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, stat, rm, rename, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -111,4 +111,33 @@ test('datamodels release: exit codes', async () => {
   r = await datamodels('release');
   assert.equal(r.code, 2);
   assert.match(r.stderr, /missing arguments\nusage: datamodels release <subject> \[dir\] \[--offline\]/);
+});
+
+test('a symbolic link in a release snapshot is refused, not published', async () => {
+  const secret = join(await mkdtemp(join(tmpdir(), 'datamodels-release-secret-')), 'secret.txt');
+  await writeFile(secret, 'not for the site');
+  const dir = await node();
+  await releaseSubject(dir, 'road', { offline: true });
+  // The current version's snapshot is compared with its sources; an older one is published as it is.
+  const subject = join(dir, 'models', 'road', 'subject.yaml');
+  await writeFile(subject, (await readFile(subject, 'utf8')).replace('version: 0.1.0', 'version: 0.2.0'));
+  const rel = join(dir, 'models', 'road', 'releases', 'v0.1.0');
+  // A file of the old snapshot replaced with a link to a file outside the node.
+  await rm(join(rel, 'schema', 'RoadPatrol.json'));
+  await symlink(secret, join(rel, 'schema', 'RoadPatrol.json'));
+  const out = join(dir, '_site');
+  await assert.rejects(buildNode(dir, { out, pages: false }), /RoadPatrol\.json is a symbolic link\. A release snapshot is published as it is/);
+  assert.equal(await exists(join(out, 'schema', 'road', 'RoadPatrol', 'v0.1.0.json')), false);
+  const r = await datamodels('check', dir);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr + r.stdout, /is a symbolic link/);
+  // The same for a whole version folder that is a link.
+  const other = await node();
+  await releaseSubject(other, 'road', { offline: true });
+  const otherSubject = join(other, 'models', 'road', 'subject.yaml');
+  await writeFile(otherSubject, (await readFile(otherSubject, 'utf8')).replace('version: 0.1.0', 'version: 0.2.0'));
+  const releases = join(other, 'models', 'road', 'releases');
+  await rename(join(releases, 'v0.1.0'), join(other, 'elsewhere'));
+  await symlink(join(other, 'elsewhere'), join(releases, 'v0.1.0'));
+  await assert.rejects(buildNode(other, { out: join(other, '_site'), pages: false }), /v0\.1\.0 is a symbolic link/);
 });

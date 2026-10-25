@@ -201,24 +201,32 @@ const pathStyles = {
  * `style` 'jsonpath' ($.area.coordinates[0], the default) or 'pointer'
  * (/area/coordinates/0). An empty ring is left to the schema. The jsonpath
  * style does not escape keys: a key with "." or "[" makes an ambiguous path.
+ * `limit` (a whole number, default no limit) stops after that many paths:
+ * each path repeats the keys above it, so a caller that reports only the
+ * first few errors of untrusted input should pass one.
  */
 export function unclosedRings(value, options = {}) {
   // The old signature took a path prefix as its second argument.
   if (!isObject(options)) throw new TypeError(`unclosedRings: the second argument is { style }, got ${kindOf(options)}`);
-  const { style = 'jsonpath' } = options;
+  const { style = 'jsonpath', limit = Infinity } = options;
   if (!Object.hasOwn(pathStyles, style)) throw new Error(`unknown path style "${style}": use jsonpath or pointer`);
+  if (limit !== Infinity && !(Number.isInteger(limit) && limit >= 0)) throw new TypeError(`unclosedRings: limit must be a whole number, got ${limit}`);
   const format = pathStyles[style];
   const out = [];
+  const full = () => out.length >= limit;
   const same = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i]);
   const closes = (ring) => !Array.isArray(ring) || ring.length === 0 || same(ring[0], ring.at(-1));
+  // Paths are formatted only while there is room, and the walk stops when out is full.
+  const add = (segments) => { if (!full()) out.push(format(segments)); };
   const walk = (v, p) => {
-    if (Array.isArray(v)) { v.forEach((e, i) => walk(e, [...p, i])); return; }
+    if (full()) return;
+    if (Array.isArray(v)) { for (let i = 0; i < v.length && !full(); i++) walk(v[i], [...p, i]); return; }
     if (!isObject(v)) return;
-    if (v.type === 'Polygon' && Array.isArray(v.coordinates)) v.coordinates.forEach((ring, i) => { if (!closes(ring)) out.push(format([...p, 'coordinates', i])); });
+    if (v.type === 'Polygon' && Array.isArray(v.coordinates)) v.coordinates.forEach((ring, i) => { if (!closes(ring)) add([...p, 'coordinates', i]); });
     else if (v.type === 'MultiPolygon' && Array.isArray(v.coordinates)) {
-      v.coordinates.forEach((poly, i) => (Array.isArray(poly) ? poly : []).forEach((ring, j) => { if (!closes(ring)) out.push(format([...p, 'coordinates', i, j])); }));
+      v.coordinates.forEach((poly, i) => (Array.isArray(poly) ? poly : []).forEach((ring, j) => { if (!closes(ring)) add([...p, 'coordinates', i, j]); }));
     }
-    for (const [k, vv] of Object.entries(v)) walk(vv, [...p, k]);
+    for (const [k, vv] of Object.entries(v)) { if (full()) return; walk(vv, [...p, k]); }
   };
   walk(value, []);
   return out;
