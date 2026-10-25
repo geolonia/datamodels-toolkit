@@ -16,7 +16,7 @@ This repository has a threat model, [`threat-model.md`](threat-model.md),
 that states what the `datamodels` command line, its GitHub Action, its
 library exports and its agent skill promise (for example, that reads of other
 nodes reach only public https hosts, and that the Action uses the job token
-for one fetch of the base branch, in a step that runs no code of this package),
+for one fetch of the base branch, in a step that runs only git),
 what they deliberately do not promise, and
 what the person running the command line and the repository owner using the
 Action own. A report is triaged against it:
