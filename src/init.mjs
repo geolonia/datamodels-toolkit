@@ -317,6 +317,12 @@ export async function publishToGitHub(dir, repo, { run, files = [] }) {
       if (branch !== 'main') throw new Error(`the workflow publishes the branch main, but this repository is on ${branch || 'no branch'}; switch to main first (git branch -m main)`);
       const other = statusPaths(await run('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all'], { cwd: dir })).filter((p) => !ours.has(p));
       if (other.length) throw new Error(`other changes in the folder would be published with the node: ${other.slice(0, 5).join(', ')}${other.length > 5 ? ', …' : ''}. Commit or remove them first`);
+      // git status shows changes only: files committed before, and their history, would be pushed to a
+      // public repository too. Every file in the history must be one init writes (a run of init that
+      // stopped before the push left only those).
+      const history = await run('git', ['log', '--all', '--name-only', '--format=', '-z'], { cwd: dir }).catch(() => '');
+      const committed = [...new Set(history.split(/[\0\n]/).filter(Boolean))].filter((p) => !ours.has(p) && !ignored(p));
+      if (committed.length) throw new Error(`earlier commits hold other files that would be published with the node, history included: ${committed.slice(0, 5).join(', ')}${committed.length > 5 ? ', …' : ''}. Run init in a new folder, or make the repository yourself`);
     } else {
       const all = (await readdir(dir, { recursive: true, withFileTypes: true })).filter((e) => e.isFile()).map((e) => relative(dir, join(e.parentPath, e.name)).split(sep).join('/'));
       const other = all.filter((p) => !ours.has(p) && !ignored(p));
