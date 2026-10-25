@@ -14,7 +14,7 @@ import { ADAPTERS, localRefs, readRefs } from '../src/adapters/index.mjs';
 import { columnsOf, shortTitle, snake } from '../src/adapters/model.mjs';
 import { fieldsOf, tableSchemaOf, xsdPattern } from '../src/adapters/table-schema/index.mjs';
 import { csvHeader, csvField } from '../src/adapters/csv/index.mjs';
-import { structuredOutputOf, unionCount, NotStrict, strict } from '../src/adapters/ai/index.mjs';
+import { structuredOutputOf, unionCount, NotStrict, strict, MAX_STRICT_PARTS } from '../src/adapters/ai/index.mjs';
 import { createTable, ident, literal } from '../src/adapters/postgis/index.mjs';
 import { exportModel } from '../src/export.mjs';
 
@@ -594,4 +594,15 @@ test('csvField: plain names as they are; quotes, commas, line breaks and formula
   assert.equal(csvField('=HYPERLINK("https://evil.example","x")'), `"'=HYPERLINK(""https://evil.example"",""x"")"`);
   for (const lead of ['+', '-', '@', '\t']) assert.equal(csvField(`${lead}1`), `'${lead}1`);
   assert.equal(csvField('\r1'), `"'\r1"`);
+});
+
+test('strict: unions whose siblings multiply at each level stop with NotStrict, not exponential work', () => {
+  // Each level is an anyOf of two branches next to a sibling that holds the next level: 2^30 parts without a limit.
+  let s = { type: 'string' };
+  for (let i = 0; i < 30; i++) s = { anyOf: [{ type: 'object' }, { type: 'object' }], properties: { next: s }, additionalProperties: false, required: ['next'] };
+  const start = performance.now();
+  assert.throws(() => strict(s, 'x'), (e) => e instanceof NotStrict && e.message.includes(`more than ${MAX_STRICT_PARTS} parts`));
+  assert.ok(performance.now() - start < 2000);
+  // An ordinary schema still has its strict form.
+  assert.deepEqual(strict({ type: 'string' }, 'y').type, 'string');
 });

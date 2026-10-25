@@ -45,8 +45,16 @@ function nullable(s) {
   return out;
 }
 
-/** The strict form of a JSON Schema fragment; `path` names it in an error. */
-export function strict(s, path) {
+/** How many schema parts one model's strict form may take. Union branches get their siblings copied in, so nested unions multiply. */
+export const MAX_STRICT_PARTS = 10000;
+
+/**
+ * The strict form of a JSON Schema fragment; `path` names it in an error.
+ * `budget` is shared by every call for one model, so a schema whose unions
+ * multiply has no strict form instead of taking exponential time and memory.
+ */
+export function strict(s, path, budget = { left: MAX_STRICT_PARTS }) {
+  if (--budget.left < 0) throw new NotStrict(`${path}: the schema is too large for a strict form (more than ${MAX_STRICT_PARTS} parts once its unions are expanded)`);
   if (!s || typeof s !== 'object') throw new NotStrict(`${path}: no schema`);
   if (s.$ref || s.allOf || s.not || s.if || s.patternProperties || s.dependentSchemas) throw new NotStrict(`${path}: ${Object.keys(s).find((k) => ['$ref', 'allOf', 'not', 'if', 'patternProperties', 'dependentSchemas'].includes(k))} has no strict form`);
   const notes = [];
@@ -62,7 +70,7 @@ export function strict(s, path) {
     const merged = branches.map((b, i) => {
       const clash = Object.keys(b ?? {}).find((k) => k !== 'description' && k in siblings && JSON.stringify(b[k]) !== JSON.stringify(siblings[k]));
       if (clash) throw new NotStrict(`${path}[${i}]: ${clash} next to ${s.oneOf ? 'oneOf' : 'anyOf'} and in the branch must both hold, which has no strict form`);
-      return strict({ ...siblings, ...b }, `${path}[${i}]`);
+      return strict({ ...siblings, ...b }, `${path}[${i}]`, budget);
     });
     return { anyOf: merged, ...describe(text, notes) };
   }
@@ -85,7 +93,7 @@ export function strict(s, path) {
     for (const [k, w] of [['minimum', 'minimum'], ['maximum', 'maximum'], ['exclusiveMinimum', 'more than'], ['exclusiveMaximum', 'less than']]) if (s[k] !== undefined) notes.push(`${w} ${s[k]}`);
   }
   if (types.includes('array')) {
-    out.items = strict(s.items ?? {}, `${path}[]`);
+    out.items = strict(s.items ?? {}, `${path}[]`, budget);
     if (s.minItems === 1) out.minItems = 1;
     else if (s.minItems > 1) notes.push(`at least ${s.minItems} items`);
     if (s.maxItems !== undefined) notes.push(`at most ${s.maxItems} items`);
@@ -96,7 +104,7 @@ export function strict(s, path) {
     if (!s.properties || !Object.keys(s.properties).length) throw new NotStrict(`${path}: an object without properties has no strict form`);
     const required = new Set(s.required ?? []);
     out.properties = Object.fromEntries(Object.entries(s.properties).map(([k, p]) => {
-      const v = strict(p, `${path}.${k}`);
+      const v = strict(p, `${path}.${k}`, budget);
       return [k, required.has(k) ? v : nullable(v)];
     }));
     out.required = Object.keys(s.properties);
@@ -132,6 +140,8 @@ export function structuredOutputOf(subject, model, context) {
   const { languages } = context;
   const links = linksOf(subject, model, context);
   const properties = {};
+  // One budget for the whole model (see strict).
+  const budget = { left: MAX_STRICT_PARTS };
   for (const c of columnsOf(model, context)) {
     let s;
     if (c.kind === 'geometry') {
@@ -140,13 +150,13 @@ export function structuredOutputOf(subject, model, context) {
       s = shapes.length === 1 ? { ...shapes[0], description: text } : { anyOf: shapes, description: text };
     } else if (c.kind === 'parts') {
       const target = { type: 'object', properties: Object.fromEntries(c.parts.map((p) => [p.name, p.prop])), required: c.parts.filter((p) => p.required).map((p) => p.name), additionalProperties: false, description: englishOf(c, languages) };
-      s = strict(target, c.name);
+      s = strict(target, c.name, budget);
     } else if (c.kind === 'json' && c.schema !== c.prop) {
       // A value type that is not a set of plain fields: its own schema, with the attribute's description.
-      s = { ...strict(c.schema, c.name), ...(englishOf(c, languages) ? { description: englishOf(c, languages) } : {}) };
+      s = { ...strict(c.schema, c.name, budget), ...(englishOf(c, languages) ? { description: englishOf(c, languages) } : {}) };
     } else {
       const { 'x-ngsi': ngsi, 'x-iri': iri, ...plain } = c.prop;
-      s = strict({ ...plain, description: englishOf(c, languages) }, c.name);
+      s = strict({ ...plain, description: englishOf(c, languages) }, c.name, budget);
     }
     properties[c.name] = c.required ? s : nullable(s);
   }
