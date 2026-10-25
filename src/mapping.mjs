@@ -358,7 +358,10 @@ export function startMapping({ target, entry, model, languages, columns, header,
   const hours = [...new Set(targets.filter((t) => t.part === 'opens').map((t) => t.attribute))].filter((a) => targets.some((t) => t.attribute === a && t.part === 'closes'));
 
   const lines = [];
-  const comment = (text) => lines.push(`# ${text}`);
+  // Comment text can hold CSV header names: a line break in one would end the
+  // comment and make the rest a YAML line of the mapping, so it becomes a space.
+  const flat = (text) => String(text).replace(/[\r\n\u0085\u2028\u2029]+/g, ' ');
+  const comment = (text) => lines.push(`# ${flat(text)}`);
   const mapping = out ?? 'mapping.yaml';
   const command = `datamodels convert ${target} ${mapping} ${csv}`;
   comment(T.head(csv, target, textIn(entry?.title, lang, languages)));
@@ -392,14 +395,14 @@ export function startMapping({ target, entry, model, languages, columns, header,
     comment(T.idTemplate);
     lines.push('convert:');
     if (fromCatalog) {
-      lines.push(`  # ${T.idFrom(fromCatalog.name)}`);
+      lines.push(`  # ${flat(T.idFrom(fromCatalog.name))}`);
       lines.push(`  id: ${q(fromCatalog.mapping.convert.id)}`);
     } else {
-      lines.push(`  # ${T.idTodo(idLike ? `urn:ngsi-ld:${model.type}:{${idLike}}` : '')}`);
+      lines.push(`  # ${flat(T.idTodo(idLike ? `urn:ngsi-ld:${model.type}:{${idLike}}` : ''))}`);
       lines.push(`  id: ${q(`urn:ngsi-ld:${model.type}:{TODO}`)}`);
     }
   }
-  if (hours.length) lines.push(`  # ${T.allDay(hours)}`);
+  if (hours.length) lines.push(`  # ${flat(T.allDay(hours))}`);
 
   lines.push('', 'fields:');
   if (idColumn) lines.push(`  id: ${flowRule({ column: 'id' })}`);
@@ -429,11 +432,11 @@ export function startMapping({ target, entry, model, languages, columns, header,
     const d = oneLine(describe(t));
     if (d) notes.push(d);
     if (allowed(t).length) notes.push(T.values(allowed(t)));
-    lines.push(`  ${t.name}: ${flowRule(rule)}  # ${notes.join('; ')}`);
+    lines.push(`  ${t.name}: ${flowRule(rule)}  # ${flat(notes.join('; '))}`);
   };
-  if (required.length) { lines.push(`  # ${T.required}`); required.forEach(row); }
-  rules.atLeastOne.forEach((g, i) => { if (groups[i].length) { lines.push(`  # ${T.atLeastOne(g)}`); groups[i].forEach(row); } });
-  if (rest.length) { lines.push(`  # ${T.optional}`); rest.forEach(row); }
+  if (required.length) { lines.push(`  # ${flat(T.required)}`); required.forEach(row); }
+  rules.atLeastOne.forEach((g, i) => { if (groups[i].length) { lines.push(`  # ${flat(T.atLeastOne(g))}`); groups[i].forEach(row); } });
+  if (rest.length) { lines.push(`  # ${flat(T.optional)}`); rest.forEach(row); }
 
   const read = new Set([...chosen.values()].flatMap((c) => c.cols));
   if (idColumn) read.add('id');

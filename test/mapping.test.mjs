@@ -409,3 +409,14 @@ test('a catalog rule with values and no transform stays a values lookup; for a b
   assert.deepEqual(m.fields.restrictedAccess, { column: '外部', values: { 外部利用不可: 'yes' } });
   assert.deepEqual(mappingProblems({ fields: m.fields }), []);
 });
+
+test('a CSV header with a line break stays inside its comment in the starter mapping', async () => {
+  const model = await siteModel(reader, 'disaster/EvacuationSite');
+  const evil = 'note\nconvert:\n  id: "urn:x:{note}"\r\n# end';
+  const r = startMapping({ target: 'disaster/EvacuationSite', ...model, header: ['名称', evil], csv: 'a.csv' });
+  assert.ok(r.unused.includes(evil));
+  const parsed = YAML.parse(r.text);
+  // The header text is only in a comment: no convert key from it, and every line it touches starts with #.
+  assert.notEqual(parsed.convert?.id, 'urn:x:{note}');
+  assert.ok(r.text.includes('# ') && r.text.includes('note convert:   id: "urn:x:{note}" # end'), r.text);
+});
