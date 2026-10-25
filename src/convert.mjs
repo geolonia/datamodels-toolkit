@@ -551,3 +551,12 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
   }
   return results;
 }
+
+/**
+ * Text from the input (CSV cells and headers) as one visible line for the
+ * terminal: line breaks and other control characters, ANSI escapes included,
+ * are shown as \n or \u001b instead of acting on the output.
+ */
+export function visible(text) {
+  return String(text).replace(/[\u0000-\u0008\u000a-\u001f\u007f-\u009f\u2028\u2029]/g, (c) => (c === '\n' ? '\\n' : `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`));
+}

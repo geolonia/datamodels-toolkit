@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { decodeCsv, parseCsv, code6, convertRows, mappingProblems, mappedColumns, unknownFields, exponentForm, weekdays, time, TRANSFORMS, LINE } from '../src/convert.mjs';
+import { decodeCsv, parseCsv, code6, convertRows, mappingProblems, mappedColumns, unknownFields, exponentForm, weekdays, time, TRANSFORMS, LINE, visible } from '../src/convert.mjs';
 import { siteReader, loadTarget } from '../src/catalog.mjs';
 
 const reader = siteReader(join(import.meta.dirname, 'fixtures', 'site'));
@@ -590,4 +590,12 @@ test('parseCsv finds repeated headers in one pass, also with many columns', () =
   const start = performance.now();
   assert.equal(parseCsv(`${many}\n`).columns.length, 200_000);
   assert.ok(performance.now() - start < 2000, 'the header check must not be quadratic');
+});
+
+test('visible: input text cannot add lines or terminal escapes to the report', () => {
+  assert.equal(visible('plain 名称 text\twith tab'), 'plain 名称 text\twith tab');
+  assert.equal(visible('a\nline 2: 0 problems'), 'a\\nline 2: 0 problems');
+  assert.equal(visible('\u001b[2K\u001b[1Ahidden'), '\\u001b[2K\\u001b[1Ahidden');
+  assert.equal(visible('cr\rback'), 'cr\\u000dback');
+  assert.equal(visible('ls sep'), 'ls\\u2028sep');
 });

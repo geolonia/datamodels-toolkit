@@ -74,7 +74,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
-import { decodeCsv, parseCsv, convertRows, mappingProblems, mappedColumns, unknownFields, LINE } from '../src/convert.mjs';
+import { decodeCsv, parseCsv, convertRows, mappingProblems, mappedColumns, unknownFields, visible, LINE } from '../src/convert.mjs';
 import { toNormalized, wrapKeyValues } from '../src/ngsi.mjs';
 import { siteReader, loadTarget, isMappingFile, CORE_CONTEXT_URL, SITE } from '../src/catalog.mjs';
 import { TEMPLATE, siteModel, templateMapping, catalogMappings, startMapping } from '../src/mapping.mjs';
@@ -358,8 +358,8 @@ async function convert(target, mappingName, file, { set: sets = [], normalized, 
   const missing = [...required.filter(none), ...groups.filter((g) => g.every(none)).map((g) => `one of ${g.join(', ')}`)];
   if (check && rows.length && missing.length) console.error(`  required, but no row gets a value: ${missing.join('; ')}`);
   if (all.skipped.length) console.error(`  skipped ${all.skipped.length} record(s) with only empty fields: line ${all.skipped.slice(0, 10).join(', ')}${all.skipped.length > 10 ? ', …' : ''}`);
-  for (const [k, e] of repairs) console.error(`  repaired ${e.n}×: ${k} (e.g. ${e.example})`);
-  for (const x of invalid.slice(0, 20)) console.error(`  line ${x.line}: ${x.problems.join('; ')}`);
+  for (const [k, e] of repairs) console.error(`  repaired ${e.n}×: ${visible(k)} (e.g. ${visible(e.example)})`);
+  for (const x of invalid.slice(0, 20)) console.error(`  line ${x.line}: ${visible(x.problems.join('; '))}`);
   if (invalid.length > 20) console.error(`  … ${invalid.length - 20} more`);
   if (!check) return invalid.length ? 1 : 0;
   // The summary is the last line, so a script or an agent can read it alone.
@@ -385,7 +385,7 @@ async function mapping(target, file, { out, site }) {
   const [hint] = r.hints;
   if (hint) console.error(`  note: the header has ${hint.n} of the ${hint.all} columns of the catalog's mapping ${hint.name}; if the list follows that standard, try: datamodels convert ${target} ${hint.name} ${file} --check`);
   console.error(`  ${r.chosen.size} of ${r.targets.length} attributes and fields have a column; ${r.todos.length + (r.idTodo ? 1 : 0) + (r.allDayTodo ? 1 : 0)} TODO(s)`);
-  if (r.unused.length) console.error(`  columns no row reads: ${r.unused.join(', ')}`);
+  if (r.unused.length) console.error(`  columns no row reads: ${r.unused.map(visible).join(', ')}`);
   console.error(`${file}: ${encoding}, ${rows.columns.length} column(s)${out ? `, mapping written to ${out}` : ''}. Next: fill in the TODOs, then datamodels convert ${target} ${out ?? '<mapping.yaml>'} ${file} --check`);
   return 0;
 }
