@@ -450,7 +450,12 @@ const valueAt = (obj, path) => path.split('.').reduce((v, k) => (v && typeof v =
  * one row gets are problems of those rows.
  * Returns one { entity, fixes, problems } per row; a fix is { field, repair, detail }.
  */
+/** How many via references one row may expand. A mapping that refers to the same mapping twice at each level grows exponentially without it. */
+export const MAX_VIA_EXPANSIONS = 1000;
+
 export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {}) {
+  // Via references expanded for the current row, against MAX_VIA_EXPANSIONS.
+  let expansions = 0;
   // chain: the via names being built, so a cycle is reported instead of recursing forever.
   // allDay: what 0:00–0:00 means (convert.allDay); the outermost mapping that says it wins, so
   // a mapping of your own decides it also for the catalog mappings it reaches through via.
@@ -463,6 +468,10 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
         const sub = mappings[rule.via];
         if (!sub) { problems.push(`${field}: no mapping ${rule.via}`); continue; }
         if (chain.includes(rule.via)) { problems.push(`${field}: via cycle ${[...chain, rule.via].join(' → ')}`); continue; }
+        if (++expansions > MAX_VIA_EXPANSIONS) {
+          if (expansions === MAX_VIA_EXPANSIONS + 1) problems.push(`${field}: the mapping expands more than ${MAX_VIA_EXPANSIONS} via references for one row; a mapping that refers to the same mapping several times at each level grows too fast`);
+          continue;
+        }
         const word = allDay ?? sub.convert?.allDay;
         const { value: v, zones: inner } = build(sub, row, fixes, problems, false, [...chain, rule.via], word);
         const meaningful = (x) => Object.keys(x).some((k) => sub.fields[k]?.value === undefined);
@@ -508,6 +517,7 @@ export function convertRows(rows, mapping, { type, mappings = {}, set = {} } = {
   const rawOf = (row, k) => sourceColumns(k).map((c) => row[c]);
   const results = rows.map((row) => {
     const fixes = [], problems = [];
+    expansions = 0;
     const { value, zones } = build(mapping, row, fixes, problems, true);
     const { id: own, ...attrs } = sameHours(value, '', '', mapping.convert?.allDay, fixes, problems, zones);
     const all = { id: own, ...attrs };

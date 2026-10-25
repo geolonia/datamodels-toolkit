@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { decodeCsv, parseCsv, code6, convertRows, mappingProblems, mappedColumns, unknownFields, exponentForm, weekdays, time, TRANSFORMS, LINE, visible } from '../src/convert.mjs';
+import { decodeCsv, parseCsv, code6, convertRows, mappingProblems, mappedColumns, unknownFields, exponentForm, weekdays, time, TRANSFORMS, LINE, visible, MAX_VIA_EXPANSIONS } from '../src/convert.mjs';
 import { siteReader, loadTarget } from '../src/catalog.mjs';
 
 const reader = siteReader(join(import.meta.dirname, 'fixtures', 'site'));
@@ -598,4 +598,15 @@ test('visible: input text cannot add lines or terminal escapes to the report', (
   assert.equal(visible('\u001b[2K\u001b[1Ahidden'), '\\u001b[2K\\u001b[1Ahidden');
   assert.equal(visible('cr\rback'), 'cr\\u000dback');
   assert.equal(visible('ls sep'), 'ls\\u2028sep');
+});
+
+test('convertRows stops a via graph that doubles at each level, and says so', () => {
+  // m0 refers to m1 twice, m1 to m2 twice, ...: 2^25 expansions without a limit.
+  const mappings = {};
+  for (let i = 0; i < 25; i++) mappings[`m${i}`] = { fields: { a: { via: `m${i + 1}` }, b: { via: `m${i + 1}` } } };
+  mappings.m25 = { fields: { name: { column: 'n' } } };
+  const start = performance.now();
+  const [r] = convertRows([{ n: 'x' }], { convert: { id: 'urn:x:{n}' }, fields: { top: { via: 'm0' } } }, { type: 'X', mappings });
+  assert.ok(performance.now() - start < 2000, 'the expansion must stop early');
+  assert.equal(r.problems.filter((p) => p.includes(`more than ${MAX_VIA_EXPANSIONS} via references`)).length, 1, JSON.stringify(r.problems));
 });
