@@ -6,9 +6,10 @@
 //   <subject>/releases/v1.0.0/context.jsonld
 //   <subject>/releases/v1.0.0/vocab.jsonld
 //   <subject>/releases/v1.0.0/schema/<Type>.json
-import { mkdir, readdir, readFile, writeFile, stat, lstat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, stat, lstat } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { buildVocabulary } from './vocab.mjs';
+import { writeNoFollow } from './load.mjs';
 
 const json = (o) => JSON.stringify(o, null, 2) + '\n';
 async function isDir(p) { try { return (await stat(p)).isDirectory(); } catch { return false; } }
@@ -85,7 +86,7 @@ async function writeIfAbsentOrEqual(file, content, what) {
     if (existing !== content) throw new Error(`${what}: release snapshot ${file} differs from the current source. A published version never changes; bump the version instead.`);
   } catch (e) {
     if (e.code !== 'ENOENT') throw e;
-    await writeFile(file, content);
+    await writeNoFollow(file, content, { create: true });
   }
 }
 

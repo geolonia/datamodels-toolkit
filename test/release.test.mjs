@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { releaseSubject } from '../src/release.mjs';
+import { writeNoFollow } from '../src/build/load.mjs';
 import { buildNode, checkNode, loadNode, snapshotRelease } from '../src/build/index.mjs';
 
 const run = promisify(execFile);
@@ -178,5 +179,14 @@ test('a symbolic link anywhere in models/ is refused, not published or written t
   assert.equal(r.code, 1);
   assert.match(r.stderr, /symbolic link/);
   assert.equal(await exists(join(dir, 'road-elsewhere', 'RoadSign')), false);
+  // A link put at a path after the checks (by another process) is not written through either.
+  const late = join(outside, 'late');
+  await symlink(target, late);
+  await assert.rejects(writeNoFollow(late, 'x'), /late is a symbolic link, not written/);
+  await assert.rejects(writeNoFollow(late, 'x', { create: true }), /late is a symbolic link, not written/);
+  assert.equal(await exists(target), false);
+  await writeNoFollow(join(outside, 'plain.txt'), 'ok', { create: true });
+  await assert.rejects(writeNoFollow(join(outside, 'plain.txt'), 'again', { create: true }), { code: 'EEXIST' });
+  assert.equal(await readFile(join(outside, 'plain.txt'), 'utf8'), 'ok');
   await rm(outside, { recursive: true, force: true });
 });

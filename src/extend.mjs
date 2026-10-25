@@ -9,11 +9,11 @@
 //     keeps the other model's IRI (x-alias-of).
 //   - a subtype (--subclass): a type of its own in this node's namespace, with
 //     the other model as its parent (x-subclass-of).
-import { readFile, writeFile, stat, lstat } from 'node:fs/promises';
+import { readFile, stat, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
 import { readNode } from './build/node.mjs';
-import { parseYaml, refuseLinks } from './build/load.mjs';
+import { parseYaml, refuseLinks, writeNoFollow } from './build/load.mjs';
 import { catalogUrls } from './build/urls.mjs';
 import { placeModel } from './add.mjs';
 import { getter, normalUrl } from './adapters/index.mjs';
@@ -174,7 +174,7 @@ notes: []
     const prefix = Object.entries(terms).find(([, v]) => v === namespace)?.[0];
     terms[type] = subclass ? (prefix ? `${prefix}:${type}` : ownIri) : entry.typeIri;
   });
-  if (nodeYaml) await writeFile(join(dir, 'node.yaml'), nodeYaml);
+  if (nodeYaml) await writeNoFollow(join(dir, 'node.yaml'), nodeYaml);
   const at = `models/${subjectName}`;
   return {
     added: [`${at}/${type}/schema.json`, `${at}/${type}/catalog.yaml`, `${at}/${type}/examples/example.json`, `${at}/${type}/notes.yaml`],

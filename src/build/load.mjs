@@ -1,7 +1,8 @@
 // Load a models folder: <subject>/{subject.yaml, context.jsonld, <Type>/...}.
 // Moved from geolonia/datamodels (scripts/lib/models.mjs, loadSubjects), with
 // the folder, the base URL and the required languages as options (#10).
-import { readFile, readdir, stat, lstat } from 'node:fs/promises';
+import { readFile, readdir, stat, lstat, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { join, relative } from 'node:path';
 import YAML from 'yaml';
 
@@ -17,6 +18,22 @@ export const parseJson = reader((t) => JSON.parse(t));
 export const parseYaml = reader((t) => YAML.parse(t));
 async function isDir(p) { try { return (await stat(p)).isDirectory(); } catch { return false; } }
 async function exists(p) { try { await stat(p); return true; } catch { return false; } }
+
+/**
+ * Write a file of the node without following a symbolic link at its path, so
+ * a link put there after the checks below (by another process) is not written
+ * through. `create`: the file must not exist yet. O_NOFOLLOW is POSIX; where
+ * it does not exist (Windows), the earlier checks are the only guard.
+ */
+export async function writeNoFollow(file, content, { create = false } = {}) {
+  const { O_WRONLY, O_CREAT, O_EXCL, O_TRUNC, O_NOFOLLOW = 0 } = constants;
+  try {
+    await writeFile(file, content, { flag: O_WRONLY | O_CREAT | (create ? O_EXCL : O_TRUNC) | O_NOFOLLOW });
+  } catch (e) {
+    if (e.code === 'ELOOP' || (create && e.code === 'EEXIST' && (await lstat(file)).isSymbolicLink())) throw new Error(`${file} is a symbolic link, not written`, { cause: e });
+    throw e;
+  }
+}
 
 /**
  * Refuse symbolic links in a models folder. Mapping files and release
