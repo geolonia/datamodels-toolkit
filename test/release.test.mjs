@@ -113,31 +113,54 @@ test('datamodels release: exit codes', async () => {
   assert.match(r.stderr, /missing arguments\nusage: datamodels release <subject> \[dir\] \[--offline\]/);
 });
 
-test('a symbolic link in a release snapshot is refused, not published', async () => {
-  const secret = join(await mkdtemp(join(tmpdir(), 'datamodels-release-secret-')), 'secret.txt');
-  await writeFile(secret, 'not for the site');
-  const dir = await node();
-  await releaseSubject(dir, 'road', { offline: true });
-  // The current version's snapshot is compared with its sources; an older one is published as it is.
-  const subject = join(dir, 'models', 'road', 'subject.yaml');
-  await writeFile(subject, (await readFile(subject, 'utf8')).replace('version: 0.1.0', 'version: 0.2.0'));
-  const rel = join(dir, 'models', 'road', 'releases', 'v0.1.0');
-  // A file of the old snapshot replaced with a link to a file outside the node.
-  await rm(join(rel, 'schema', 'RoadPatrol.json'));
-  await symlink(secret, join(rel, 'schema', 'RoadPatrol.json'));
-  const out = join(dir, '_site');
-  await assert.rejects(buildNode(dir, { out, pages: false }), /RoadPatrol\.json is a symbolic link\. A release snapshot is published as it is/);
-  assert.equal(await exists(join(out, 'schema', 'road', 'RoadPatrol', 'v0.1.0.json')), false);
-  const r = await datamodels('check', dir);
-  assert.equal(r.code, 1);
-  assert.match(r.stderr + r.stdout, /is a symbolic link/);
-  // The same for a whole version folder that is a link.
-  const other = await node();
-  await releaseSubject(other, 'road', { offline: true });
-  const otherSubject = join(other, 'models', 'road', 'subject.yaml');
-  await writeFile(otherSubject, (await readFile(otherSubject, 'utf8')).replace('version: 0.1.0', 'version: 0.2.0'));
-  const releases = join(other, 'models', 'road', 'releases');
-  await rename(join(releases, 'v0.1.0'), join(other, 'elsewhere'));
-  await symlink(join(other, 'elsewhere'), join(releases, 'v0.1.0'));
-  await assert.rejects(buildNode(other, { out: join(other, '_site'), pages: false }), /v0\.1\.0 is a symbolic link/);
+test('a symbolic link anywhere in models/ is refused, not published or written through', async (t) => {
+  const outside = await mkdtemp(join(tmpdir(), 'datamodels-release-secret-'));
+  const secret = join(outside, 'secret.txt');
+  await writeFile(secret, 'token: not for the site\n');
+  // Some systems (Windows without developer mode) cannot make links: nothing to test there.
+  try { await symlink(secret, join(outside, 'probe')); } catch (e) { if (e.code === 'EPERM') return t.skip('no symbolic links here'); throw e; }
+  // A released v0.1.0 and a current v0.2.0: the old snapshot is published as it is.
+  const released = async () => {
+    const dir = await node();
+    await releaseSubject(dir, 'road', { offline: true });
+    const subject = join(dir, 'models', 'road', 'subject.yaml');
+    await writeFile(subject, (await readFile(subject, 'utf8')).replace('version: 0.1.0', 'version: 0.2.0'));
+    return dir;
+  };
+  const refused = async (dir, name) => {
+    const out = join(dir, '_site');
+    await assert.rejects(buildNode(dir, { out, pages: false }), new RegExp(`symbolic links? in .*models: .*${name}.*replace each link`), name);
+    assert.equal(await exists(out), false, `${name}: nothing built`);
+    const r = await datamodels('check', dir);
+    assert.equal(r.code, 1, name);
+    assert.match(r.stderr + r.stdout, /symbolic link/, name);
+  };
+  const rel = (dir) => join(dir, 'models', 'road', 'releases', 'v0.1.0');
+  // A file of an old snapshot.
+  let dir = await released();
+  await rm(join(rel(dir), 'schema', 'RoadPatrol.json'));
+  await symlink(secret, join(rel(dir), 'schema', 'RoadPatrol.json'));
+  await refused(dir, 'RoadPatrol\\.json');
+  // A whole version folder.
+  dir = await released();
+  await rename(rel(dir), join(dir, 'elsewhere'));
+  await symlink(join(dir, 'elsewhere'), rel(dir));
+  await refused(dir, 'v0\\.1\\.0');
+  // A mapping file, which build also publishes as it is.
+  dir = await node();
+  await mkdir(join(dir, 'models', 'road', 'RoadPatrol', 'mapping'), { recursive: true });
+  await symlink(secret, join(dir, 'models', 'road', 'RoadPatrol', 'mapping', 'leak.yaml'));
+  await refused(dir, 'leak\\.yaml');
+  // A subject folder that points outside models/.
+  dir = await node();
+  await rename(join(dir, 'models', 'road'), join(dir, 'road-elsewhere'));
+  await symlink(join(dir, 'road-elsewhere'), join(dir, 'models', 'road'));
+  await refused(dir, 'road');
+  // release does not write through a dangling link.
+  dir = await node();
+  await mkdir(rel(dir), { recursive: true });
+  const target = join(outside, 'written-by-release.jsonld');
+  await symlink(target, join(rel(dir), 'context.jsonld'));
+  await assert.rejects(releaseSubject(dir, 'road', { offline: true }), /symbolic link/);
+  assert.equal(await exists(target), false);
 });

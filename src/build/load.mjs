@@ -1,7 +1,7 @@
 // Load a models folder: <subject>/{subject.yaml, context.jsonld, <Type>/...}.
 // Moved from geolonia/datamodels (scripts/lib/models.mjs, loadSubjects), with
 // the folder, the base URL and the required languages as options (#10).
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readFile, readdir, stat, lstat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import YAML from 'yaml';
 
@@ -19,6 +19,28 @@ async function isDir(p) { try { return (await stat(p)).isDirectory(); } catch { 
 async function exists(p) { try { await stat(p); return true; } catch { return false; } }
 
 /**
+ * Refuse symbolic links in a models folder. Mapping files and release
+ * snapshots are published byte for byte, so a link would publish whatever it
+ * points to, a file outside the node included, and release would write
+ * through one. A node has no use for links, so none is allowed anywhere in it.
+ * Walked by hand: readdir's recursive option descends into linked folders.
+ */
+export async function refuseLinks(modelsDir) {
+  if ((await lstat(modelsDir)).isSymbolicLink()) throw new Error(`${modelsDir} is a symbolic link. A node's models folder must hold real files and folders`);
+  const links = [];
+  const walk = async (dir) => {
+    for (const e of await readdir(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isSymbolicLink()) links.push(relative(modelsDir, p));
+      else if (e.isDirectory()) await walk(p);
+    }
+  };
+  await walk(modelsDir);
+  links.sort();
+  if (links.length) throw new Error(`${links.length === 1 ? 'a symbolic link' : `${links.length} symbolic links`} in ${modelsDir}: ${links.slice(0, 5).join(', ')}${links.length > 5 ? ', …' : ''}. Files there are published as they are, so the folder must hold real files and folders: replace each link with the file it points to, or remove it`);
+}
+
+/**
  * The subjects of a models folder, each with its models.
  *
  * Options:
@@ -30,6 +52,7 @@ async function exists(p) { try { await stat(p); return true; } catch { return fa
 export async function loadSubjects(modelsDir, { urls, languages = ['ja', 'en'], subjectFields = ['title', 'summary', 'description'], importable = () => false } = {}) {
   const readJson = (file) => parseJson(file, modelsDir);
   const readYaml = (file) => parseYaml(file, modelsDir);
+  await refuseLinks(modelsDir);
   const subjects = [];
   for (const name of (await readdir(modelsDir)).sort()) {
     const dir = join(modelsDir, name);
