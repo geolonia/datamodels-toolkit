@@ -6,6 +6,21 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.3.18] - 2026-10-26
+
+A security release: ten low-severity fixes from a code scan (#139). Reads of a node's published files follow the same address rules as every other read, `init --github` checks the whole history, and inputs that grew exponentially now stop.
+
+### Security
+
+- `datamodels check` and `release` read the published files with the same rules as every other read of a site: https on a public host name only, redirects included (at most a few, never to a private or loopback address). A `baseUrl` or a redirect that points elsewhere is not read: `check` notes it, `release` stops. So a node whose `baseUrl` is not https on a public host (an `http://` or localhost preview) needs `release --offline`.
+- `datamodels init --github` refuses an existing repository whose history holds files other than the ones init writes: before, files committed (and maybe deleted) earlier were pushed to the new public repository too.
+- `subject.yaml` may not set `dir`, `context`, `imports`, `inlineTerms` or `models`, which the toolkit sets itself: a `dir` there moved `release`, `bump` and `build` to another folder.
+- The CSV adapter encodes each column name of the header: quoted when it holds a comma, quote or line break (RFC 4180), and with a leading `'` when a spreadsheet would read it as a formula (`=`, `+`, `-`, `@`, tab, CR or LF first). Names come from another catalog with `datamodels export`.
+- `datamodels mapping` keeps a CSV header with a line break inside its comment in the starter mapping: before, the rest became a line of the mapping.
+- `datamodels convert` and `mapping` show CSV text in their messages with line breaks and control characters (ANSI escapes included) as `\n` and `\u001b`.
+- Inputs that grew exponentially now stop with an error: `convert` expands at most 1000 `via` references per row, the `ai` adapter converts at most 10000 schema parts per model (no AI file otherwise), and `check` walks at most 10000 `@context` parts.
+- `parseCsv` finds repeated header names in one pass: a header with very many columns took quadratic time.
+
 ## [0.3.17] - 2026-10-25
 
 A security release: a node's `models/` folder may no longer hold symbolic links, and `unclosedRings` can stop after a number of paths.
@@ -354,7 +369,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.17...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.18...main
+[0.3.18]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.17...v0.3.18
 [0.3.17]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.16...v0.3.17
 [0.3.16]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.15...v0.3.16
 [0.3.15]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.14...v0.3.15
