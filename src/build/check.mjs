@@ -19,7 +19,7 @@ import { catalogUrls, attributesOf } from './urls.mjs';
 import { schemaRuleProblems, exampleProblems, contextLoader, jsonldProblems, vocabularyProblems } from './examples.mjs';
 import { mappingFileProblems, viaCycles } from './mapping-check.mjs';
 import { compareWithBase } from './published.mjs';
-import { getter, normalUrl } from '../adapters/index.mjs';
+import { getter, normalUrl, bytesReader } from '../adapters/index.mjs';
 import { verifyRelease } from './releases.mjs';
 
 // A schema on another site that could not be read: noted and skipped, never a problem of this node.
@@ -220,7 +220,7 @@ export function termProblems(subject, urls, resolved) {
  */
 export async function checkNode(dir, { offline = false, base, allReleased = false, fetch: fetchUrl = globalThis.fetch, timeout = 20000 } = {}) {
   // A node that hangs is treated like one that is down: noted, not waited for.
-  const fetch = (url) => fetchUrl(url, { signal: AbortSignal.timeout(timeout) });
+  const readPublished = bytesReader(fetchUrl, timeout);
   const problems = [];
   const notes = [];
   const out = await mkdtemp(join(tmpdir(), 'datamodels-check-'));
@@ -354,12 +354,12 @@ export async function checkNode(dir, { offline = false, base, allReleased = fals
       const url = `${urls.baseUrl}${path}`;
       let body;
       try {
-        const res = await fetch(url);
+        // Through bytesReader: a baseUrl or redirect that points at a private address is not read .
+        const res = await readPublished(url);
         if (res.status === 404) continue;
         if (!res.ok) { notes.push(`${url}: HTTP ${res.status}, not compared`); continue; }
-        // The body too: a server can send its headers and then stall or break off.
-        body = Buffer.from(await res.arrayBuffer());
-      } catch (e) { notes.push(`${url}: not reachable (${e.cause?.code ?? e.message}), not compared`); continue; }
+        body = res.body;
+      } catch (e) { notes.push(`${url}: ${e.refused ? e.message : `not reachable (${e.cause?.code ?? e.message})`}, not compared`); continue; }
       online.add(url);
       if (body.equals(await readFile(join(out, path.slice(1))))) continue;
       if (correctable) notes.push(`${url}: differs from the published file, corrected in place during the pre-release (prerelease: true in node.yaml)`);

@@ -46,6 +46,42 @@ const REDIRECTS = 5;
 const refusal = (message, refused, options) => Object.assign(new Error(message, options), { refused });
 
 /**
+ * A reader of a published file's bytes, for the comparisons of check and
+ * release: { status, ok, body } (body a Buffer when ok). The same rules as
+ * getter(): the URL and every redirect must be a publicUrl(), at most
+ * REDIRECTS of them, and with the global fetch it reads through publicFetch,
+ * so a node's baseUrl or a redirect cannot point the read at a private or
+ * loopback address. `timeout` (ms) covers the whole read.
+ */
+export const bytesReader = (fetchUrl, timeout = 20000) => {
+  const read = !fetchUrl || fetchUrl === globalThis.fetch ? publicFetch : fetchUrl;
+  return async (url) => {
+    let at = normalUrl(url);
+    if (!publicUrl(at)) throw refusal(`${url} is not read: only https on a public host name`, 'url');
+    const signal = AbortSignal.timeout(timeout);
+    for (let hop = 0; ; hop++) {
+      let res;
+      try { res = await read(at, { signal, redirect: 'manual' }); } catch (e) {
+        if (signal.aborted) throw new Error(`${url} could not be read (timed out after ${timeout / 1000} s)`);
+        const code = [e?.cause?.code, e?.code].find((c) => typeof c === 'string');
+        const options = code ? { cause: typeof e.cause?.code === 'string' ? e.cause : e } : undefined;
+        if (code === 'ENOTPUBLIC') throw refusal(`${url} is not read: ${e.message}`, 'address', options);
+        throw new Error(`${url} could not be read (${code ?? e.message})`, options);
+      }
+      const location = res.status >= 300 && res.status < 400 ? res.headers?.get?.('location') : null;
+      if (location) {
+        const next = normalUrl(new URL(location, at).href);
+        if (hop >= REDIRECTS || !publicUrl(next)) throw refusal(`${url}: redirects to ${next ?? location}, not followed (only to https on a public host name, at most ${REDIRECTS} times)`, 'redirect');
+        at = next;
+        continue;
+      }
+      // The body too: a server can send its headers and then stall or break off.
+      return { status: res.status, ok: res.ok, body: res.ok ? Buffer.from(await res.arrayBuffer()) : null };
+    }
+  };
+};
+
+/**
  * A reader of JSON URLs that reads each once. The first URL and every redirect
  * must be a publicUrl(); with the global fetch (the default everywhere), it
  * reads through publicFetch, which also refuses a host that resolves to a

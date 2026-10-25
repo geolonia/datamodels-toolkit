@@ -202,3 +202,28 @@ test('subject.yaml cannot replace the folder the toolkit loads it from (or its o
   await writeFile(subject, `${(await readFile(subject, 'utf8')).replace(/^dir: .*\n/m, '')}models: []\ncontext: {}\n`);
   await assert.rejects(buildNode(dir, { out: join(dir, '_site'), pages: false }), /context, models are set by the toolkit/);
 });
+
+test('release and check do not follow a redirect of the published site to a private address', async () => {
+  const dir = await node();
+  const seen = [];
+  // The site answers every URL with a redirect to the cloud metadata address.
+  const redirecting = async (url, init) => {
+    seen.push(url);
+    assert.equal(init?.redirect, 'manual');
+    return new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/latest/meta-data/' } });
+  };
+  await assert.rejects(releaseSubject(dir, 'road', { fetch: redirecting }), /redirects to http:\/\/169\.254\.169\.254\/latest\/meta-data\/, not followed/);
+  assert.ok(seen.every((u) => u.startsWith(BASE)), seen.join(' '));
+  const r = await checkNode(dir, { fetch: redirecting });
+  assert.ok(r.notes.some((n) => /redirects to http:\/\/169\.254\.169\.254.*not followed.*not compared/.test(n)), r.notes.join('\n'));
+  assert.ok(seen.every((u) => !u.includes('169.254')));
+});
+
+test('a baseUrl that is not https on a public host name is not read for the comparison', async () => {
+  const dir = await node();
+  await writeFile(join(dir, 'node.yaml'), (await readFile(join(dir, 'node.yaml'), 'utf8')).replace(`baseUrl: ${BASE}`, 'baseUrl: http://127.0.0.1:8080'));
+  const seen = [];
+  const r = await checkNode(dir, { fetch: async (url) => { seen.push(url); return new Response('x'); } });
+  assert.deepEqual(seen, []);
+  assert.ok(r.notes.some((n) => /is not read: only https on a public host name.*not compared/.test(n)), r.notes.join('\n'));
+});

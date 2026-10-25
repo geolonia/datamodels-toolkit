@@ -7,6 +7,7 @@ import { join, relative } from 'node:path';
 import { stat } from 'node:fs/promises';
 import { loadNode } from './build/node.mjs';
 import { releaseContents, snapshotRelease, verifyRelease } from './build/releases.mjs';
+import { bytesReader } from './adapters/index.mjs';
 
 const exists = (p) => stat(p).then(() => true, () => false);
 
@@ -36,16 +37,17 @@ export async function releaseSubject(dir, subjectName, { offline = false, fetch:
   else {
     const changed = [];
     const unread = [];
+    // https on public hosts only, redirects included, as for every other read of a site.
+    const readPublished = bytesReader(fetchUrl, timeout);
     for (const e of entries) {
       // Only "not published" (404) lets a file through uncompared; any other failure stops the release.
       try {
-        const res = await fetchUrl(e.url, { signal: AbortSignal.timeout(timeout) });
+        const res = await readPublished(e.url);
         if (res.status === 404) continue;
         if (!res.ok) { unread.push(`${e.url}: HTTP ${res.status}`); continue; }
-        const body = Buffer.from(await res.arrayBuffer());
         result.online++;
-        if (!body.equals(Buffer.from(e.content))) changed.push(e.url);
-      } catch (err) { unread.push(`${e.url}: ${err.cause?.code ?? err.message}`); }
+        if (!res.body.equals(Buffer.from(e.content))) changed.push(e.url);
+      } catch (err) { unread.push(`${e.url}: ${err.refused ? err.message : err.cause?.code ?? err.message}`); }
     }
     if (unread.length) throw new Error(`${subject.name} v${subject.version}: nothing released, the published files could not be compared:\n${unread.map((u) => `  ${u}`).join('\n')}\nTry again when the site answers, or release with --offline to skip the comparison.`);
     if (changed.length) throw new Error(`${subject.name} v${subject.version} is published, and its sources changed since:\n${changed.map((u) => `  ${u}`).join('\n')}\nThe snapshot must keep what was published. Restore the sources of v${subject.version} (for example with git), release, then make the change with a new version.`);
