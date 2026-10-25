@@ -81,6 +81,9 @@ function absoluteRefs(schema, out = new Set()) {
   return out;
 }
 
+/** How many @context parts resolveContext walks in all, imports counted each time they come. */
+export const MAX_CONTEXT_PARTS = 10000;
+
 /**
  * Resolve an @context as a JSON-LD processor does: its parts in order, each
  * against the definitions so far. An inline object adds or replaces terms
@@ -108,8 +111,13 @@ function absoluteRefs(schema, out = new Set()) {
 export async function resolveContext(context, getJson, { offline = false, local = async () => undefined, written = false } = {}) {
   const state = { iris: new Map(), uncertain: new Set(), open: false, notes: [] };
   const docs = new Map();
+  // A URL that comes again applies again, so documents that import the same
+  // context twice at each level would be walked exponentially often: the parts
+  // walked in all are counted, and too many is an error.
+  let parts = 0;
   const walk = async (ctx, stack, mine) => {
     for (const part of [ctx].flat()) {
+      if (++parts > MAX_CONTEXT_PARTS) throw new Error(`the @context imports too much: more than ${MAX_CONTEXT_PARTS} parts in all, counting each import every time it comes`);
       if (part === null) { state.iris.clear(); state.uncertain.clear(); state.open = false; continue; }
       if (typeof part === 'object') {
         // Expanded here, with this part's own prefixes and those defined so far.

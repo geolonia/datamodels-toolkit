@@ -529,3 +529,18 @@ test('a context imported by a URL with %2e%2e is checked where it leads', async 
     assert.ok(r.problems.some((p) => p.endsWith(`only catalog contexts may be imported by URL, got ${sneaky}`)), r.problems.join('\n'));
   }
 });
+
+test('resolveContext stops an import graph that doubles at each level', async () => {
+  const { resolveContext, MAX_CONTEXT_PARTS } = await import('../src/build/check.mjs');
+  // d0 imports d1 twice, d1 imports d2 twice, ...: 2^30 walks without a limit.
+  const url = (i) => `https://models.example.org/context/d${i}.jsonld`;
+  const docs = new Map();
+  for (let i = 0; i < 30; i++) docs.set(url(i), { '@context': [url(i + 1), url(i + 1)] });
+  docs.set(url(30), { '@context': { name: 'https://example.org/name' } });
+  const start = performance.now();
+  await assert.rejects(resolveContext([url(0)], async () => undefined, { offline: true, local: async (u) => docs.get(u) }), new RegExp(`more than ${MAX_CONTEXT_PARTS} parts`));
+  assert.ok(performance.now() - start < 2000);
+  // A small graph that imports the same context twice still resolves.
+  const small = await resolveContext([url(29)], async () => undefined, { offline: true, local: async (u) => docs.get(u) });
+  assert.equal(small.iris.get('name'), 'https://example.org/name');
+});
