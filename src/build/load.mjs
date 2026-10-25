@@ -7,6 +7,8 @@ import { join, relative } from 'node:path';
 import YAML from 'yaml';
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
+/** Keys loadSubjects() sets on a subject from the folder; subject.yaml may not hold them. */
+const RESERVED_SUBJECT_KEYS = ['dir', 'context', 'imports', 'inlineTerms', 'models'];
 
 // A file that does not parse is named in the error, from the models folder on (task/Task/examples/example.json: ...).
 const reader = (parse) => async (file, base) => {
@@ -77,6 +79,9 @@ export async function loadSubjects(modelsDir, { urls, languages = ['ja', 'en'], 
     // An empty subject.yaml (or one with only comments) is null: its missing name is reported below.
     const meta = (await readYaml(join(dir, 'subject.yaml'))) ?? {};
     if (meta.name !== name) throw new Error(`${name}/subject.yaml: name "${meta.name}" does not match folder`);
+    // The loader sets these itself; subject.yaml must not replace them (a dir there would move release, bump and publish elsewhere).
+    const reserved = RESERVED_SUBJECT_KEYS.filter((k) => Object.hasOwn(meta, k));
+    if (reserved.length) throw new Error(`${name}/subject.yaml: ${reserved.join(', ')} ${reserved.length === 1 ? 'is' : 'are'} set by the toolkit, not in subject.yaml`);
     if (!SEMVER.test(meta.version)) throw new Error(`${name}/subject.yaml: version must be X.Y.Z`);
     for (const field of subjectFields) {
       for (const lang of languages) {

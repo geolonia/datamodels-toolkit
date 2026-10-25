@@ -190,3 +190,15 @@ test('a symbolic link anywhere in models/ is refused, not published or written t
   assert.equal(await readFile(join(outside, 'plain.txt'), 'utf8'), 'ok');
   await rm(outside, { recursive: true, force: true });
 });
+
+test('subject.yaml cannot replace the folder the toolkit loads it from (or its other own keys)', async () => {
+  const dir = await node();
+  const subject = join(dir, 'models', 'road', 'subject.yaml');
+  const elsewhere = await mkdtemp(join(tmpdir(), 'datamodels-elsewhere-'));
+  await writeFile(subject, `${await readFile(subject, 'utf8')}dir: ${elsewhere}\n`);
+  await assert.rejects(buildNode(dir, { out: join(dir, '_site'), pages: false }), /road\/subject\.yaml: dir is set by the toolkit, not in subject\.yaml/);
+  await assert.rejects(releaseSubject(dir, 'road', { offline: true }), /dir is set by the toolkit/);
+  assert.deepEqual(await readdir(elsewhere), []);
+  await writeFile(subject, `${(await readFile(subject, 'utf8')).replace(/^dir: .*\n/m, '')}models: []\ncontext: {}\n`);
+  await assert.rejects(buildNode(dir, { out: join(dir, '_site'), pages: false }), /context, models are set by the toolkit/);
+});
