@@ -594,6 +594,8 @@ test('csvField: plain names as they are; quotes, commas, line breaks and formula
   assert.equal(csvField('=HYPERLINK("https://evil.example","x")'), `"'=HYPERLINK(""https://evil.example"",""x"")"`);
   for (const lead of ['+', '-', '@', '\t']) assert.equal(csvField(`${lead}1`), `'${lead}1`);
   assert.equal(csvField('\r1'), `"'\r1"`);
+  // A line feed first: some spreadsheets read the next line as its own cell.
+  assert.equal(csvField('\n=1+1'), `"'\n=1+1"`);
 });
 
 test('strict: unions whose siblings multiply at each level stop with NotStrict, not exponential work', () => {

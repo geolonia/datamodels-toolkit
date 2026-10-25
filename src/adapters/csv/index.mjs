@@ -9,12 +9,12 @@ import { fieldsOf } from '../table-schema/index.mjs';
  * One CSV field. The names come from a schema, maybe another catalog's
  * (datamodels export), so they are encoded rather than trusted: a field with a
  * comma, quote or line break is quoted (RFC 4180), and one a spreadsheet would
- * read as a formula (=, +, -, @, tab or CR first) gets a leading ' (OWASP CSV
+ * read as a formula (=, +, -, @, tab, CR or LF first) gets a leading ' (OWASP CSV
  * injection). An ordinary attribute name stays as it is.
  */
 export function csvField(value) {
   let v = String(value);
-  if (/^[=+\-@\t\r]/.test(v)) v = `'${v}`;
+  if (/^[=+\-@\t\r\n]/.test(v)) v = `'${v}`;
   return /[",\r\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v;
 }
 

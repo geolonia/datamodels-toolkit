@@ -46,6 +46,28 @@ const REDIRECTS = 5;
 const refusal = (message, refused, options) => Object.assign(new Error(message, options), { refused });
 
 /**
+ * The error for a read that failed (getter and bytesReader share it, so they
+ * agree on what is refused and what is down): a timeout of the whole read; a
+ * host that resolves to a private address (publicFetch's ENOTPUBLIC) is
+ * refused, not down; otherwise "could not be read", with an error code
+ * (ENOTFOUND) kept as the cause for callers that show only the code (check).
+ */
+function readError(url, e, signal, timeout) {
+  if (signal.aborted) return new Error(`${url} could not be read (timed out after ${timeout / 1000} s)`);
+  const code = [e?.cause?.code, e?.code].find((c) => typeof c === 'string');
+  const options = code ? { cause: typeof e.cause?.code === 'string' ? e.cause : e } : undefined;
+  if (code === 'ENOTPUBLIC') return refusal(`${url} is not read: ${e.message}`, 'address', options);
+  return new Error(`${url} could not be read (${code ?? e.message})`, options);
+}
+
+/** The next URL of a redirect, or a refusal: only to a publicUrl(), at most REDIRECTS times. */
+function redirectTarget(url, location, at, hop) {
+  const next = normalUrl(new URL(location, at).href);
+  if (hop >= REDIRECTS || !publicUrl(next)) throw refusal(`${url}: redirects to ${next ?? location}, not followed (only to https on a public host name, at most ${REDIRECTS} times)`, 'redirect');
+  return next;
+}
+
+/**
  * A reader of a published file's bytes, for the comparisons of check and
  * release: { status, ok, body } (body a Buffer when ok). The same rules as
  * getter(): the URL and every redirect must be a publicUrl(), at most
@@ -61,28 +83,13 @@ export const bytesReader = (fetchUrl, timeout = 20000) => {
     const signal = AbortSignal.timeout(timeout);
     for (let hop = 0; ; hop++) {
       let res;
-      try { res = await read(at, { signal, redirect: 'manual' }); } catch (e) {
-        if (signal.aborted) throw new Error(`${url} could not be read (timed out after ${timeout / 1000} s)`);
-        const code = [e?.cause?.code, e?.code].find((c) => typeof c === 'string');
-        const options = code ? { cause: typeof e.cause?.code === 'string' ? e.cause : e } : undefined;
-        if (code === 'ENOTPUBLIC') throw refusal(`${url} is not read: ${e.message}`, 'address', options);
-        throw new Error(`${url} could not be read (${code ?? e.message})`, options);
-      }
+      try { res = await read(at, { signal, redirect: 'manual' }); } catch (e) { throw readError(url, e, signal, timeout); }
       const location = res.status >= 300 && res.status < 400 ? res.headers?.get?.('location') : null;
-      if (location) {
-        const next = normalUrl(new URL(location, at).href);
-        if (hop >= REDIRECTS || !publicUrl(next)) throw refusal(`${url}: redirects to ${next ?? location}, not followed (only to https on a public host name, at most ${REDIRECTS} times)`, 'redirect');
-        at = next;
-        continue;
-      }
+      if (location) { at = redirectTarget(url, location, at, hop); continue; }
       // The body too: a server can send its headers and then stall or break off.
       let body = null;
       if (res.ok) {
-        try { body = Buffer.from(await res.arrayBuffer()); } catch (e) {
-          if (signal.aborted) throw new Error(`${url} could not be read (timed out after ${timeout / 1000} s)`);
-          const code = [e?.cause?.code, e?.code].find((c) => typeof c === 'string');
-          throw new Error(`${url} could not be read (${code ?? e.message})`, code ? { cause: typeof e.cause?.code === 'string' ? e.cause : e } : undefined);
-        }
+        try { body = Buffer.from(await res.arrayBuffer()); } catch (e) { throw readError(url, e, signal, timeout); }
       }
       return { status: res.status, ok: res.ok, body };
     }
@@ -113,19 +120,10 @@ export const getter = (fetchUrl, timeout = 20000) => {
         // One deadline for the read, so a chain of redirects cannot make it longer.
         const signal = AbortSignal.timeout(timeout);
         for (let hop = 0; ; hop++) {
-          try { res = await read(at, { signal, redirect: 'manual' }); } catch (e) {
-            if (signal.aborted) throw new Error(`${url} could not be read (timed out after ${timeout / 1000} s)`);
-            // An error code (ENOTFOUND) stays as the cause, for callers that show only the code (check).
-            const code = [e?.cause?.code, e?.code].find((c) => typeof c === 'string');
-            const options = code ? { cause: typeof e.cause?.code === 'string' ? e.cause : e } : undefined;
-            // A host that resolves to a private address (publicFetch) is refused, not down.
-            if (code === 'ENOTPUBLIC') throw refusal(`${url} is not read: ${e.message}`, 'address', options);
-            throw new Error(`${url} could not be read (${code ?? e.message})`, options);
-          }
+          try { res = await read(at, { signal, redirect: 'manual' }); } catch (e) { throw readError(url, e, signal, timeout); }
           const location = res.status >= 300 && res.status < 400 ? res.headers?.get?.('location') : null;
           if (!location) break;
-          const next = normalUrl(new URL(location, at).href);
-          if (hop >= REDIRECTS || !publicUrl(next)) throw refusal(`${url}: redirects to ${next ?? location}, not followed (only to https on a public host name, at most ${REDIRECTS} times)`, 'redirect');
+          const next = redirectTarget(url, location, at, hop);
           if (prefixes && !prefixes.some((p) => next.startsWith(p))) throw refusal(`${url}: redirects to ${next}, not followed (only under ${prefixes.join(', ')})`, 'redirect');
           at = next;
         }
