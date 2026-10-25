@@ -288,6 +288,9 @@ test('--github in a repository with earlier commits: refused when they hold othe
   // Paths end with NUL: a file name with a line break is one path, not two.
   f = fakeRun({ answers: { ...clean, 'git log --all -m --name-only --format= -z': `node.yaml\0README.md\nsecrets.env\0` } });
   await assert.rejects(publishToGitHub(dir, 'example/models', { ...f, files }), /history included: README\.md\nsecrets\.env/);
+  // A leading line break is part of the name: "\nnode.yaml" is not the node.yaml init writes.
+  f = fakeRun({ answers: { ...clean, 'git log --all -m --name-only --format= -z': `node.yaml\0\nnode.yaml\0` } });
+  await assert.rejects(publishToGitHub(dir, 'example/models', { ...f, files }), /history included: \nnode\.yaml/);
   // A git log that fails stops, rather than passing as an empty history; so does an ignored folder that was committed.
   f = fakeRun({ answers: clean, fail: ['git log'] });
   await assert.rejects(publishToGitHub(dir, 'example/models', { ...f, files }), /git log .* failed/);
