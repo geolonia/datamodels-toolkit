@@ -14,8 +14,20 @@ import csv from './csv/index.mjs';
 import tableSchema from './table-schema/index.mjs';
 import ai from './ai/index.mjs';
 import postgis from './postgis/index.mjs';
+import geonicdb from './geonicdb/index.mjs';
 
+/** The generic adapters: every node has them. */
 export const ADAPTERS = [csv, tableSchema, ai, postgis];
+
+/**
+ * The product adapters: files for one product, off unless a node turns them on
+ * (node.yaml: `adapters: [geonicdb]`). Model pages never link them; they are
+ * listed in catalog.json under `adapters`, like the generic ones.
+ */
+export const PRODUCT_ADAPTERS = [geonicdb];
+
+/** Every adapter, generic and product, for export, which names the ones it writes. */
+export const ALL_ADAPTERS = [...ADAPTERS, ...PRODUCT_ADAPTERS];
 
 /** A URL as fetch requests it: dot segments (also %2e%2e) resolved, so a prefix check sees the real path. */
 export const normalUrl = (url) => { try { return new URL(url).href; } catch { return null; } };

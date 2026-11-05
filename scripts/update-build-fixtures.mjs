@@ -47,8 +47,8 @@ const catalogRes = await fetch(`${SITE}/catalog.json`);
 if (!catalogRes.ok) throw new Error(`${SITE}/catalog.json: ${catalogRes.status}`);
 const catalog = await catalogRes.json();
 const models = catalog.models.filter((m) => SUBJECTS.includes(m.subject));
-// The adapters' files the site lists for them; the GeonicDB adapter is datamodels.jp's own.
-for (const m of models) for (const [name, url] of Object.entries(m.adapters ?? {})) if (name !== 'geonicdb') files.add(url);
+// The adapters' files the site lists for them, the GeonicDB adapter's too (a product adapter the build turns on).
+for (const m of models) for (const url of Object.values(m.adapters ?? {})) files.add(url);
 for (const url of files) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: ${res.status}`);

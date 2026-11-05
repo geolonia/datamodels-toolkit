@@ -27,7 +27,7 @@ Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.3.19`) an
 |---|---|---|
 | `search`, `nodes` | Find existing models in datamodels.jp and the sites it links to | [Your site's models](https://datamodels.jp/en/toolkit/models#search) |
 | `convert`, `mapping` | Turn a CSV list into entities of a model, with a mapping file | [Converting your data](https://datamodels.jp/en/toolkit/convert) |
-| `export` | A CSV template, a Table Schema, a JSON Schema for AI output, a PostgreSQL / PostGIS table | [Exporting to other tools](https://datamodels.jp/en/toolkit/export) |
+| `export` | A CSV template, a Table Schema, a JSON Schema for AI output, a PostgreSQL / PostGIS table; a GeonicDB Custom Data Model body (`--to geonicdb`) | [Exporting to other tools](https://datamodels.jp/en/toolkit/export) |
 | `init` | Start a site of your own for your models (a node) | [Starting a site](https://datamodels.jp/en/toolkit/start) |
 | `add`, `extend` | Add a model to your site, or start from a catalog model | [Your site's models](https://datamodels.jp/en/toolkit/models) |
 | `check`, `build` | Check the node and build its files and pages | [Checking and building](https://datamodels.jp/en/toolkit/check), [The node and build](https://datamodels.jp/en/toolkit/node) |

@@ -196,7 +196,7 @@ test('export on the command line: the model of a local node, into --out', async 
   assert.match(r.stderr, /road\/RoadPatrol: https:\/\/models\.example\.org\/ns\/road#RoadPatrol/);
   const bad = await datamodels('export', 'road/RoadPatrol', '--to', 'excel');
   assert.equal(bad.code, 2);
-  assert.match(bad.stderr, /--to excel: not an adapter \(csv, table-schema, ai, postgis\)/);
+  assert.match(bad.stderr, /--to excel: not an adapter \(csv, table-schema, ai, postgis, geonicdb\)/);
   assert.equal((await datamodels('export', 'road/RoadPatrol')).code, 2, '--to is required');
 });
 

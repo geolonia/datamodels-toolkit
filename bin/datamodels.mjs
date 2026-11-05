@@ -88,7 +88,7 @@ import { releaseSubject } from '../src/release.mjs';
 import { upgradeNode, bumpSubject } from '../src/version.mjs';
 import { extendModel, extendChoices, extendMessage } from '../src/extend.mjs';
 import { exportModel, writeExport } from '../src/export.mjs';
-import { ADAPTERS } from '../src/adapters/index.mjs';
+import { ALL_ADAPTERS as ADAPTERS } from '../src/adapters/index.mjs';
 import { unionCount } from '../src/adapters/ai/index.mjs';
 import { crossRules } from '../src/adapters/model.mjs';
 import { discoverNodes, searchModels, words, plain, DEFAULT_INDEX, MAX_DEPTH } from '../src/discover.mjs';

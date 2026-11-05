@@ -22,10 +22,10 @@ async function filesUnder(dir) {
 test('the files are byte for byte what datamodels.jp serves for the same sources', async () => {
   const subjects = await loadSubjects(join(FIXTURES, 'models'), { urls: site });
   const outDir = await mkdtemp(join(tmpdir(), 'datamodels-build-'));
-  // The toolkit's adapters, as every node has them, and datamodels.jp's own (GeonicDB): a stand-in with the same URLs.
-  const { adapters } = await nodeAdapters(subjects, { urls: site, languages: ['ja', 'en'], offline: true });
-  const geonicdb = { name: 'geonicdb', urlFor: (s, m) => (m.kind === 'entity' ? `${SITE}/adapters/geonicdb/${s.name}/${m.type}.json` : null), content: () => '{}\n' };
-  const { catalog } = await publishCatalog(subjects, { urls: site, outDir, adapters: [...adapters, geonicdb], head: { license: 'CC0-1.0', licenseUrl: `${SITE}/LICENSE-CONTENT` } });
+  // The toolkit's adapters, with the GeonicDB product adapter turned on as datamodels.jp has it.
+  const { adapters, notes } = await nodeAdapters(subjects, { urls: site, languages: ['ja', 'en'], offline: true, enabled: ['geonicdb'] });
+  assert.deepEqual(notes, []);
+  const { catalog } = await publishCatalog(subjects, { urls: site, outDir, adapters, head: { license: 'CC0-1.0', licenseUrl: `${SITE}/LICENSE-CONTENT` } });
   const expectedDir = join(FIXTURES, 'expected');
   const expected = (await filesUnder(expectedDir)).filter((f) => !f.endsWith('catalog-models.json'));
   assert.ok(expected.length > 30, 'the fixtures hold the served files');

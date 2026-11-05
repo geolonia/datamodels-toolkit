@@ -102,7 +102,8 @@ export function pageData(subjects, { urls, node, lang = node.languages[0], forme
       };
       // The adapters' files, to download from the model page (a button each, product-neutral);
       // datamodels.jp explains them (t.aboutFilesUrl), so a node has no page of its own for that.
-      m.downloads = adapters.map((a) => [a, a.urlFor(subject, model)]).filter(([, url]) => url).map(([a, url]) => ({ url, label: texts(a.label)[0] ?? { lang, text: a.name } }));
+      // Product adapters (GeonicDB) are not linked: model pages stay product-neutral.
+      m.downloads = adapters.filter((a) => !a.product).map((a) => [a, a.urlFor(subject, model)]).filter(([, url]) => url).map(([a, url]) => ({ url, label: texts(a.label)[0] ?? { lang, text: a.name } }));
       models.push(m);
       return m;
     });
