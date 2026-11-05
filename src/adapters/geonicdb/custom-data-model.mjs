@@ -113,23 +113,30 @@ export const needsTerms = (model) => attributesOf(model).some(([, p]) => ngsiTyp
  *                    property's IRI in `@context`, so the caller's contextUrl
  *                    must map the alias to that IRI.
  *   contextTerms     the subject's context terms, instead of context.terms
- *   warn             where notes go (default console.warn)
+ *   warn             where notes go (default context.warn, else console.warn)
+ *
+ * An attribute may be named like a member of Object.prototype (constructor):
+ * every lookup by attribute name is of an own property.
  */
-export function toCustomDataModel(subject, model, context, { typePrefix = '', typeName, contextUrl, allowAdditional = false, extend, rename = {}, contextTerms, warn = console.warn } = {}) {
+export function toCustomDataModel(subject, model, context, { typePrefix = '', typeName, contextUrl, allowAdditional = false, extend, rename = {}, contextTerms, warn = context.warn ?? console.warn } = {}) {
   const { urls, languages = [] } = context;
-  const terms = contextTerms ?? context.terms?.[subject.name];
-  const termsMissing = terms ? '' : ` (the terms of the ${subject.name} context could not be read)`;
+  const own = (o, k) => (o && Object.hasOwn(o, k) ? o[k] : undefined);
+  const terms = contextTerms ?? own(context.terms, subject.name);
+  const why = own(context.termsProblems, subject.name);
+  const termsMissing = terms ? '' : ` (the terms of the ${subject.name} context could not be read${why ? `: ${why}` : ''})`;
   const text = (texts) => textIn(texts, 'ja', languages);
   const names = new Set(attributesOf(model).map(([n]) => n));
   for (const [from, to] of Object.entries(rename)) {
     if (!names.has(from)) throw new Error(`rename: "${from}" is not an attribute of ${model.type}`);
     if (!/^[A-Za-z0-9_]+$/.test(to)) throw new Error(`rename: alias "${to}" must match [A-Za-z0-9_]+ (GeonicDB attribute name rule)`);
-    if (names.has(to) && rename[to] === undefined) throw new Error(`rename: alias "${to}" collides with attribute "${to}" of ${model.type}`);
+    if (names.has(to) && own(rename, to) === undefined) throw new Error(`rename: alias "${to}" collides with attribute "${to}" of ${model.type}`);
   }
   const aliasTargets = Object.values(rename);
   if (new Set(aliasTargets).size !== aliasTargets.length) throw new Error('rename: two attributes mapped to the same alias');
   const example = model.examples?.['example.json'] ?? {};
-  const propertyDetails = {};
+  // Keys are attribute names, so no inherited setter (__proto__) may take one.
+  const propertyDetails = Object.create(null);
+  const put = (key, value) => Object.defineProperty(propertyDetails, key, { value, enumerable: true, writable: true, configurable: true });
   for (const [name, prop] of attributesOf(model)) {
     const ngsiType = ngsiTypeOf(prop);
     const d = {
@@ -139,9 +146,9 @@ export function toCustomDataModel(subject, model, context, { typePrefix = '', ty
       ngsiType,
       valueType: valueTypeOf(prop),
       // GeonicDB requires the key on every property; null when the example has no value.
-      example: example[name] ?? null,
+      example: own(example, name) ?? null,
       required: (model.schema.required ?? []).includes(name),
-      description: text(model.catalog?.attributes?.[name]) || prop.description || '',
+      description: text(own(model.catalog?.attributes, name)) || prop.description || '',
     };
     // GeonicDB reads a property-level `@context` as the term IRI when it
     // generates a context itself. With contextUrl set it is not needed, but
@@ -157,11 +164,11 @@ export function toCustomDataModel(subject, model, context, { typePrefix = '', ty
     }
     // A JsonProperty keeps its checks: GeonicDB applies them to the JSON itself.
     if (Object.keys(validation).length) d.validation = validation;
-    propertyDetails[rename[name] ?? name] = d;
+    put(own(rename, name) ?? name, d);
   }
   if (extend?.propertyDetails) {
     for (const [name, detail] of Object.entries(extend.propertyDetails)) {
-      if (name in propertyDetails) throw new Error(`extension redefines attribute "${name}" of ${model.type}; add a new attribute instead`);
+      if (Object.hasOwn(propertyDetails, name)) throw new Error(`extension redefines attribute "${name}" of ${model.type}; add a new attribute instead`);
       if (!detail || typeof detail !== 'object' || !detail.ngsiType || !detail.valueType) throw new Error(`extension attribute "${name}" needs ngsiType and valueType`);
       // The same GeonicDB rules as the model's attributes. The extension's own
       // context is not read here: its allowed terms expand with the subject's.
@@ -170,7 +177,7 @@ export function toCustomDataModel(subject, model, context, { typePrefix = '', ty
         ext.validation = vocabValidation(detail.validation, terms, `extension attribute "${name}"`, `write it as a full IRI, or as a term or prefix of the ${subject.name} context${termsMissing}`, warn);
         if (!Object.keys(ext.validation).length) delete ext.validation;
       }
-      propertyDetails[name] = ext;
+      put(name, ext);
     }
   }
   return {

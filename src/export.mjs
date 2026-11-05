@@ -64,8 +64,10 @@ export async function exportModel(target, names, { dir = '.', index, fetch: fetc
     context = { urls: local.urls, languages: local.node.languages, refs };
     // The terms of the subject's context, for the adapters that expand terms (GeonicDB).
     if (adapters.some((a) => a.product)) {
-      const t = await subjectTerms([subject], { urls: local.urls, fetch: fetchUrl, timeout });
+      // Every subject of the node: a context may import a sibling's (decision imports common), read from the sources.
+      const t = await subjectTerms(local.subjects, { urls: local.urls, fetch: fetchUrl, timeout, only: [subject.name] });
       context.terms = t.terms;
+      context.termsProblems = t.problems;
     }
     from = dir;
   } else {
@@ -82,12 +84,20 @@ export async function exportModel(target, names, { dir = '.', index, fetch: fetc
     if (problems.length) throw new Error(problems.join('\n'));
     context = { urls: r.urls, languages: r.languages, refs };
     // The terms of the model's context, read from its site (its contextUrl), for the adapters that expand terms.
+    // Only a context of that catalog's own site, as for its schema (remoteModel).
     if (adapters.some((a) => a.product) && model.links?.contextUrl) {
-      const { resolveContext } = await import('./build/check.mjs');
-      try {
-        const resolved = await resolveContext(model.links.contextUrl, getter(fetchUrl, timeout));
-        if (!resolved.open && !resolved.uncertain.size) context.terms = { [subject.name]: Object.fromEntries([...resolved.iris].filter(([, iri]) => iri)) };
-      } catch { /* no terms: a model that needs them says so (its adapter's error) */ }
+      const contextRoot = new URL('context/', new URL('.', from)).href;
+      const contextUrl = normalUrl(model.links.contextUrl);
+      const fail = (why) => { context.termsProblems = { [subject.name]: why }; };
+      if (!contextUrl?.startsWith(contextRoot)) fail(`its context ${model.links.contextUrl} is not under ${contextRoot}, not read`);
+      else {
+        const { resolveContext } = await import('./build/check.mjs');
+        try {
+          const resolved = await resolveContext(contextUrl, getter(fetchUrl, timeout));
+          if (!resolved.open && !resolved.uncertain.size) context.terms = { [subject.name]: Object.fromEntries([...resolved.iris].filter(([, iri]) => iri)) };
+          else fail(resolved.notes.join('; ') || 'a context it imports was not read');
+        } catch (e) { fail(e.message); }
+      }
     }
   }
   if (model.kind !== 'entity') throw new Error(`${target} is a value type; the adapters write files for entity types`);

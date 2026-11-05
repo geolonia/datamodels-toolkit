@@ -120,36 +120,58 @@ export async function nodeAdapters(subjects, { urls, languages, fetch, timeout, 
   // Schemas of other sites only from the nodes this node knows (node.yaml), as for @context imports.
   const { refs, problems } = await readRefs(models, { local: localRefs(subjects, urls), fetch, timeout, offline, trusted: schemaPrefixes(nodes) });
   const products = PRODUCT_ADAPTERS.filter((p) => enabled.includes(p.name));
-  // The terms of each subject's context, imports included, for the product adapters that expand terms (GeonicDB).
-  const terms = products.length ? await subjectTerms(subjects, { urls, fetch, timeout, offline }) : { terms: {}, problems: {} };
-  const context = { urls, languages, refs, terms: terms.terms };
   const notes = problems.map((p) => `no adapter files for the models that use it: ${p}`);
+  // The terms of the contexts, imports included, for the product adapters that expand terms (GeonicDB):
+  // only for the subjects with a model that needs them, so other builds read nothing more.
+  const withTerms = products.length ? subjects.filter((s) => s.models.some((m) => m.kind === 'entity' && needsTerms(m))) : [];
+  const terms = withTerms.length ? await subjectTerms(subjects, { urls, fetch, timeout, offline, only: withTerms.map((s) => s.name) }) : { terms: {}, problems: {} };
+  const context = { urls, languages, refs, terms: terms.terms, termsProblems: terms.problems, warn: (text) => notes.push(text) };
   for (const [name, why] of Object.entries(terms.problems)) {
     const affected = subjects.find((s) => s.name === name)?.models.filter((m) => m.kind === 'entity' && needsTerms(m)).map((m) => m.type) ?? [];
     if (affected.length) notes.push(`no GeonicDB files for ${affected.map((t) => `${name}/${t}`).join(', ')}: the terms of the ${name} context are not known (${why})`);
   }
-  const bind = (a, usable) => ({
-    name: a.name, label: a.label, note: a.note, ...(a.product ? { product: true } : {}),
-    urlFor: (subject, model) => (refsRead(model, refs) && usable(subject, model) ? a.urlFor(subject, model, context) : null),
+  const bind = (a) => ({
+    name: a.name, label: a.label, note: a.note,
+    urlFor: (subject, model) => (refsRead(model, refs) ? a.urlFor(subject, model, context) : null),
     content: (subject, model) => a.content(subject, model, context),
   });
-  const adapters = [
-    ...ADAPTERS.map((a) => bind(a, () => true)),
-    // A model whose allowed terms cannot be expanded (its context's imports not read) gets no file rather than a wrong one.
-    ...products.map((a) => bind(a, (subject, model) => !needsTerms(model) || !!context.terms[subject.name])),
-  ];
-  return { adapters, notes };
+  // A product adapter is turned on by the node, not part of its models: a model it cannot convert
+  // (allowed terms that do not expand, its context's imports not read) gets no file and a note,
+  // instead of a wrong file or a failed build. Each body is made once.
+  const bindProduct = (a) => {
+    const made = new Map();
+    const make = (subject, model) => {
+      const key = `${subject.name}/${model.type}`;
+      if (!made.has(key)) {
+        let content = null;
+        if (model.kind === 'entity' && refsRead(model, refs) && (!needsTerms(model) || Object.hasOwn(terms.terms, subject.name))) {
+          try { content = a.content(subject, model, context); } catch (e) { notes.push(`no ${a.label.en} file for ${key}: ${e.message}`); }
+        }
+        made.set(key, content);
+      }
+      return made.get(key);
+    };
+    return {
+      name: a.name, label: a.label, note: a.note, product: true,
+      urlFor: (subject, model) => (make(subject, model) === null ? null : a.urlFor(subject, model, context)),
+      content: (subject, model) => make(subject, model),
+    };
+  };
+  return { adapters: [...ADAPTERS.map(bind), ...products.map(bindProduct)], notes };
 }
 
 /**
  * The terms of each subject's @context, imports included, as a JSON-LD
  * processor resolves them (resolveContext): { terms: { subject: { term: IRI } },
- * problems: { subject: why } }. A subject's own contexts (current version, and
- * the alias of its major version) come from its sources; any other import is
- * read online, only from the nodes this node's contexts may import (loadNode).
- * A subject whose context cannot be resolved for certain has no terms.
+ * problems: { subject: why } }. The contexts of `subjects` (current version, and
+ * the alias of its major version) come from their sources; any other import is
+ * read online, as `check` reads it: the imports a node's own contexts may make
+ * are limited to the nodes it knows (loadNode), and what those contexts import
+ * in turn is read only from public https hosts (getter). A subject whose context
+ * cannot be resolved for certain has no terms. `only`: the names of the subjects
+ * to resolve (default all); the others still serve as local contexts.
  */
-export async function subjectTerms(subjects, { urls, fetch, timeout = 20000, offline = false }) {
+export async function subjectTerms(subjects, { urls, fetch, timeout = 20000, offline = false, only }) {
   const { resolveContext } = await import('./check.mjs');
   const own = new Map();
   for (const s of subjects) {
@@ -160,7 +182,7 @@ export async function subjectTerms(subjects, { urls, fetch, timeout = 20000, off
   const getJson = getter(fetch, timeout);
   const terms = {};
   const problems = {};
-  for (const s of subjects) {
+  for (const s of subjects.filter((x) => !only || only.includes(x.name))) {
     try {
       const resolved = await resolveContext(s.context['@context'], getJson, { offline, local, written: true });
       if (resolved.open || resolved.uncertain.size) { problems[s.name] = resolved.notes.join('; ') || 'a context it imports was not read'; continue; }

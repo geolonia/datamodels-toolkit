@@ -190,3 +190,49 @@ test('export --to geonicdb: from this node, and from another node\'s catalog.jso
   assert.equal(b.type, 'EvacuationSite');
   assert.match(b.contextUrl, /^https:\/\/datamodels\.jp\/context\/disaster\/v\d+\.jsonld$/);
 });
+
+test('attributes named like members of Object.prototype keep their names and examples', () => {
+  const m = {
+    type: 'Odd', kind: 'entity', examples: { 'example.json': { constructor: 'c', ['__proto__']: 'p' } },
+    schema: { properties: JSON.parse('{"id":{},"type":{},"constructor":{"type":"string"},"__proto__":{"type":"string"},"toString":{"type":"string"}}') },
+  };
+  m.examples['example.json'] = JSON.parse('{"constructor":"c","__proto__":"p"}');
+  const b = JSON.parse(JSON.stringify(toCustomDataModel(task, m, context)));
+  assert.deepEqual(Object.keys(b.propertyDetails), ['constructor', '__proto__', 'toString']);
+  assert.equal(b.propertyDetails.constructor.example, 'c');
+  assert.equal(b.propertyDetails.__proto__.example, 'p');
+  assert.equal(b.propertyDetails.toString.example, null);
+  // An extension may add a name that only Object.prototype has.
+  const e = toCustomDataModel(task, model('Task'), context, { extend: { propertyDetails: { valueOf: { ngsiType: 'Property', valueType: 'string' } } } });
+  assert.ok(Object.hasOwn(e.propertyDetails, 'valueOf'));
+});
+
+test('build: a model the adapter cannot convert gets no file and a note; the build goes on', async () => {
+  const s = { ...task, name: 'decision', context: { '@context': { dpv: 'https://w3id.org/dpv#' } } };
+  const bad = withEnum('dpv:HumanNotInvolved', 'Nowhere');
+  const odd = structuredClone(decision);
+  odd.type = 'Odd';
+  Object.assign(odd.schema.properties.level, { pattern: '^dpv:' });
+  s.models = [bad, odd];
+  const r = await nodeAdapters([s], { urls, languages: ['ja', 'en'], offline: true, enabled: ['geonicdb'] });
+  const g = r.adapters.find((a) => a.name === 'geonicdb');
+  assert.equal(g.urlFor(s, bad), null);
+  assert.match(r.notes.join('\n'), /no GeonicDB file for decision\/Decision: Decision\.level: the VocabProperty term "Nowhere" cannot be expanded/);
+  assert.equal(g.urlFor(s, odd), `${DJ}/adapters/geonicdb/decision/Odd.json`);
+  assert.deepEqual(JSON.parse(g.content(s, odd)).propertyDetails.level.validation.enum.length, 2);
+  // The warning about what is not sent is a build note, not console output.
+  assert.match(r.notes.join('\n'), /Odd\.level: GeonicDB adapter: pattern of a VocabProperty not sent/);
+});
+
+test('subjectTerms: a context that imports a sibling subject\'s reads it from the sources, without the network', async () => {
+  const common = subjects.find((s) => s.name === 'common');
+  const decisionLike = { name: 'decision', version: '1.0.0', models: [], context: { '@context': [urls.subjectUrls(common).contextAlias, { dpv: 'https://w3id.org/dpv#' }] } };
+  const r = await subjectTerms([common, decisionLike], { urls, fetch: noNetwork, only: ['decision'] });
+  assert.deepEqual(r.problems, {});
+  assert.deepEqual(Object.keys(r.terms), ['decision']);
+  assert.equal(r.terms.decision.ContactPoint, `${DJ}/ns/common/ContactPoint`, 'a term of the imported common context');
+  assert.equal(r.terms.decision.dpv, 'https://w3id.org/dpv#');
+  // Without the sibling among the subjects, the import would be read online: here, it cannot be.
+  const alone = await subjectTerms([decisionLike], { urls, fetch: noNetwork });
+  assert.match(alone.problems.decision, /common\/v1\.jsonld/);
+});
