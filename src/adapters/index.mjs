@@ -29,6 +29,14 @@ export const PRODUCT_ADAPTERS = [geonicdb];
 /** Every adapter, generic and product, for export, which names the ones it writes. */
 export const ALL_ADAPTERS = [...ADAPTERS, ...PRODUCT_ADAPTERS];
 
+/**
+ * The GeonicDB conversion with its options for a tenant's variant (type prefix,
+ * type name, `extend`, `rename`, `allowAdditional`), for a tool that writes
+ * such variants (geolonia/datamodels' adapters/geonicdb/export.mjs). The
+ * adapter itself (PRODUCT_ADAPTERS) writes the default body only.
+ */
+export { toCustomDataModel, expandVocabTerm } from './geonicdb/custom-data-model.mjs';
+
 /** A URL as fetch requests it: dot segments (also %2e%2e) resolved, so a prefix check sees the real path. */
 export const normalUrl = (url) => { try { return new URL(url).href; } catch { return null; } };
 
