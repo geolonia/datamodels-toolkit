@@ -6,6 +6,18 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-06
+
+A node can publish its models for GeonicDB: a ready-made Custom Data Model body per entity model, which GeonicDB registers by its URL (#134).
+
+### Added
+
+- A GeonicDB adapter for every node, off by default: with `adapters: [geonicdb]` in `node.yaml`, the build publishes a ready-made Custom Data Model body per entity model at `/adapters/geonicdb/<subject>/<Type>.json` and lists it under `adapters` in `catalog.json`, so GeonicDB can register the model by its URL (`sourceUrl`). Model pages do not link it: they stay product-neutral. `datamodels export <subject>/<Type> --to geonicdb` writes one body, from this node or another node's catalog. The conversion is the one datamodels.jp uses, moved from geolonia/datamodels; for datamodels.jp's models it gives the same files (#134).
+
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.3.19 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.3.19`. The README uses 0.3.19 too.
+
 ## [0.3.19] - 2026-10-26
 
 A security release for the GitHub Action: the job token goes only to the fetch of a pull request's base branch, not to the toolkit's own steps (#127).
@@ -381,7 +393,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.19...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.0...main
+[0.4.0]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.19...v0.4.0
 [0.3.19]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.18...v0.3.19
 [0.3.18]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.17...v0.3.18
 [0.3.17]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.16...v0.3.17
