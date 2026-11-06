@@ -6,6 +6,18 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-06
+
+The GeonicDB conversion with its options for a tenant's variant is part of the package, and a new node's workflow uses the v0.4.0 Action, which has the GeonicDB adapter (#134).
+
+### Added
+
+- `@geolonia/datamodels/adapters` exports `toCustomDataModel`, the GeonicDB conversion with its options for a tenant's variant (type prefix, type name, `extend`, `rename`, `allowAdditional`), and `expandVocabTerm`, so geolonia/datamodels' `export.mjs` uses the same conversion as the adapter (#134).
+
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.4.0 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.4.0`. The README uses 0.4.0 too.
+
 ## [0.4.0] - 2026-11-06
 
 A node can publish its models for GeonicDB: a ready-made Custom Data Model body per entity model, which GeonicDB registers by its URL (#134).
@@ -393,7 +405,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.0...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.1...main
+[0.4.1]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.19...v0.4.0
 [0.3.19]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.18...v0.3.19
 [0.3.18]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.17...v0.3.18
