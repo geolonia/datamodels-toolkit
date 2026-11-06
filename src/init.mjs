@@ -14,8 +14,8 @@ import { npxSpec } from './version.mjs';
 // the commit SHA of a release tag, with the tag as a comment, so Dependabot
 // can propose newer releases. A release updates both (it cannot point to
 // itself: the tag is made after the release commit).
-export const ACTION_REF = '87bb97c33a092c059af5f00457df100383d75d1e';
-export const ACTION_VERSION = 'v0.4.0';
+export const ACTION_REF = '5da2dea3c6a17c0dc5bb7f28aef441cf65a54cf9';
+export const ACTION_VERSION = 'v0.4.1';
 const CHECKOUT = 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1';
 const GITIGNORE = ['_site/', 'node_modules/'];
 const SUBJECT_NAME = /^[a-z][a-z0-9-]*$/;
