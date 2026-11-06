@@ -241,7 +241,7 @@ test('the package exports the conversion with its options, for tenant variants',
   const pkg = await import('@geolonia/datamodels/adapters');
   assert.equal(pkg.toCustomDataModel, toCustomDataModel);
   assert.equal(pkg.expandVocabTerm, expandVocabTerm);
-  const model = task.models.find((m) => m.type === 'Task');
-  const body = pkg.toCustomDataModel(task, model, { urls, terms: await subjectTerms(subjects, { urls, offline: true }) }, { typePrefix: 'Acme' });
-  assert.equal(body.type, 'AcmeTask');
+  const variant = pkg.toCustomDataModel(task, model('Task'), context, { typePrefix: 'Acme' });
+  assert.equal(variant.type, 'AcmeTask');
+  assert.deepEqual(variant.propertyDetails, body('Task').propertyDetails);
 });
