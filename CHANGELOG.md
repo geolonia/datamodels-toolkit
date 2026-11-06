@@ -12,7 +12,7 @@ The GeonicDB conversion with its options for a tenant's variant is part of the p
 
 ### Added
 
-- `@geolonia/datamodels/adapters` exports `toCustomDataModel`, the GeonicDB conversion with its options for a tenant's variant (type prefix, type name, `extend`, `rename`, `allowAdditional`), and `expandVocabTerm`, so geolonia/datamodels' `export.mjs` uses the same conversion as the adapter (#134).
+- `@geolonia/datamodels/adapters` exports `toCustomDataModel`, the GeonicDB conversion with its options for a tenant's variant (type prefix, type name, `extend`, `rename`, `allowAdditional`), and `expandVocabTerm`, so a tool that writes such variants, such as geolonia/datamodels' `export.mjs`, can use the same conversion as the adapter (#134).
 
 ### Changed
 
