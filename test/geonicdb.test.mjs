@@ -254,3 +254,11 @@ test('a LanguageProperty keeps its type; its value type is the language map, an 
   assert.equal(d.label.valueType, 'object');
   assert.equal(d.label.validation, undefined);
 });
+
+test('a multi-valued LanguageProperty is sent with the value type of its schema, an array', () => {
+  const m = structuredClone(decision);
+  m.schema.properties.label = { type: 'array', items: { type: 'object', additionalProperties: { type: 'string' } }, 'x-ngsi': { type: 'LanguageProperty', multi: true } };
+  const d = decisionBody(m);
+  assert.equal(d.label.ngsiType, 'LanguageProperty');
+  assert.equal(d.label.valueType, 'array');
+});

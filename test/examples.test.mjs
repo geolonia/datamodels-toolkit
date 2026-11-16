@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { checkNode } from '../src/build/index.mjs';
 import { schemaRuleProblems, keyPaths } from '../src/build/examples.mjs';
 import { catalogUrls } from '../src/build/urls.mjs';
-import { toKeyValues, unwrapKeyValues, unclosedRings } from '../src/ngsi.mjs';
+import { toKeyValues, unwrapKeyValues, wrapKeyValues, unclosedRings } from '../src/ngsi.mjs';
 
 const BASE = 'https://models.example.org';
 const CORE = 'https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context-v1.8.jsonld';
@@ -290,4 +290,30 @@ test('a LanguageProperty schema describes a language map: an object of strings',
   for (const good of [{ type: 'object', patternProperties: { '^[a-z]{2,3}(-[A-Za-z0-9]+)*$': { type: 'string' } }, additionalProperties: false }]) {
     assert.deepEqual((await problemsOf(withLabel(good))).filter((p) => p.startsWith(where)), [], JSON.stringify(good));
   }
+});
+
+test('language tags are compared case-insensitively after JSON-LD (zh-Hant comes back as zh-hant)', async () => {
+  const map = { ja: '夜間巡回', 'zh-Hant': '夜間巡邏' };
+  assert.deepEqual(await problemsOf((f) => {
+    const g = withLabel()(f);
+    return { ...g, kv: { ...g.kv, label: { languageMap: map } }, norm: { ...g.norm, label: { type: 'LanguageProperty', languageMap: map } } };
+  }), []);
+});
+
+test('a multi-valued LanguageProperty is an array of language maps', async () => {
+  const items = { type: 'object', additionalProperties: { type: 'string' } };
+  const multi = (schemaLabel) => (f) => {
+    const g = withLabel(schemaLabel)(f);
+    g.schema.properties.label['x-ngsi'].multi = true;
+    return {
+      ...g,
+      kv: { ...g.kv, label: [{ languageMap: { ja: '夜間' } }, { languageMap: { ja: '昼間' } }] },
+      norm: { ...g.norm, label: [{ type: 'LanguageProperty', languageMap: { ja: '夜間' }, datasetId: 'urn:ngsi-ld:dataset:label:1' }, { type: 'LanguageProperty', languageMap: { ja: '昼間' }, datasetId: 'urn:ngsi-ld:dataset:label:2' }] },
+    };
+  };
+  assert.deepEqual(await problemsOf(multi({ type: 'array', items })), []);
+  assert.ok((await problemsOf(multi(items))).some((p) => p.includes('as the items of a "type": "array"')));
+  const schema = { properties: { label: { 'x-ngsi': { type: 'LanguageProperty', multi: true } } } };
+  assert.deepEqual(unwrapKeyValues({ label: [{ languageMap: { ja: 'a' } }] }, schema), { label: [{ ja: 'a' }] });
+  assert.deepEqual(wrapKeyValues({ label: [{ ja: 'a' }] }, schema), { label: [{ languageMap: { ja: 'a' } }] });
 });

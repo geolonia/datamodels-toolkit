@@ -39,6 +39,9 @@ export function keyPaths(obj, prefix = '') {
   });
 }
 
+/** A key path with the language tag after languageMap in lower case (BCP 47 tags are case-insensitive). */
+const foldLanguageTag = (path) => path.replace(/(^|\.)(languageMap\.)([^.]+)$/, (_, a, b, tag) => `${a}${b}${tag.toLowerCase()}`);
+
 /**
  * True when a schema describes a language map: an object whose values are
  * strings, given as additionalProperties or patternProperties (every one).
@@ -66,7 +69,11 @@ export function schemaRuleProblems(subject, model, urls) {
     const type = prop?.['x-ngsi']?.type;
     if (type !== undefined && !NGSI_TYPES.includes(type)) out.push(`${where}: ${name}: x-ngsi.type must be one of ${NGSI_TYPES.join(', ')}, got ${JSON.stringify(type)}`);
     // The schema describes the language map: language tags to strings ({"ja": "...", "en": "..."}).
-    if (type === 'LanguageProperty' && !isLanguageMapSchema(prop)) out.push(`${where}: ${name}: a LanguageProperty describes its language map: "type": "object" with string values (additionalProperties or patternProperties of "type": "string")`);
+    // A multi-valued attribute is an array of instances: each item is a language map.
+    const multi = prop?.['x-ngsi']?.multi === true;
+    if (type === 'LanguageProperty' && !(multi ? prop.type === 'array' && isLanguageMapSchema(prop.items) : isLanguageMapSchema(prop))) {
+      out.push(`${where}: ${name}: a LanguageProperty describes its language map: "type": "object" with string values (additionalProperties or patternProperties of "type": "string")${multi ? ', as the items of a "type": "array" (x-ngsi.multi)' : ''}`);
+    }
   }
   return out;
 }
@@ -214,8 +221,9 @@ export async function jsonldProblems(subject, model, { urls, loader, iriOf }) {
     }
     if (node['@type']?.[0] !== typeIri) problems.push(`${f}: the type expands to ${node['@type']?.[0]}, not ${typeIri}`);
     // Every key at every depth comes back: expansion drops a field that no context defines.
-    const after = new Set(keyPaths(await jsonld.compact(expanded, { '@context': norm['@context'] }, { documentLoader })));
-    for (const k of keyPaths(norm)) if (!after.has(k) && !/(^|\.)(type|value|object|datasetId|json|vocab)$/.test(k)) problems.push(`${f}: "${k}" is lost when JSON-LD expands and compacts it (is it in the @context?)`);
+    // JSON-LD lowercases language tags (zh-Hant comes back as zh-hant): compare them case-insensitively.
+    const after = new Set(keyPaths(await jsonld.compact(expanded, { '@context': norm['@context'] }, { documentLoader })).map(foldLanguageTag));
+    for (const k of keyPaths(norm)) if (!after.has(foldLanguageTag(k)) && !/(^|\.)(type|value|object|datasetId|json|vocab)$/.test(k)) problems.push(`${f}: "${k}" is lost when JSON-LD expands and compacts it (is it in the @context?)`);
   }));
   return { problems, notes };
 }

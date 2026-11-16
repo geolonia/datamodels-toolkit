@@ -6,7 +6,7 @@
 // MCP server, a Cloudflare Worker, can use them too (#120): this module must
 // keep having no imports.
 
-/** NGSI-LD attribute types a model may declare in x-ngsi.type. JsonProperty and VocabProperty are NGSI-LD 1.8. */
+/** NGSI-LD attribute types a model may declare in x-ngsi.type. LanguageProperty is older; JsonProperty and VocabProperty are NGSI-LD 1.8. */
 export const NGSI_TYPES = ['Property', 'Relationship', 'GeoProperty', 'LanguageProperty', 'JsonProperty', 'VocabProperty'];
 
 /**

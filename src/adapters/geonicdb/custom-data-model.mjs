@@ -18,7 +18,9 @@ import { textIn } from '../model.mjs';
 // accepts a date-time.
 
 // Every attribute is sent with its own NGSI-LD type as ngsiType, VocabProperty
-// and JsonProperty included (#285). A GeonicDB that does not accept these two
+// and JsonProperty included (#285). A LanguageProperty is sent with the value
+// type of its schema: object for the language map (array when multi-valued); the
+// checks of the strings inside the map are not sent. A GeonicDB that does not accept these two
 // types in a model (v0.22.0 and older) answers 400 for a model that has them.
 const VALUE_CHECKS = ['minLength', 'maxLength', 'minimum', 'maximum', 'pattern', 'enum'];
 
