@@ -4,7 +4,7 @@
 //
 //   - schema.json: the type's const, $id and x-version fit the folder and the
 //     subject, and every x-ngsi.type is an NGSI-LD attribute type.
-//   - example.json validates with its json and vocab wrappers removed, also
+//   - example.json validates with its languageMap, json and vocab wrappers removed, also
 //     with the @context that data may carry, and its polygons close.
 //   - example-normalized.jsonld, when there is one, follows the NGSI-LD rules:
 //     the attribute types of the schema, typed dates, the same id and vocab
@@ -39,6 +39,23 @@ export function keyPaths(obj, prefix = '') {
   });
 }
 
+/** A key path with the language tag after languageMap in lower case (BCP 47 tags are case-insensitive). */
+const foldLanguageTag = (path) => path.replace(/(^|\.)(languageMap\.)([^.]+)$/, (_, a, b, tag) => `${a}${b}${tag.toLowerCase()}`);
+
+/**
+ * True when a schema describes a language map: an object whose values are
+ * strings, given as additionalProperties or patternProperties (every one).
+ */
+function isLanguageMapSchema(prop) {
+  if (!isObject(prop) || prop.type !== 'object') return false;
+  const isString = (s) => isObject(s) && s.type === 'string';
+  const patterns = isObject(prop.patternProperties) ? Object.values(prop.patternProperties) : [];
+  if (isObject(prop.properties) && Object.keys(prop.properties).length) return false;
+  // Keys no pattern matches fall to additionalProperties: a string, or none allowed.
+  const rest = isString(prop.additionalProperties) || (prop.additionalProperties === false && patterns.length > 0);
+  return rest && patterns.every(isString);
+}
+
 /** The rules of a model's schema.json that the schema itself cannot state. `urls` from catalogUrls(). */
 export function schemaRuleProblems(subject, model, urls) {
   const where = `${subject.name}/${model.type}/schema.json`;
@@ -51,6 +68,12 @@ export function schemaRuleProblems(subject, model, urls) {
   for (const [name, prop] of attributesOf(model)) {
     const type = prop?.['x-ngsi']?.type;
     if (type !== undefined && !NGSI_TYPES.includes(type)) out.push(`${where}: ${name}: x-ngsi.type must be one of ${NGSI_TYPES.join(', ')}, got ${JSON.stringify(type)}`);
+    // The schema describes the language map: language tags to strings ({"ja": "...", "en": "..."}).
+    // A multi-valued attribute is an array of instances: each item is a language map.
+    const multi = prop?.['x-ngsi']?.multi === true;
+    if (type === 'LanguageProperty' && !(multi ? prop.type === 'array' && isLanguageMapSchema(prop.items) : isLanguageMapSchema(prop))) {
+      out.push(`${where}: ${name}: a LanguageProperty describes its language map: "type": "object" with string values (additionalProperties or patternProperties of "type": "string")${multi ? ', as the items of a "type": "array" (x-ngsi.multi)' : ''}`);
+    }
   }
   return out;
 }
@@ -198,8 +221,9 @@ export async function jsonldProblems(subject, model, { urls, loader, iriOf }) {
     }
     if (node['@type']?.[0] !== typeIri) problems.push(`${f}: the type expands to ${node['@type']?.[0]}, not ${typeIri}`);
     // Every key at every depth comes back: expansion drops a field that no context defines.
-    const after = new Set(keyPaths(await jsonld.compact(expanded, { '@context': norm['@context'] }, { documentLoader })));
-    for (const k of keyPaths(norm)) if (!after.has(k) && !/(^|\.)(type|value|object|datasetId|json|vocab)$/.test(k)) problems.push(`${f}: "${k}" is lost when JSON-LD expands and compacts it (is it in the @context?)`);
+    // JSON-LD lowercases language tags (zh-Hant comes back as zh-hant): compare them case-insensitively.
+    const after = new Set(keyPaths(await jsonld.compact(expanded, { '@context': norm['@context'] }, { documentLoader })).map(foldLanguageTag));
+    for (const k of keyPaths(norm)) if (!after.has(foldLanguageTag(k)) && !/(^|\.)(type|value|object|datasetId|json|vocab)$/.test(k)) problems.push(`${f}: "${k}" is lost when JSON-LD expands and compacts it (is it in the @context?)`);
   }));
   return { problems, notes };
 }
