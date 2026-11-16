@@ -6,6 +6,18 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-17
+
+Models may use LanguageProperty for names and texts in several languages (#155).
+
+### Added
+
+- A model may declare `"x-ngsi": { "type": "LanguageProperty" }` for a name or text in several languages. Its schema describes the language map: `"type": "object"` with string values, written out (a `$ref` or `allOf` is not accepted yet), or a `"type": "array"` of them when the attribute is multi-valued. Its key-values form keeps the `{"languageMap": {...}}` wrapper as NGSI-LD's simplified form does, and `convert` and `check` handle it like JsonProperty and VocabProperty. `check` compares language tags case-insensitively, since JSON-LD lowercases them (`zh-Hant` comes back as `zh-hant`). The GeonicDB adapter sends it as a LanguageProperty with the value type of its schema (`object`, or `array` when multi-valued).
+
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.4.1 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.4.1`. The README uses 0.4.1 too.
+
 ## [0.4.1] - 2026-11-06
 
 The GeonicDB conversion with its options for a tenant's variant is part of the package, and a new node's workflow uses the v0.4.0 Action, which has the GeonicDB adapter (#134).
@@ -405,7 +417,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.1...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.2...main
+[0.4.2]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.19...v0.4.0
 [0.3.19]: https://github.com/geolonia/datamodels-toolkit/compare/v0.3.18...v0.3.19
