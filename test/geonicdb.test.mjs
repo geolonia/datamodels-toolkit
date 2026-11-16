@@ -245,3 +245,12 @@ test('the package exports the conversion with its options, for tenant variants',
   assert.equal(variant.type, 'AcmeTask');
   assert.deepEqual(variant.propertyDetails, body('Task').propertyDetails);
 });
+
+test('a LanguageProperty keeps its type; its value type is the language map, an object', () => {
+  const m = structuredClone(decision);
+  m.schema.properties.label = { type: 'object', additionalProperties: { type: 'string' }, 'x-ngsi': { type: 'LanguageProperty' } };
+  const d = decisionBody(m);
+  assert.equal(d.label.ngsiType, 'LanguageProperty');
+  assert.equal(d.label.valueType, 'object');
+  assert.equal(d.label.validation, undefined);
+});

@@ -334,7 +334,7 @@ async function convert(target, mappingName, file, { set: sets = [], normalized, 
     for (const f of r.fixes) { const k = `${f.field}: ${f.repair}`; const e = repairs.get(k) ?? { n: 0, example: f.detail }; e.n++; repairs.set(k, e); }
     if (r.problems.length || !validate(r.entity)) { invalidIndex.add(i); invalid.push({ line: rows[i][LINE], problems: [...r.problems, ...(r.problems.length ? [] : [schemaErrors(validate.errors)])] }); }
   }
-  // Valid as the schema describes them; in key-values form a JsonProperty or VocabProperty keeps its wrapper.
+  // Valid as the schema describes them; in key-values form a LanguageProperty, JsonProperty or VocabProperty keeps its wrapper.
   const entities = results.filter((_, i) => !invalidIndex.has(i)).map((r) => wrapKeyValues(r.entity, schema));
   if (!check) {
     const context = [entry.contextAliasUrl, CORE_CONTEXT_URL];

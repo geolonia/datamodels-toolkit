@@ -194,7 +194,7 @@ test('the rules of schema.json that the schema cannot state', () => {
     'road/RoadPatrol/schema.json: properties.type.const must be "RoadPatrol", the name of its folder',
     `road/RoadPatrol/schema.json: $id must be ${$id}, where the build publishes it`,
     'road/RoadPatrol/schema.json: x-version must be 0.1.0, the version of the subject',
-    'road/RoadPatrol/schema.json: route: x-ngsi.type must be one of Property, Relationship, GeoProperty, JsonProperty, VocabProperty, got "Text"',
+    'road/RoadPatrol/schema.json: route: x-ngsi.type must be one of Property, Relationship, GeoProperty, LanguageProperty, JsonProperty, VocabProperty, got "Text"',
   ]);
   // A value type has no type attribute.
   assert.deepEqual(schemaRuleProblems(subject, model({ $id, properties: {} }, 'value'), urls), []);
@@ -262,4 +262,32 @@ test('review fixes: an attribute named __proto__ in the normalized example is an
     `${N}: its key-values form: data must NOT have additional properties`,
     `${N}: "__proto__" is lost when JSON-LD expands and compacts it (is it in the @context?)`,
   ]);
+});
+
+/** The fixture with a LanguageProperty `label` added; `schemaLabel` replaces its schema. */
+const withLabel = (schemaLabel = { type: 'object', additionalProperties: { type: 'string' } }) => (f) => ({
+  ...f,
+  context: { '@context': { ...f.context['@context'], label: 'road:label' } },
+  schema: { ...f.schema, properties: { ...f.schema.properties, label: { ...schemaLabel, 'x-iri': `${BASE}/ns/road#label`, 'x-ngsi': { type: 'LanguageProperty' } } } },
+  kv: { ...f.kv, label: { languageMap: { ja: '夜間巡回', en: 'Night patrol' } } },
+  norm: { ...f.norm, label: { type: 'LanguageProperty', languageMap: { ja: '夜間巡回', en: 'Night patrol' } } },
+  catalog: `${f.catalog}  label: { en: Label }\n`,
+});
+
+test('a LanguageProperty keeps its languageMap wrapper in key-values form, and both examples pass', async () => {
+  assert.deepEqual(await problemsOf(withLabel()), []);
+  const label = await problemsOf((f) => { const g = withLabel()(f); return { ...g, kv: { ...g.kv, label: { ja: '夜間巡回' } } }; });
+  assert.deepEqual(label, [`${K}: attribute label: a LanguageProperty is {"languageMap": ...} in key-values form`]);
+  assert.deepEqual(toKeyValues({ id: ID, type: 'RoadPatrol', label: { type: 'LanguageProperty', languageMap: { ja: 'a' } } }), { id: ID, type: 'RoadPatrol', label: { languageMap: { ja: 'a' } } });
+});
+
+test('a LanguageProperty schema describes a language map: an object of strings', async () => {
+  const where = 'road/RoadPatrol/schema.json: label: a LanguageProperty describes its language map';
+  for (const bad of [{ type: 'string' }, { type: 'object' }, { type: 'object', additionalProperties: { type: 'number' } }, { type: 'object', properties: { ja: { type: 'string' } }, additionalProperties: { type: 'string' } }]) {
+    const problems = await problemsOf(withLabel(bad));
+    assert.ok(problems.some((p) => p.startsWith(where)), `${JSON.stringify(bad)}: ${problems.join('\n')}`);
+  }
+  for (const good of [{ type: 'object', patternProperties: { '^[a-z]{2,3}(-[A-Za-z0-9]+)*$': { type: 'string' } }, additionalProperties: false }]) {
+    assert.deepEqual((await problemsOf(withLabel(good))).filter((p) => p.startsWith(where)), [], JSON.stringify(good));
+  }
 });

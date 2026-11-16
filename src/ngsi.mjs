@@ -7,15 +7,16 @@
 // keep having no imports.
 
 /** NGSI-LD attribute types a model may declare in x-ngsi.type. JsonProperty and VocabProperty are NGSI-LD 1.8. */
-export const NGSI_TYPES = ['Property', 'Relationship', 'GeoProperty', 'JsonProperty', 'VocabProperty'];
+export const NGSI_TYPES = ['Property', 'Relationship', 'GeoProperty', 'LanguageProperty', 'JsonProperty', 'VocabProperty'];
 
 /**
- * The member that holds the value of a JsonProperty (json) or a VocabProperty
- * (vocab). NGSI-LD keeps it in the key-values (simplified) form too:
- * `"answers": {"json": [...]}`, so a broker knows the type (ETSI GS CIM 009
- * clause 4.5.4, Simplified Representation).
+ * The member that holds the value of a LanguageProperty (languageMap), a
+ * JsonProperty (json) or a VocabProperty (vocab). NGSI-LD keeps it in the
+ * key-values (simplified) form too: `"answers": {"json": [...]}`,
+ * `"name": {"languageMap": {"ja": "...", "en": "..."}}`, so a broker knows the
+ * type (ETSI GS CIM 009 clause 4.5.4, Simplified Representation).
  */
-export const WRAPPED = { JsonProperty: 'json', VocabProperty: 'vocab' };
+export const WRAPPED = { LanguageProperty: 'languageMap', JsonProperty: 'json', VocabProperty: 'vocab' };
 
 const isObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 /**
@@ -36,7 +37,7 @@ function unwrapOne(k, type, v) {
 }
 
 /**
- * The key-values entity with the json and vocab wrappers removed, as the
+ * The key-values entity with the languageMap, json and vocab wrappers removed, as the
  * model's JSON Schema describes it (the schema describes the value, as for a
  * Property). Throws when an attribute of one of these types is not wrapped.
  */
@@ -55,7 +56,7 @@ export function unwrapKeyValues(keyValues, schema) {
 
 /**
  * The other way: an entity as the model's JSON Schema describes it, with the
- * json and vocab wrappers that its key-values form needs (convert's output).
+ * languageMap, json and vocab wrappers that its key-values form needs (convert's output).
  */
 export function wrapKeyValues(entity, schema) {
   if (!isObject(entity)) throw new Error(`must be a JSON object, got ${kindOf(entity)}`);
@@ -236,8 +237,8 @@ export function unclosedRings(value, options = {}) {
  * Normalized form of a key-values entity, for a model's JSON Schema: each
  * attribute takes the NGSI-LD type the schema declares (x-ngsi.type),
  * date and date-time Properties become typed Date and DateTime values
- * (typedDate), a JsonProperty or VocabProperty takes the content of its
- * {"json": ...} or {"vocab": ...} wrapper, and each instance of a
+ * (typedDate), a LanguageProperty, JsonProperty or VocabProperty takes the
+ * content of its {"languageMap": ...}, {"json": ...} or {"vocab": ...} wrapper, and each instance of a
  * multi-valued attribute gets a datasetId (urn:ngsi-ld:dataset:<attribute>:<n>,
  * the form the catalog's examples use). An attribute the schema does not
  * declare becomes a Property.
