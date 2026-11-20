@@ -3,7 +3,7 @@
 Canonical docs (do not duplicate): AGENTS.md (setup, test, hard constraints incl. no `process.exit()`, changes/ files), README.md (commands, Action, build library exports, release steps), CONTRIBUTING.md, changes/README.md. User-facing command docs live in the OTHER repo: geolonia/datamodels `site/toolkit/` + `site/en/toolkit/` — a CLI change needs a PR there too.
 
 Source map:
-- `bin/datamodels.mjs` = CLI entry (commander); most subcommands implemented in `src/<name>.mjs` (convert, mapping, export, init, add, extend, release, version, discover, catalog); check/build live in `src/build/`.
+- `bin/datamodels.mjs` = CLI entry (commander); subcommands are registered there and implemented in `src/*.mjs` (file names do not always match commands, e.g. `version.mjs` = `bump` + `upgrade`); check/build live in `src/build/`.
 - `src/build/` = build library (`./build` export) used by datamodels.jp itself and by every node; also `check.mjs`, `model-rules.mjs` (generic model rules), Eleventy page templates (`pages/`, `eleventy.config.mjs`).
 - `src/ngsi.mjs` = `./ngsi` export; must stay import-free (runs in browser/Worker).
 - `src/adapters/` = export targets (`./adapters` export).
