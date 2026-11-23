@@ -1,7 +1,7 @@
 # threat-model.yaml — derived index; the prose threat model (threat-model.md) is canonical.
 schema: threat-model-sidecar/v2
 project: datamodels-toolkit
-prose_version: "threat-model.md@sha256:acc9de427ad4b402ed75f11a4bf3eb82eb7f8d787c35f3a58d5220bdbe780a21"
+prose_version: "threat-model.md@sha256:02392b0982c1dfd97be2be1929e0b8f3239a4ff64785b4f92447511fd6fd1c47"
 model_status: accepted
 triage_policy: strict
 confidence:
@@ -649,7 +649,7 @@ entry_points:
     caller_must_enforce: none — P-PUBLIC-READS
     provenance:
       kind: documented
-      source: "src/export.mjs exportModel comment: \"Only a context of that catalog\""
+      source: "src/export.mjs exportModel comment: \"Only contexts of that catalog's own site\""
 - id: "agent-skill: text read by the agent"
   component: agent-skill
   parameters:

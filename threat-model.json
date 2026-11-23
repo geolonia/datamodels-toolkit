@@ -608,7 +608,7 @@
       "component": "remote-reads",
       "caller_must_enforce": "none — P-PUBLIC-READS",
       "provenance": "documented",
-      "source": "src/export.mjs exportModel comment: \"Only a context of that catalog\""
+      "source": "src/export.mjs exportModel comment: \"Only contexts of that catalog's own site\""
     },
     {
       "entry_point": "agent-skill: text read by the agent",
