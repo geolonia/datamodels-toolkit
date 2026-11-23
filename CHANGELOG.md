@@ -8,7 +8,7 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [0.4.3] - 2026-11-23
 
-The GeonicDB adapter sends target types and list rules, and Task registers on GeonicDB v0.25.0 and later again (geolonia/datamodels#300); `init` pins the Action v0.4.2, which accepts LanguageProperty (#162).
+The GeonicDB adapter sends target types and list rules, and Task registers on GeonicDB v0.25.0 and later again (#164, geolonia/datamodels#300); `init` pins the Action v0.4.2, which accepts LanguageProperty (#158, closes #162).
 
 ### Added
 

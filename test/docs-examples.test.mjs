@@ -35,7 +35,16 @@ const UPDATE = process.env.UPDATE_GOLDEN === '1';
 const { version } = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'));
 // init pins the Action release before this one (a release cannot pin its own tag), in its
 // workflow and its README's npx commands, so that version is normalized too.
-const { ACTION_VERSION } = await import(join(ROOT, 'src', 'init.mjs'));
+const { ACTION_VERSION, ACTION_REF } = await import(join(ROOT, 'src', 'init.mjs'));
+
+test('init pins a released Action: a version tag no newer than this package, at a full commit SHA', () => {
+  const m = /^v(\d+)\.(\d+)\.(\d+)$/.exec(ACTION_VERSION);
+  assert.ok(m, ACTION_VERSION);
+  const [pa, pb, pc] = version.split('.').map(Number);
+  const [a, b, c] = m.slice(1).map(Number);
+  assert.ok(a < pa || (a === pa && (b < pb || (b === pb && c <= pc))), `${ACTION_VERSION} is newer than ${version}`);
+  assert.match(ACTION_REF, /^[0-9a-f]{40}$/);
+});
 const PAGES = 'https://datamodels.jp/en/toolkit';
 // Commands that read the catalog get the fixtures copy of the site.
 const READS_SITE = new Set(['convert', 'mapping']);
