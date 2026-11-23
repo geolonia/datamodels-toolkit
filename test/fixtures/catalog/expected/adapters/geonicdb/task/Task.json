@@ -26,7 +26,8 @@
       "example": "urn:ngsi-ld:Project:heavy-rain-2026-07",
       "required": false,
       "description": "所属するプロジェクト（元のシステムにプロジェクトの概念があるとき）",
-      "@context": "https://datamodels.jp/ns/task/project"
+      "@context": "https://datamodels.jp/ns/task/project",
+      "objectType": "https://datamodels.jp/ns/task/Project"
     },
     "milestone": {
       "ngsiType": "Relationship",
@@ -34,7 +35,8 @@
       "example": "urn:ngsi-ld:Milestone:heavy-rain-2026-07-initial",
       "required": false,
       "description": "予定しているマイルストーン（バージョン、リリース）",
-      "@context": "https://datamodels.jp/ns/task/milestone"
+      "@context": "https://datamodels.jp/ns/task/milestone",
+      "objectType": "https://datamodels.jp/ns/task/Milestone"
     },
     "parent": {
       "ngsiType": "Relationship",
@@ -42,7 +44,8 @@
       "example": "urn:ngsi-ld:Task:1200",
       "required": false,
       "description": "親タスク（RFC 8984 relatedTo parent）",
-      "@context": "https://datamodels.jp/ns/task/parent"
+      "@context": "https://datamodels.jp/ns/task/parent",
+      "objectType": "https://datamodels.jp/ns/task/Task"
     },
     "relatedTo": {
       "ngsiType": "Relationship",
@@ -52,7 +55,8 @@
       ],
       "required": false,
       "description": "関連するタスク。key-values の形では、対象が 1 つでも配列です。関係の種類（blocks、precedes、duplicates など）は拡張で表します。",
-      "@context": "https://datamodels.jp/ns/task/relatedTo"
+      "@context": "https://datamodels.jp/ns/task/relatedTo",
+      "objectType": "https://datamodels.jp/ns/task/Task"
     },
     "refersTo": {
       "ngsiType": "Relationship",
@@ -158,10 +162,7 @@
       "example": "PT1H30M",
       "required": false,
       "description": "見積もった作業時間。ISO 8601 の期間（例：PT1H30M）で書きます（RFC 8984 estimatedDuration）。",
-      "@context": "https://datamodels.jp/ns/task/estimatedDuration",
-      "validation": {
-        "pattern": "^P(?!$)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$"
-      }
+      "@context": "https://datamodels.jp/ns/task/estimatedDuration"
     },
     "percentComplete": {
       "ngsiType": "Property",

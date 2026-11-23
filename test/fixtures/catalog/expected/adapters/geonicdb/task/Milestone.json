@@ -26,7 +26,8 @@
       "example": "urn:ngsi-ld:Project:heavy-rain-2026-07",
       "required": false,
       "description": "所属するプロジェクト",
-      "@context": "https://datamodels.jp/ns/task/project"
+      "@context": "https://datamodels.jp/ns/task/project",
+      "objectType": "https://datamodels.jp/ns/task/Project"
     },
     "start": {
       "ngsiType": "Property",

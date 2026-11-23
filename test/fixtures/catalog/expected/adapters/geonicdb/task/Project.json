@@ -34,7 +34,8 @@
       "example": null,
       "required": false,
       "description": "親プロジェクト",
-      "@context": "https://datamodels.jp/ns/task/parent"
+      "@context": "https://datamodels.jp/ns/task/parent",
+      "objectType": "https://datamodels.jp/ns/task/Project"
     },
     "projectStatus": {
       "ngsiType": "Property",

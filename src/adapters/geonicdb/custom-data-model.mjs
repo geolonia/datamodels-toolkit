@@ -24,6 +24,23 @@ import { textIn } from '../model.mjs';
 // types in a model (v0.22.0 and older) answers 400 for a model that has them.
 const VALUE_CHECKS = ['minLength', 'maxLength', 'minimum', 'maximum', 'pattern', 'enum'];
 
+// A list (valueType array) gets the rules of its items and its length instead, in
+// GeonicDB's form `validation: { items: {...}, minItems, maxItems, uniqueItems }`
+// (GeonicDB v0.25.0 and later; geolonia/datamodels#300). GeonicDB refuses the
+// scalar rules at the top level of a list, and list rules anywhere else. Items
+// that are objects or value types ($ref) get no item rules, since GeonicDB does
+// not check inside a value; their length rules are still sent.
+const LIST_CHECKS = ['minItems', 'maxItems', 'uniqueItems'];
+
+// Patterns GeonicDB's ReDoS check refuses although they are linear, so a body
+// with one could not be registered at all (400): the ISO 8601 duration of
+// Task.estimatedDuration and the fieldservice durations, refused since GeonicDB
+// v0.25.0 (geolonia/geonicdb#4180). They are not sent, and `warn` says so: the
+// broker then does not check the format of that value. Remove an entry once the
+// GeonicDB that refuses it is gone.
+const GEONICDB_REFUSED_PATTERNS = [/^\^P\(\?!\$\)/];
+const refusedPattern = (pattern) => typeof pattern === 'string' && GEONICDB_REFUSED_PATTERNS.some((re) => re.test(pattern));
+
 /**
  * The full IRI of a VocabProperty term, or undefined, expanded with `terms` (the
  * context's terms, imports included: { term: IRI or definition }) as JSON-LD
@@ -89,6 +106,55 @@ function valueTypeOf(prop) {
   if (prop.allOf || prop.$ref) return 'object'; // a value type referred to with $ref
   if (prop.format === 'uri') return 'uri';
   return prop.type; // string | number | integer | boolean | array | object
+}
+
+/**
+ * The rules of a list (valueType array) in GeonicDB's form: the scalar rules of
+ * its items under `items`, and its length rules. A VocabProperty's or a
+ * LanguageProperty's list gets no item rules: GeonicDB would compare a term
+ * before expanding it, and a language map is not a scalar. `warn` says what
+ * was left out.
+ */
+function listValidation(prop, where, warn) {
+  const v = {};
+  const ngsiType = ngsiTypeOf(prop);
+  const items = prop.items && typeof prop.items === 'object' && !Array.isArray(prop.items) ? prop.items : {};
+  const scalar = ['string', 'number', 'integer', 'boolean'].includes(items.type) && !items.$ref && !items.allOf;
+  const itemRules = {};
+  if (scalar && ngsiType !== 'VocabProperty' && ngsiType !== 'LanguageProperty') {
+    for (const k of VALUE_CHECKS) if (items[k] !== undefined) itemRules[k] = items[k];
+    if (refusedPattern(itemRules.pattern)) {
+      delete itemRules.pattern;
+      warn(`${where}: GeonicDB adapter: pattern of the items not sent, GeonicDB refuses it (geolonia/geonicdb#4180)`);
+    }
+  } else if (VALUE_CHECKS.some((k) => items[k] !== undefined)) {
+    warn(`${where}: GeonicDB adapter: rules of the items not sent (GeonicDB checks only scalar items of a Property list)`);
+  }
+  if (Object.keys(itemRules).length) v.items = itemRules;
+  for (const k of LIST_CHECKS) if (prop[k] !== undefined) v[k] = prop[k];
+  const top = VALUE_CHECKS.filter((k) => prop[k] !== undefined);
+  if (top.length) warn(`${where}: GeonicDB adapter: ${top.join(', ')} at the top level of a list not sent (GeonicDB takes them only under items)`);
+  return v;
+}
+
+/**
+ * The target type of a Relationship for GeonicDB's `objectType` (v0.25.0 and
+ * later; geolonia/datamodels#300): the full type IRI of `x-ngsi.target`, or a
+ * list of them. None for `any` or `agent` (no single type), and none for a
+ * target of the model's own subject when the tenant's types are renamed
+ * (typePrefix): data naming the renamed type would not match. GeonicDB compares
+ * only an `objectType` the data states; data without one is accepted.
+ */
+function objectTypeOf(prop, subject, terms, { typePrefix, typeName }) {
+  if (!['Relationship', 'ListRelationship'].includes(ngsiTypeOf(prop))) return undefined;
+  const target = prop['x-ngsi']?.target;
+  const list = (Array.isArray(target) ? target : [target]).filter((t) => typeof t === 'string' && /^(https?:\/\/|urn:)/.test(t));
+  if (!list.length || list.length !== (Array.isArray(target) ? target.length : 1)) return undefined;
+  if (typePrefix || typeName) {
+    const own = new Set((subject.models ?? []).map((m) => (terms && Object.hasOwn(terms, m.type) ? (typeof terms[m.type] === 'string' ? terms[m.type] : terms[m.type]?.['@id']) : undefined)).filter(Boolean));
+    if (!terms || list.some((t) => own.has(t))) return undefined;
+  }
+  return list.length === 1 ? list[0] : list;
 }
 
 /** True when a model has a VocabProperty with allowed terms: its body needs the context's terms. */
@@ -160,12 +226,23 @@ export function toCustomDataModel(subject, model, context, { typePrefix = '', ty
     const iri = prop['x-iri'];
     if (typeof iri === 'string' && /^https?:\/\//.test(iri)) d['@context'] = iri;
     let validation = {};
-    for (const k of VALUE_CHECKS) if (prop[k] !== undefined) validation[k] = prop[k];
-    if (ngsiType === 'VocabProperty') {
-      validation = vocabValidation(validation, terms, `${model.type}.${name}`, `define its prefix or term in ${subject.name}/context.jsonld (or a context it imports), or write the full IRI${termsMissing}`, warn);
+    const where = `${model.type}.${name}`;
+    if (d.valueType === 'array') {
+      validation = listValidation(prop, where, warn);
+    } else {
+      for (const k of VALUE_CHECKS) if (prop[k] !== undefined) validation[k] = prop[k];
+      if (refusedPattern(validation.pattern)) {
+        delete validation.pattern;
+        warn(`${where}: GeonicDB adapter: pattern not sent, GeonicDB refuses it (geolonia/geonicdb#4180)`);
+      }
+    }
+    if (ngsiType === 'VocabProperty' && d.valueType !== 'array') {
+      validation = vocabValidation(validation, terms, where, `define its prefix or term in ${subject.name}/context.jsonld (or a context it imports), or write the full IRI${termsMissing}`, warn);
     }
     // A JsonProperty keeps its checks: GeonicDB applies them to the JSON itself.
     if (Object.keys(validation).length) d.validation = validation;
+    const objectType = objectTypeOf(prop, subject, terms, { typePrefix, typeName });
+    if (objectType !== undefined) d.objectType = objectType;
     put(own(rename, name) ?? name, d);
   }
   if (extend?.propertyDetails) {
