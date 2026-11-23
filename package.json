@@ -35,7 +35,8 @@
     "test": "node --test",
     "fixtures": "node scripts/update-fixtures.mjs",
     "fixtures:build": "node scripts/update-build-fixtures.mjs",
-    "changelog": "node scripts/changelog.mjs"
+    "changelog": "node scripts/changelog.mjs",
+    "golden": "UPDATE_GOLDEN=1 node --test test/docs-examples.test.mjs"
   },
   "repository": {
     "type": "git",

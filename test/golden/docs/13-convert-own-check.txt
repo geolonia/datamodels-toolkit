@@ -1,0 +1,9 @@
+# https://datamodels.jp/en/toolkit/convert#your-own-list
+$ datamodels convert disaster/EvacuationSite my-list.yaml my-list.csv --check
+exit: 0
+--- stdout
+
+--- stderr
+my-list.csv: utf-8, checked 2 of 2 row(s) with my-list.yaml
+  repaired 2×: localGovernmentCode: restored the leading zero (e.g. 92011 → 092011)
+2 of 2 rows valid

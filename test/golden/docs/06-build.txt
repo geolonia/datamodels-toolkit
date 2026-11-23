@@ -1,0 +1,33 @@
+# https://datamodels.jp/en/toolkit/node
+$ cd my-models && datamodels build
+exit: 0
+--- stdout
+
+--- stderr
+.: 1 subject(s), 2 model(s), written to _site
+--- added my-models/_site/404.html
+--- added my-models/_site/_headers
+--- added my-models/_site/adapters/ai/road/RoadPatrol.ai.json
+--- added my-models/_site/adapters/csv/road/RoadPatrol.csv
+--- added my-models/_site/adapters/postgis/road/RoadPatrol.sql
+--- added my-models/_site/adapters/table-schema/road/RoadPatrol.tableschema.json
+--- added my-models/_site/catalog.json
+--- added my-models/_site/context/road/v0.1.0.jsonld
+--- added my-models/_site/context/road/v0.jsonld
+--- added my-models/_site/en/index.html
+--- added my-models/_site/en/models/road/RoadPatrol/index.html
+--- added my-models/_site/en/models/road/Segment/index.html
+--- added my-models/_site/en/ns/road.html
+--- added my-models/_site/examples/road/RoadPatrol/example.json
+--- added my-models/_site/examples/road/Segment/example.json
+--- added my-models/_site/index.html
+--- added my-models/_site/llms.txt
+--- added my-models/_site/models/road/RoadPatrol/index.html
+--- added my-models/_site/models/road/Segment/index.html
+--- added my-models/_site/ns/road.html
+--- added my-models/_site/schema/road/RoadPatrol/v0.1.0.json
+--- added my-models/_site/schema/road/RoadPatrol/v0.json
+--- added my-models/_site/schema/road/Segment/v0.1.0.json
+--- added my-models/_site/schema/road/Segment/v0.json
+--- added my-models/_site/vocab/road/v0.1.0.jsonld
+--- added my-models/_site/vocab/road/v0.jsonld

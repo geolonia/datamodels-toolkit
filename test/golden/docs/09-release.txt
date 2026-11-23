@@ -1,0 +1,122 @@
+# https://datamodels.jp/en/toolkit/versions
+$ cd my-models && datamodels release road --offline
+exit: 0
+--- stdout
+
+--- stderr
+  note: offline: the snapshot was not compared with the published files
+road v0.2.0: released into models/road/releases/v0.2.0. Commit it; the next version leaves these files online.
+--- added my-models/models/road/releases/v0.2.0/context.jsonld
+{
+  "@context": {
+    "road": "https://models.example.org/ns/road#",
+    "RoadPatrol": "road:RoadPatrol",
+    "Segment": "road:Segment"
+  }
+}
+--- added my-models/models/road/releases/v0.2.0/schema/RoadPatrol.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/RoadPatrol/v0.2.0.json",
+  "title": "RoadPatrol",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "description": "Entity id (URN)"
+    },
+    "type": {
+      "type": "string",
+      "const": "RoadPatrol",
+      "description": "Entity type"
+    }
+  },
+  "required": [
+    "id",
+    "type"
+  ]
+}
+--- added my-models/models/road/releases/v0.2.0/schema/Segment.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/Segment/v0.2.0.json",
+  "title": "Segment",
+  "x-kind": "value",
+  "type": "object",
+  "properties": {},
+  "required": []
+}
+--- added my-models/models/road/releases/v0.2.0/vocab.jsonld
+{
+  "@context": {
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "label": {
+      "@id": "rdfs:label",
+      "@container": "@language"
+    },
+    "comment": {
+      "@id": "rdfs:comment",
+      "@container": "@language"
+    },
+    "subClassOf": {
+      "@id": "rdfs:subClassOf",
+      "@type": "@id"
+    },
+    "isDefinedBy": {
+      "@id": "rdfs:isDefinedBy",
+      "@type": "@id"
+    },
+    "seeAlso": {
+      "@id": "rdfs:seeAlso",
+      "@type": "@id"
+    },
+    "versionInfo": "owl:versionInfo"
+  },
+  "@graph": [
+    {
+      "@id": "https://models.example.org/ns/road#",
+      "@type": "owl:Ontology",
+      "label": {
+        "ja": "road",
+        "en": "road"
+      },
+      "comment": {
+        "ja": "The models of road.",
+        "en": "The models of road."
+      },
+      "versionInfo": "0.2.0",
+      "seeAlso": "https://models.example.org/context/road/v0.2.0.jsonld"
+    },
+    {
+      "@id": "https://models.example.org/ns/road#RoadPatrol",
+      "@type": "rdfs:Class",
+      "label": {
+        "ja": "RoadPatrol",
+        "en": "RoadPatrol"
+      },
+      "comment": {
+        "ja": "One RoadPatrol.",
+        "en": "One RoadPatrol."
+      },
+      "isDefinedBy": "https://models.example.org/ns/road#",
+      "seeAlso": "https://models.example.org/models/road/RoadPatrol/"
+    },
+    {
+      "@id": "https://models.example.org/ns/road#Segment",
+      "@type": "rdfs:Class",
+      "label": {
+        "ja": "Segment",
+        "en": "Segment"
+      },
+      "comment": {
+        "ja": "One Segment.",
+        "en": "One Segment."
+      },
+      "isDefinedBy": "https://models.example.org/ns/road#",
+      "seeAlso": "https://models.example.org/models/road/Segment/"
+    }
+  ]
+}

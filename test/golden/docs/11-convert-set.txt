@@ -1,0 +1,58 @@
+# https://datamodels.jp/en/toolkit/convert
+$ datamodels convert disaster/EvacuationSite gsi-emergency-site 13101_2.csv --set localGovernmentCode=131016
+exit: 0
+--- stdout
+[
+  {
+    "id": "urn:ngsi-ld:EvacuationSite:E1310100002201",
+    "type": "EvacuationSite",
+    "nationalShelterId": "E1310100002201",
+    "name": "番町小学校",
+    "address": {
+      "addressCountry": "JP",
+      "addressText": "東京都千代田区六番町8"
+    },
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        139.73407899331,
+        35.688111802263
+      ]
+    },
+    "hazardTypes": [
+      "flood",
+      "stormSurge",
+      "earthquake",
+      "inlandFlood"
+    ],
+    "alsoDesignatedShelter": true,
+    "localGovernmentCode": "131016"
+  },
+  {
+    "id": "urn:ngsi-ld:EvacuationSite:E1310100002203",
+    "type": "EvacuationSite",
+    "nationalShelterId": "E1310100002203",
+    "name": "麹町小学校",
+    "address": {
+      "addressCountry": "JP",
+      "addressText": "東京都千代田区麹町2-8"
+    },
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        139.739,
+        35.684
+      ]
+    },
+    "hazardTypes": [
+      "flood",
+      "earthquake",
+      "greatFire",
+      "inlandFlood"
+    ],
+    "alsoDesignatedShelter": true,
+    "localGovernmentCode": "131016"
+  }
+]
+--- stderr
+13101_2.csv: utf-8 (BOM), 2 row(s), 2 valid EvacuationSite, 0 invalid

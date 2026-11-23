@@ -1,0 +1,63 @@
+# https://datamodels.jp/en/toolkit/models
+$ cd my-models && datamodels add road/RoadPatrol
+exit: 0
+--- stdout
+
+--- stderr
+  added models/road/RoadPatrol/schema.json
+  added models/road/RoadPatrol/catalog.yaml
+  added models/road/RoadPatrol/examples/example.json
+  added models/road/RoadPatrol/notes.yaml
+  changed models/road/context.jsonld
+road/RoadPatrol: https://models.example.org/ns/road#RoadPatrol. Next: its attributes in schema.json (each with x-iri) and catalog.yaml, then datamodels check.
+--- added my-models/models/road/RoadPatrol/catalog.yaml
+# Write the title and description in each language. Every attribute in schema.json
+# needs a description here, under attributes (name: { ja: …, en: … }).
+title:
+  ja: RoadPatrol
+  en: RoadPatrol
+description:
+  ja: One RoadPatrol.
+  en: One RoadPatrol.
+status: draft
+attributes: {}
+--- added my-models/models/road/RoadPatrol/examples/example.json
+{
+  "id": "urn:ngsi-ld:RoadPatrol:example-1",
+  "type": "RoadPatrol"
+}
+--- added my-models/models/road/RoadPatrol/notes.yaml
+# Notes: the sources, the decisions and their reasons, what is left out. Shown on the model's page.
+# One item per note, in each language of the node, for example:
+#   - { ja: …, en: … }
+notes: []
+--- added my-models/models/road/RoadPatrol/schema.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/RoadPatrol/v0.1.0.json",
+  "title": "RoadPatrol",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "description": "Entity id (URN)"
+    },
+    "type": {
+      "type": "string",
+      "const": "RoadPatrol",
+      "description": "Entity type"
+    }
+  },
+  "required": [
+    "id",
+    "type"
+  ]
+}
+--- changed my-models/models/road/context.jsonld
+{
+  "@context": {
+    "road": "https://models.example.org/ns/road#",
+    "RoadPatrol": "road:RoadPatrol"
+  }
+}

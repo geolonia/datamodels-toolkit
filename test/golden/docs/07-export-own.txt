@@ -1,0 +1,21 @@
+# https://datamodels.jp/en/toolkit/export
+$ datamodels export road/RoadPatrol my-models --to postgis
+exit: 0
+--- stdout
+
+--- stderr
+  wrote RoadPatrol.sql
+road/RoadPatrol: https://models.example.org/ns/road#RoadPatrol, from my-models
+--- added RoadPatrol.sql
+-- RoadPatrol: https://models.example.org/ns/road#RoadPatrol
+-- road v0.1.0. JSON Schema: https://models.example.org/schema/road/RoadPatrol/v0.1.0.json
+-- @context: https://models.example.org/context/road/v0.jsonld
+-- Columns are the attributes in snake_case; <attribute>_<field> columns are the fields of one value (an address).
+CREATE TABLE road_patrol (
+  id text PRIMARY KEY
+);
+COMMENT ON TABLE road_patrol IS 'RoadPatrol。One RoadPatrol.。
+RoadPatrol. One RoadPatrol.
+<https://models.example.org/ns/road#RoadPatrol>';
+COMMENT ON COLUMN road_patrol.id IS 'エンティティの ID（URI。例：urn:ngsi-ld:RoadPatrol:001）
+Entity id: a URI, for example urn:ngsi-ld:RoadPatrol:001';

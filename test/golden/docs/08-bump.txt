@@ -1,0 +1,170 @@
+# https://datamodels.jp/en/toolkit/versions
+$ cd my-models && datamodels bump road minor --offline
+exit: 0
+--- stdout
+
+--- stderr
+  note: offline: the snapshot was not compared with the published files
+  released v0.1.0 (models/road/releases/v0.1.0)
+  changed models/road/subject.yaml
+  changed models/road/RoadPatrol/schema.json
+  changed models/road/Segment/schema.json
+road: 0.1.0 → 0.2.0. Commit both; the site keeps v0.1.0 and adds v0.2.0.
+--- changed my-models/models/road/RoadPatrol/schema.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/RoadPatrol/v0.2.0.json",
+  "title": "RoadPatrol",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "description": "Entity id (URN)"
+    },
+    "type": {
+      "type": "string",
+      "const": "RoadPatrol",
+      "description": "Entity type"
+    }
+  },
+  "required": [
+    "id",
+    "type"
+  ]
+}
+--- changed my-models/models/road/Segment/schema.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/Segment/v0.2.0.json",
+  "title": "Segment",
+  "x-kind": "value",
+  "type": "object",
+  "properties": {},
+  "required": []
+}
+--- added my-models/models/road/releases/v0.1.0/context.jsonld
+{
+  "@context": {
+    "road": "https://models.example.org/ns/road#",
+    "RoadPatrol": "road:RoadPatrol",
+    "Segment": "road:Segment"
+  }
+}
+--- added my-models/models/road/releases/v0.1.0/schema/RoadPatrol.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/RoadPatrol/v0.1.0.json",
+  "title": "RoadPatrol",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "description": "Entity id (URN)"
+    },
+    "type": {
+      "type": "string",
+      "const": "RoadPatrol",
+      "description": "Entity type"
+    }
+  },
+  "required": [
+    "id",
+    "type"
+  ]
+}
+--- added my-models/models/road/releases/v0.1.0/schema/Segment.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/Segment/v0.1.0.json",
+  "title": "Segment",
+  "x-kind": "value",
+  "type": "object",
+  "properties": {},
+  "required": []
+}
+--- added my-models/models/road/releases/v0.1.0/vocab.jsonld
+{
+  "@context": {
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "label": {
+      "@id": "rdfs:label",
+      "@container": "@language"
+    },
+    "comment": {
+      "@id": "rdfs:comment",
+      "@container": "@language"
+    },
+    "subClassOf": {
+      "@id": "rdfs:subClassOf",
+      "@type": "@id"
+    },
+    "isDefinedBy": {
+      "@id": "rdfs:isDefinedBy",
+      "@type": "@id"
+    },
+    "seeAlso": {
+      "@id": "rdfs:seeAlso",
+      "@type": "@id"
+    },
+    "versionInfo": "owl:versionInfo"
+  },
+  "@graph": [
+    {
+      "@id": "https://models.example.org/ns/road#",
+      "@type": "owl:Ontology",
+      "label": {
+        "ja": "road",
+        "en": "road"
+      },
+      "comment": {
+        "ja": "The models of road.",
+        "en": "The models of road."
+      },
+      "versionInfo": "0.1.0",
+      "seeAlso": "https://models.example.org/context/road/v0.1.0.jsonld"
+    },
+    {
+      "@id": "https://models.example.org/ns/road#RoadPatrol",
+      "@type": "rdfs:Class",
+      "label": {
+        "ja": "RoadPatrol",
+        "en": "RoadPatrol"
+      },
+      "comment": {
+        "ja": "One RoadPatrol.",
+        "en": "One RoadPatrol."
+      },
+      "isDefinedBy": "https://models.example.org/ns/road#",
+      "seeAlso": "https://models.example.org/models/road/RoadPatrol/"
+    },
+    {
+      "@id": "https://models.example.org/ns/road#Segment",
+      "@type": "rdfs:Class",
+      "label": {
+        "ja": "Segment",
+        "en": "Segment"
+      },
+      "comment": {
+        "ja": "One Segment.",
+        "en": "One Segment."
+      },
+      "isDefinedBy": "https://models.example.org/ns/road#",
+      "seeAlso": "https://models.example.org/models/road/Segment/"
+    }
+  ]
+}
+--- changed my-models/models/road/subject.yaml
+# A subject: models that share one @context and one vocabulary. Write the title and description in each language.
+name: road
+version: 0.2.0
+source: minted
+title:
+  ja: road
+  en: road
+description:
+  ja: The models of road.
+  en: The models of road.

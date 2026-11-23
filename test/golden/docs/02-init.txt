@@ -1,0 +1,130 @@
+# https://datamodels.jp/en/toolkit/start
+$ datamodels init my-models --base-url https://models.example.org --iris hash --languages ja,en --publisher 'Example Inc.' --publisher-url https://example.org/ --license CC0-1.0 --subject road --yes
+exit: 0
+--- stdout
+
+--- stderr
+  added node.yaml
+  added models/road/subject.yaml
+  added models/road/context.jsonld
+  added .github/workflows/publish.yml
+  added .github/dependabot.yml
+  added README.md
+  added LICENSE
+  added .gitignore
+my-models: a data model node. Next: add a model under models/road/, then datamodels check and datamodels build.
+--- added my-models/.github/dependabot.yml
+# Keeps the pinned Actions current, the datamodels-toolkit Action included. Written by datamodels init.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait 8 days before proposing a new release, to lower the risk of a freshly published (possibly hijacked) version.
+    cooldown:
+      default-days: 8
+    groups:
+      github-actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+--- added my-models/.github/workflows/publish.yml
+# Checks the node on pull requests; on main, builds it and deploys it to GitHub Pages
+# (Settings → Pages → Source: GitHub Actions). Written by datamodels init.
+name: Publish
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@<sha> # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: geolonia/datamodels-toolkit@<sha> # v<version>
+        with:
+          deploy: 'false'
+
+  publish:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.node.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@<sha> # v7.0.1
+        with:
+          persist-credentials: false
+      - id: node
+        uses: geolonia/datamodels-toolkit@<sha> # v<version>
+--- added my-models/.gitignore
+_site/
+node_modules/
+--- added my-models/LICENSE (sha256 a2010f343487d3f7)
+--- added my-models/README.md
+# Data models by Example Inc.
+
+A data model node: JSON Schemas, JSON-LD @contexts and vocabularies at https://models.example.org, built with [datamodels-toolkit](https://github.com/geolonia/datamodels-toolkit) (what a node publishes: [docs/node.md](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
+
+- `node.yaml`: the settings.
+- `models/road/`: the first subject. A model is a folder in it with `schema.json`, `catalog.yaml` and `examples/example.json`, laid out as in [datamodels.jp](https://github.com/geolonia/datamodels/tree/main/models).
+- `.github/workflows/publish.yml`: checks pull requests, and publishes main to GitHub Pages.
+
+Licence: [CC0-1.0](LICENSE).
+
+```bash
+npx @geolonia/datamodels@<version> check
+npx @geolonia/datamodels@<version> build   # into _site/
+```
+--- added my-models/models/road/context.jsonld
+{
+  "@context": {
+    "road": "https://models.example.org/ns/road#"
+  }
+}
+--- added my-models/models/road/subject.yaml
+# A subject: models that share one @context and one vocabulary. Write the title and description in each language.
+name: road
+version: 0.1.0
+source: minted
+title:
+  ja: road
+  en: road
+description:
+  ja: The models of road.
+  en: The models of road.
+--- added my-models/node.yaml
+# The settings of this data model node (https://github.com/geolonia/datamodels/blob/main/docs/node.md).
+# The base URL and the IRI form are part of every IRI the node publishes: do not change them once published.
+baseUrl: https://models.example.org
+iris: hash
+languages:
+  - ja
+  - en
+publisher:
+  name:
+    ja: Example Inc.
+  url: https://example.org/
+license: CC0-1.0
+# Optional: the node's name and what it publishes. Fill in each language before you uncomment them.
+# The title names the site on every page and in catalog.json; the home page shows the description.
+# title: { ja: "", en: "" }
+# description: { ja: "", en: "" }

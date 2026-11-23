@@ -1,0 +1,79 @@
+# https://datamodels.jp/en/toolkit/convert
+$ datamodels convert disaster/EvacuationSite jichitai-opendata-site 092011_evacuation_space.csv --out sites.json
+exit: 1
+--- stdout
+
+--- stderr
+092011_evacuation_space.csv: utf-8, 3 row(s), 2 valid EvacuationSite, 1 invalid
+  line 4: coordinates: 経度, 緯度: not all numbers (139.9, 北緯36度)
+--- added sites.json
+[
+  {
+    "id": "urn:ngsi-ld:EvacuationSite:092011-1",
+    "type": "EvacuationSite",
+    "externalSiteId": "1",
+    "localGovernmentCode": "092011",
+    "name": "中央小学校",
+    "nameKana": "チュウオウショウガッコウ",
+    "nameEn": "Chuo Elementary School",
+    "address": {
+      "addressCountry": "JP",
+      "addressRegion": "栃木県",
+      "addressLocality": "宇都宮市",
+      "addressText": "栃木県宇都宮市中央本町1-29",
+      "localGovernmentCode": "092011"
+    },
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        139.8847723,
+        36.55925966
+      ]
+    },
+    "elevation": 120.5,
+    "telephone": "028-000-0001",
+    "hazardTypes": [
+      "flood",
+      "earthquake",
+      "greatFire",
+      "inlandFlood"
+    ],
+    "alsoDesignatedShelter": true,
+    "maxCapacity": 1200,
+    "targetAreas": [
+      "中央一丁目",
+      "中央二丁目"
+    ]
+  },
+  {
+    "id": "urn:ngsi-ld:EvacuationSite:092011-2",
+    "type": "EvacuationSite",
+    "externalSiteId": "2",
+    "localGovernmentCode": "092011",
+    "name": "東小学校",
+    "nameKana": "ヒガシショウガッコウ",
+    "nameEn": "Higashi Elementary School",
+    "address": {
+      "addressCountry": "JP",
+      "addressRegion": "栃木県",
+      "addressLocality": "宇都宮市",
+      "addressText": "栃木県宇都宮市東1-1",
+      "localGovernmentCode": "092011"
+    },
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        139.89,
+        36.56
+      ]
+    },
+    "elevation": 118,
+    "hazardTypes": [
+      "landslide",
+      "earthquake"
+    ],
+    "alsoDesignatedShelter": false,
+    "maxCapacity": 500,
+    "description": "体育館"
+  }
+]

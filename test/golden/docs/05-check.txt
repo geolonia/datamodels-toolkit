@@ -1,0 +1,8 @@
+# https://datamodels.jp/en/toolkit/check
+$ cd my-models && datamodels check --offline
+exit: 0
+--- stdout
+
+--- stderr
+  note: offline: the published files and the models this node extends were not checked
+.: ok
