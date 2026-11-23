@@ -278,8 +278,8 @@ test('a Relationship with one catalog type as its target sends it as objectType;
   assert.equal(body('Milestone').propertyDetails.project.objectType, `${DJ}/ns/task/Project`);
 });
 
-test('a tenant variant with renamed types sends no objectType for targets of its own subject', () => {
-  for (const options of [{ typePrefix: 'Acme' }, { typeName: 'Kadai' }]) {
+test('a tenant variant with a type prefix sends no objectType for targets of its own subject', () => {
+  for (const options of [{ typePrefix: 'Acme' }]) {
     const d = body('Task', options).propertyDetails;
     for (const name of ['project', 'milestone', 'parent', 'relatedTo']) assert.equal(Object.hasOwn(d[name], 'objectType'), false, `${JSON.stringify(options)} ${name}`);
   }
@@ -330,4 +330,70 @@ test('a pattern GeonicDB refuses (the ISO 8601 duration) is not sent, and a note
   const subject = { name: 'x', version: '1.0.0', models: [] };
   const m = { type: 'X', kind: 'entity', examples: {}, catalog: {}, schema: { properties: { id: {}, type: {}, code: { type: 'string', pattern: '^[0-9]{6}$' } } } };
   assert.deepEqual(toCustomDataModel(subject, m, { ...context, terms: { x: {} } }).propertyDetails.code.validation, { pattern: '^[0-9]{6}$' });
+});
+
+test('objectType: a list of targets without duplicates; a short name or a list with any sends none', (t) => {
+  const warn = t.mock.fn();
+  const subject = { name: 'x', version: '1.0.0', models: [] };
+  const rel = (target) => ({ type: 'string', format: 'uri', 'x-ngsi': { type: 'Relationship', target } });
+  const m = { type: 'X', kind: 'entity', examples: {}, catalog: {}, schema: { properties: { id: {}, type: {},
+    two: rel([`${DJ}/ns/task/Task`, `${DJ}/ns/task/Project`]),
+    dup: rel([`${DJ}/ns/task/Task`, `${DJ}/ns/task/Task`]),
+    short: rel('Task'),
+    mixed: rel([`${DJ}/ns/task/Task`, 'any']),
+    spaced: rel(`${DJ}/ns/task/Ta sk`),
+    many: rel(Array.from({ length: 51 }, (_, i) => `${DJ}/ns/x/T${i}`)),
+  } } };
+  const d = toCustomDataModel(subject, m, { ...context, terms: { x: {} } }, { warn }).propertyDetails;
+  assert.deepEqual(d.two.objectType, [`${DJ}/ns/task/Task`, `${DJ}/ns/task/Project`]);
+  assert.equal(d.dup.objectType, `${DJ}/ns/task/Task`, 'GeonicDB refuses duplicates');
+  for (const name of ['short', 'mixed', 'spaced', 'many']) assert.equal(Object.hasOwn(d[name], 'objectType'), false, name);
+  assert.ok(warn.mock.calls.some((c) => /X\.many: .*more than 50/.test(c.arguments[0])));
+});
+
+test('a tenant variant: typeName drops only the model\'s own type; without the context terms, none and a note', (t) => {
+  const d = body('Task', { typeName: 'Kadai' }).propertyDetails;
+  assert.equal(Object.hasOwn(d.parent, 'objectType'), false, 'Task.parent -> Task, renamed');
+  assert.equal(d.project.objectType, `${DJ}/ns/task/Project`, 'Project keeps its name');
+  const warn = t.mock.fn();
+  const v = toCustomDataModel(task, model('Task'), { ...context, terms: {} }, { typePrefix: 'Acme', warn }).propertyDetails;
+  for (const p of Object.values(v)) assert.equal(Object.hasOwn(p, 'objectType'), false);
+  assert.ok(warn.mock.calls.some((c) => /objectType not sent .*context terms could not be read/.test(c.arguments[0])));
+});
+
+test('a nullable list is still a list: type [array, null] gets the list rules', () => {
+  const subject = { name: 'x', version: '1.0.0', models: [] };
+  const m = { type: 'X', kind: 'entity', examples: {}, catalog: {}, schema: { properties: { id: {}, type: {},
+    tags: { type: ['array', 'null'], items: { type: 'string', minLength: 1 }, minItems: 1 },
+    note: { type: ['string', 'null'], maxLength: 10 },
+  } } };
+  const d = toCustomDataModel(subject, m, { ...context, terms: { x: {} } }).propertyDetails;
+  assert.equal(d.tags.valueType, 'array');
+  assert.deepEqual(d.tags.validation, { items: { minLength: 1 }, minItems: 1 });
+  assert.equal(d.note.valueType, 'string');
+  assert.deepEqual(d.note.validation, { maxLength: 10 });
+});
+
+test('the duration pattern is left out of list items too; other rules of the attribute stay', (t) => {
+  const warn = t.mock.fn();
+  const subject = { name: 'x', version: '1.0.0', models: [] };
+  const DUR = '^P(?!$)(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$';
+  const m = { type: 'X', kind: 'entity', examples: {}, catalog: {}, schema: { properties: { id: {}, type: {},
+    windows: { type: 'array', items: { type: 'string', pattern: DUR, maxLength: 20 }, minItems: 1 },
+    wait: { type: 'string', pattern: DUR, minLength: 3 },
+  } } };
+  const d = toCustomDataModel(subject, m, { ...context, terms: { x: {} } }, { warn }).propertyDetails;
+  assert.deepEqual(d.windows.validation, { items: { maxLength: 20 }, minItems: 1 });
+  assert.deepEqual(d.wait.validation, { minLength: 3 });
+  assert.equal(warn.mock.calls.filter((c) => /geonicdb#4180/.test(c.arguments[0])).length, 2);
+});
+
+test('extension attributes pass through in GeonicDB\'s form, objectType and list rules included', () => {
+  const propertyDetails = {
+    site: { ngsiType: 'Relationship', valueType: 'uri', objectType: `${DJ}/ns/disaster/EvacuationSite` },
+    codes: { ngsiType: 'Property', valueType: 'array', validation: { items: { enum: ['a', 'b'] }, minItems: 1, uniqueItems: true } },
+  };
+  const d = body('Task', { extend: { propertyDetails } }).propertyDetails;
+  assert.deepEqual(d.site, { ...propertyDetails.site, example: null });
+  assert.deepEqual(d.codes, { ...propertyDetails.codes, example: null });
 });

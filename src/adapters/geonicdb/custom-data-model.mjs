@@ -97,6 +97,13 @@ function mayBeDate(prop) {
   return ngsiTypeOf(prop) === 'Property' && prop.type === 'string' && dateFormats(prop).includes('date');
 }
 
+/** The schema's type without 'null': ['array', 'null'] is a list that may be left out. */
+function typeOf(prop) {
+  if (!Array.isArray(prop.type)) return prop.type;
+  const types = prop.type.filter((t) => t !== 'null');
+  return types.length === 1 ? types[0] : prop.type;
+}
+
 function valueTypeOf(prop) {
   const ngsi = ngsiTypeOf(prop);
   if (ngsi === 'Relationship') return 'uri';
@@ -105,7 +112,7 @@ function valueTypeOf(prop) {
   if (prop.format === 'date-time') return 'datetime';
   if (prop.allOf || prop.$ref) return 'object'; // a value type referred to with $ref
   if (prop.format === 'uri') return 'uri';
-  return prop.type; // string | number | integer | boolean | array | object
+  return typeOf(prop); // string | number | integer | boolean | array | object
 }
 
 /**
@@ -140,19 +147,35 @@ function listValidation(prop, where, warn) {
 /**
  * The target type of a Relationship for GeonicDB's `objectType` (v0.25.0 and
  * later; geolonia/datamodels#300): the full type IRI of `x-ngsi.target`, or a
- * list of them. None for `any` or `agent` (no single type), and none for a
- * target of the model's own subject when the tenant's types are renamed
- * (typePrefix): data naming the renamed type would not match. GeonicDB compares
- * only an `objectType` the data states; data without one is accepted.
+ * list of them without duplicates. None for `any` or `agent` (no single type)
+ * or a short name, and none for a renamed type of a tenant variant: a target
+ * of the subject with typePrefix, the model's own type with typeName, since
+ * data naming the renamed type would not match. Detecting them needs the
+ * subject's context terms (`terms`); without them a variant sends no objectType.
+ * GeonicDB compares only an `objectType` the data states; data without one is
+ * accepted, and the target entity is never loaded.
  */
-function objectTypeOf(prop, subject, terms, { typePrefix, typeName }) {
-  if (!['Relationship', 'ListRelationship'].includes(ngsiTypeOf(prop))) return undefined;
+function objectTypeOf(prop, subject, model, terms, { typePrefix, typeName }, where, warn) {
+  if (ngsiTypeOf(prop) !== 'Relationship') return undefined;
   const target = prop['x-ngsi']?.target;
-  const list = (Array.isArray(target) ? target : [target]).filter((t) => typeof t === 'string' && /^(https?:\/\/|urn:)/.test(t));
-  if (!list.length || list.length !== (Array.isArray(target) ? target.length : 1)) return undefined;
+  const given = Array.isArray(target) ? target : [target];
+  // Full IRIs only: a short name would depend on the context, and any or agent name no single type.
+  const iri = (t) => typeof t === 'string' && /^(https?:\/\/|urn:)\S+$/.test(t);
+  if (!given.length || !given.every(iri)) return undefined;
+  const list = [...new Set(given)];
+  if (list.length > 50) {
+    warn(`${where}: GeonicDB adapter: objectType not sent (more than 50 target types; GeonicDB takes at most 50)`);
+    return undefined;
+  }
   if (typePrefix || typeName) {
-    const own = new Set((subject.models ?? []).map((m) => (terms && Object.hasOwn(terms, m.type) ? (typeof terms[m.type] === 'string' ? terms[m.type] : terms[m.type]?.['@id']) : undefined)).filter(Boolean));
-    if (!terms || list.some((t) => own.has(t))) return undefined;
+    if (!terms) {
+      warn(`${where}: GeonicDB adapter: objectType not sent (the types are renamed and the ${subject.name} context terms could not be read)`);
+      return undefined;
+    }
+    const iriOf = (type) => (Object.hasOwn(terms, type) ? (typeof terms[type] === 'string' ? terms[type] : terms[type]?.['@id']) : undefined);
+    // typePrefix renames every type of the subject (export does the whole subject); typeName only this model's.
+    const renamed = new Set((typePrefix ? (subject.models ?? []).map((m) => m.type) : [model.type]).map(iriOf).filter(Boolean));
+    if (list.some((t) => renamed.has(t))) return undefined;
   }
   return list.length === 1 ? list[0] : list;
 }
@@ -173,7 +196,10 @@ export const needsTerms = (model) => attributesOf(model).some(([, p]) => ngsiTyp
  *                    not know are accepted (unvalidated)
  *   extend           { contextUrl?, description?, propertyDetails? }: a tenant's
  *                    own attributes merged into the body. An attribute of the
- *                    model cannot be redefined; a name clash throws. The
+ *                    model cannot be redefined; a name clash throws. They are
+ *                    in GeonicDB's form already and pass through as written
+ *                    (objectType, validation.items and the list rules included);
+ *                    only a VocabProperty's allowed terms are expanded. The
  *                    extension's contextUrl should import the subject's context
  *                    and define only the added terms.
  *   typeName         full replacement of the type name (alias; same IRI)
@@ -239,9 +265,10 @@ export function toCustomDataModel(subject, model, context, { typePrefix = '', ty
     if (ngsiType === 'VocabProperty' && d.valueType !== 'array') {
       validation = vocabValidation(validation, terms, where, `define its prefix or term in ${subject.name}/context.jsonld (or a context it imports), or write the full IRI${termsMissing}`, warn);
     }
-    // A JsonProperty keeps its checks: GeonicDB applies them to the JSON itself.
+    // A JsonProperty keeps its checks: GeonicDB applies them to the JSON itself
+    // (a JsonProperty list gets the list rules above).
     if (Object.keys(validation).length) d.validation = validation;
-    const objectType = objectTypeOf(prop, subject, terms, { typePrefix, typeName });
+    const objectType = objectTypeOf(prop, subject, model, terms, { typePrefix, typeName }, where, warn);
     if (objectType !== undefined) d.objectType = objectType;
     put(own(rename, name) ?? name, d);
   }
