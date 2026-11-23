@@ -1,0 +1,12 @@
+# my-list.csv to disaster/EvacuationSite, with the TODOs of the first version
+# filled in: step 2 of "Any other CSV" (datamodels.jp/en/toolkit/convert).
+convert:
+  id: "urn:ngsi-ld:EvacuationSite:{localGovernmentCode}-{externalSiteId}"
+fields:
+  externalSiteId: { column: 番号 }
+  localGovernmentCode: { column: 団体コード, transform: code6 }
+  name: { column: 施設名 }
+  address.addressCountry: { value: JP }
+  address.addressText: { column: 住所 }
+  location: { column: [経度, 緯度], transform: geometry }
+  maxCapacity: { column: 収容人数, transform: integer }

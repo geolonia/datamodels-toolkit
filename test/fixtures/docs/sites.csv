@@ -1,0 +1,2 @@
+id,name,externalSiteId,localGovernmentCode,address.addressText,longitude,latitude,hazardTypes,maxCapacity
+urn:ngsi-ld:EvacuationSite:092011-1,中央小学校,1,092011,栃木県宇都宮市中央本町1-29,139.8847723,36.55925966,flood;earthquake,1200

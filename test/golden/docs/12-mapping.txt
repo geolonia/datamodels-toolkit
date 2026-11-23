@@ -1,0 +1,66 @@
+# https://datamodels.jp/en/toolkit/convert#your-own-list
+$ datamodels mapping disaster/EvacuationSite my-list.csv --out my-list.yaml
+exit: 0
+--- stdout
+
+--- stderr
+  3 of 31 attributes and fields have a column; 29 TODO(s)
+  columns no row reads: 番号, 団体コード, 施設名
+my-list.csv: utf-8, 7 column(s), mapping written to my-list.yaml. Next: fill in the TODOs, then datamodels convert disaster/EvacuationSite my-list.yaml my-list.csv --check
+--- added my-list.yaml
+# my-list.csv から disaster/EvacuationSite（指定緊急避難場所） への対応表。datamodels mapping が書いた下書きです。
+# fields の各行：モデルの属性（address.postalCode は住所の項目）と、その値を取る列。
+#   column     CSV の列名（位置は経度と緯度の 2 列、または GeoJSON の列）
+#   transform  文字をどう値にするか。無ければそのまま（一覧は README）
+#   value      すべての行で同じ値。すべての行に当てはまるときだけ
+# 列が見つからなかった行には TODO とあります。列名を書くか、一覧に無い項目なら行ごと消します。
+# 一覧に無い値は書きません。検証し、直し、すべての行が有効になるまで繰り返します：
+#   datamodels convert disaster/EvacuationSite my-list.yaml my-list.csv --check
+# それから変換します：
+#   datamodels convert disaster/EvacuationSite my-list.yaml my-list.csv --out entities.json
+
+# エンティティの ID：{属性} はその行の属性の値になります。ID は行ごとに違う必要があります。
+convert:
+  # TODO：どの属性で行を見分けますか？ 波括弧で書きます。
+  id: "urn:ngsi-ld:EvacuationSite:{TODO}"
+
+fields:
+  # 必須：どのエンティティにも要ります。
+  name: {}  # TODO：どの列？; 指定緊急避難場所の名称（通称や建物の名前）
+  localGovernmentCode: { transform: code6 }  # TODO：どの列？; 候補 団体コード; 避難場所を指定し、一覧を公開する自治体の全国地方公共団体コード（検査数字を含む 6 桁）
+  # externalSiteId、nationalShelterId のどれか 1 つは必須です。
+  externalSiteId: {}  # TODO：どの列？; 自治体の指定緊急避難場所一覧での ID（自治体の中で一意）。localGovernmentCode と合わせると全国で一意になります。nationalShelterId が無いときは必須です（国土地理院のデータには自治体の ID がありま…
+  nationalShelterId: {}  # TODO：どの列？; 全国共通避難所・避難場所 ID（14 文字。国土地理院の指定緊急避難場所データの「共通 ID」）。このモデルで使えるのは、種別コード 20（指定緊急避難場所）だけです。採番されていなければ省きます。ID の構造と出典は、Evacuatio…
+  # 任意。
+  nameKana: {}  # TODO：どの列？; 名称のカナ表記（全角カタカナ）
+  nameEn: {}  # TODO：どの列？; 名称の英語表記
+  address.addressCountry: {}  # TODO：どの列？; 国。常に JP です。; 値：JP
+  address.postalCode: {}  # TODO：どの列？; 候補 番号; 郵便番号（7 桁。ハイフンの有無は問いません）
+  address.addressRegion: {}  # TODO：どの列？; 都道府県名
+  address.addressLocality: {}  # TODO：どの列？; 市区町村名。政令指定都市は、市名と区名を含みます（例：横浜市中区）。
+  address.machiaza: {}  # TODO：どの列？; 町字（町名、大字、字）。丁目は含めません。
+  address.chome: {}  # TODO：どの列？; 丁目。数字だけで書きます（「一丁目」なら "1"）。
+  address.banchi: {}  # TODO：どの列？; 番地。住居表示を実施している区域では街区符号、それ以外では枝番を含む地番全体です（例：4638-1）。
+  address.go: {}  # TODO：どの列？; 号。住居表示を実施している区域では住居番号です。地番の区域では空にします（枝番は banchi に含めます）。
+  address.buildingName: {}  # TODO：どの列？; 候補 番号; 建物名、部屋番号など、号より下の表記
+  address.residentialIndication: { transform: flag }  # TODO：どの列？; 住居表示を実施している区域なら true（banchi と go は街区符号と住居番号）、地番なら false
+  address.jisPrefectureCode: {}  # TODO：どの列？; 都道府県コード（JIS X 0401、2 桁）
+  address.jisMunicipalityCode: {}  # TODO：どの列？; 市区町村コード（JIS X 0402、都道府県コードを含む 5 桁）
+  address.localGovernmentCode: { transform: code6 }  # TODO：どの列？; 候補 団体コード; 全国地方公共団体コード（JIS X 0402 の 5 桁と検査数字 1 桁）
+  address.abrMachiazaId: {}  # TODO：どの列？; アドレス・ベース・レジストリの町字 ID（7 桁）。全国地方公共団体コードと組み合わせると、町字を一意に識別できます。
+  address.addressText: { column: "住所" }  # gsi-emergency-site と同じ; 住所の全文（正規化した 1 行の表記）。構造化した項目がそろわないときの受け皿でもあります。
+  location: { column: ["経度", "緯度"], transform: geometry }  # gsi-emergency-site と同じ; 位置（点）
+  elevation: { transform: number }  # TODO：どの列？; 標高（メートル）
+  hazardTypes: { transform: split }  # TODO：どの列？; 指定されている災害の種別。flood（洪水）、landslide（崖崩れ、土石流及び地滑り）、stormSurge（高潮）、earthquake（地震）、tsunami（津波）、greatFire（大規模な火事）、inlandFlood（…; 値：flood, landslide, stormSurge, earthquake, tsunami, greatFire, inlandFlood, eruption
+  alsoDesignatedShelter: { transform: flag }  # TODO：どの列？; 指定避難所も兼ねるとき true
+  alsoWelfareShelter: { transform: flag }  # TODO：どの列？; 指定福祉避難所も兼ねるとき true
+  maxCapacity: { column: "収容人数", transform: integer }  # 要確認：名前の一部からの推測; 想定収容人数
+  targetAreas: { transform: split }  # TODO：どの列？; この避難場所に避難する町会・自治会や地域
+  telephone: {}  # TODO：どの列？; 候補 番号; 連絡先の電話番号
+  url: {}  # TODO：どの列？; 避難場所のウェブページ
+  description: {}  # TODO：どの列？; 備考
+
+# どの行も読まない CSV の列（エンティティには入りません）：
+#   番号
+#   団体コード
+#   施設名

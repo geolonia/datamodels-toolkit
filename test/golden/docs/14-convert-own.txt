@@ -1,0 +1,49 @@
+# https://datamodels.jp/en/toolkit/convert#your-own-list
+$ datamodels convert disaster/EvacuationSite my-list.yaml my-list.csv --out entities.json
+exit: 0
+--- stdout
+
+--- stderr
+my-list.csv: utf-8, 2 row(s), 2 valid EvacuationSite, 0 invalid
+  repaired 2×: localGovernmentCode: restored the leading zero (e.g. 92011 → 092011)
+--- added entities.json
+[
+  {
+    "id": "urn:ngsi-ld:EvacuationSite:092011-1",
+    "type": "EvacuationSite",
+    "externalSiteId": "1",
+    "localGovernmentCode": "092011",
+    "name": "中央小学校",
+    "address": {
+      "addressCountry": "JP",
+      "addressText": "栃木県宇都宮市中央本町1-29"
+    },
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        139.8847723,
+        36.55925966
+      ]
+    },
+    "maxCapacity": 1200
+  },
+  {
+    "id": "urn:ngsi-ld:EvacuationSite:092011-2",
+    "type": "EvacuationSite",
+    "externalSiteId": "2",
+    "localGovernmentCode": "092011",
+    "name": "東小学校",
+    "address": {
+      "addressCountry": "JP",
+      "addressText": "栃木県宇都宮市東1-1"
+    },
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        139.89,
+        36.56
+      ]
+    },
+    "maxCapacity": 500
+  }
+]

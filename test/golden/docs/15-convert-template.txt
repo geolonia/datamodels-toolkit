@@ -1,0 +1,33 @@
+# https://datamodels.jp/en/toolkit/convert
+$ datamodels convert disaster/EvacuationSite csv-template sites.csv --out template-entities.json
+exit: 0
+--- stdout
+
+--- stderr
+sites.csv: utf-8, 1 row(s), 1 valid EvacuationSite, 0 invalid
+  not in the file, so left empty: nameKana, nameEn, nationalShelterId, address.addressCountry, address.postalCode, address.addressRegion, address.addressLocality, address.machiaza, address.chome, address.banchi, address.go, address.buildingName, address.residentialIndication, address.jisPrefectureCode, address.jisMunicipalityCode, address.localGovernmentCode, address.abrMachiazaId, elevation, alsoDesignatedShelter, alsoWelfareShelter, targetAreas, telephone, url, description
+--- added template-entities.json
+[
+  {
+    "id": "urn:ngsi-ld:EvacuationSite:092011-1",
+    "type": "EvacuationSite",
+    "name": "中央小学校",
+    "externalSiteId": "1",
+    "localGovernmentCode": "092011",
+    "address": {
+      "addressText": "栃木県宇都宮市中央本町1-29"
+    },
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        139.8847723,
+        36.55925966
+      ]
+    },
+    "hazardTypes": [
+      "flood",
+      "earthquake"
+    ],
+    "maxCapacity": 1200
+  }
+]

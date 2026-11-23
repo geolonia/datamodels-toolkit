@@ -1,0 +1,48 @@
+# https://datamodels.jp/en/toolkit/models
+$ cd my-models && datamodels add road/Segment --value
+exit: 0
+--- stdout
+
+--- stderr
+  added models/road/Segment/schema.json
+  added models/road/Segment/catalog.yaml
+  added models/road/Segment/examples/example.json
+  added models/road/Segment/notes.yaml
+  changed models/road/context.jsonld
+road/Segment: https://models.example.org/ns/road#Segment. Next: its attributes in schema.json (each with x-iri) and catalog.yaml, then datamodels check.
+--- changed my-models/models/road/context.jsonld
+{
+  "@context": {
+    "road": "https://models.example.org/ns/road#",
+    "RoadPatrol": "road:RoadPatrol",
+    "Segment": "road:Segment"
+  }
+}
+--- added my-models/models/road/Segment/catalog.yaml
+# Write the title and description in each language. Every attribute in schema.json
+# needs a description here, under attributes (name: { ja: …, en: … }).
+title:
+  ja: Segment
+  en: Segment
+description:
+  ja: One Segment.
+  en: One Segment.
+status: draft
+attributes: {}
+--- added my-models/models/road/Segment/examples/example.json
+{}
+--- added my-models/models/road/Segment/notes.yaml
+# Notes: the sources, the decisions and their reasons, what is left out. Shown on the model's page.
+# One item per note, in each language of the node, for example:
+#   - { ja: …, en: … }
+notes: []
+--- added my-models/models/road/Segment/schema.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/Segment/v0.1.0.json",
+  "title": "Segment",
+  "x-kind": "value",
+  "type": "object",
+  "properties": {},
+  "required": []
+}

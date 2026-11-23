@@ -1,0 +1,28 @@
+# https://datamodels.jp/en/toolkit/
+$ datamodels --help
+exit: 0
+--- stdout
+usage: datamodels [options] [command]
+
+options:
+  -h, --help                                             display help for command
+
+commands:
+  convert [options] <subject/Type> <mapping> <file.csv>  turn a published list (CSV) into entities of a catalog model, validated against its JSON Schema
+  mapping [options] <subject/Type> <file.csv>            write a first mapping file for your own list (CSV) and a catalog model: a row per attribute with the column that fits it, or a TODO
+  build [options] [dir]                                  write the files a data model node publishes: catalog.json, @contexts, JSON Schemas, vocabularies, examples, llms.txt, the pages and the adapters' files
+  check [options] [dir]                                  check a data model node before it publishes: schemas, examples, published versions, extended terms
+  init [options] [dir]                                   start a data model node: node.yaml, the first subject, a README and the GitHub Pages workflow
+  add [options] <subject/Type> [dir]                     add a model to a subject of the node: schema.json, catalog.yaml, an example and the type in the subject's @context
+  release [options] <subject> [dir]                      keep the subject's current version online: snapshot its @context, vocabulary and schemas, so the next version leaves them in place
+  bump [options] <subject> <level> [dir]                 give a subject a new version: release the current one (it stays online), then raise the version in subject.yaml and the subject's schema URLs
+  upgrade [options] [dir]                                move the node to a release of datamodels-toolkit: the Action's pin in the workflows and npx in the Markdown files
+  extend [options] [model] [subject/Type] [dir]          start a model from a model of another node, such as datamodels.jp's: a copy of its schema at its version, its @context imported, recorded in extends
+  export [options] <subject/Type> [dir]                  write files made from a model for other tools: a CSV template and its Table Schema, a JSON Schema for the structured output of AI models, a PostgreSQL / PostGIS table
+  search [options] <words...>                            find models by words in their type, title, attributes and description, in datamodels.jp (or another index) and the nodes it links to
+  nodes [options]                                        list the data model nodes reachable from datamodels.jp (or another index): name, address, licence and number of models
+  help [command]                                         display help for command
+
+More on each command, with examples: https://datamodels.jp/en/toolkit/reference
+--- stderr
+
