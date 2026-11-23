@@ -1203,7 +1203,7 @@ Revise the model when any of these happens:
 - The agent skill moves into the npm package or another distribution.
 - The catalogue's model changes what it relies on from the toolkit.
 - A change to a cap of `P-WORK-BOUNDED`, or a new expansion without one.
-- `export --to geonicdb` restricting the contexts a model's context imports to that catalog's `/context/` (geolonia/datamodels-toolkit#167): the §1.7 row and the `remote-reads` x-outbound-requests row widen again.
+- `export --to geonicdb` restricting the contexts a model's context imports to that catalog's `/context/` (geolonia/datamodels-toolkit#167): the §1.7 row and the `remote-reads` x-outbound-requests row narrow to that path for the imports too.
 - A new product adapter, or a change in what the GeonicDB adapter leaves out
   of a body or where it points `contextUrl`.
 - A new advisory for this repository.
