@@ -423,3 +423,22 @@ test('export --to geonicdb reads the contexts a remote context imports only unde
   assert.equal(read.includes(outside), false, 'an import on another site is not read');
   assert.equal(read.some((u) => u.includes('/elsewhere/')), false, 'an import that climbs out of context/ is not read');
 });
+
+test('export --to geonicdb follows no redirect out of the catalog\'s context/ (#167)', async () => {
+  const site = join(import.meta.dirname, 'fixtures', 'site');
+  const read = [];
+  const away = 'https://example.org/context/z.jsonld';
+  const siteFetch = async (url) => {
+    read.push(url);
+    const u = new URL(url);
+    if (url === away) return { ok: true, status: 200, json: async () => ({ '@context': { extra: 'https://example.org/ns/extra' } }) };
+    if (u.pathname.startsWith('/context/disaster/')) return { ok: true, status: 200, json: async () => ({ '@context': [`${DJ}/context/common/v1.jsonld`, { disaster: `${DJ}/ns/disaster/` }] }) };
+    // The import under context/ answers with a redirect to another site.
+    if (u.pathname.startsWith('/context/common/')) return { ok: false, status: 302, headers: { get: (h) => (h.toLowerCase() === 'location' ? away : null) } };
+    try { const text = await readFile(join(site, u.pathname), 'utf8'); return { ok: true, status: 200, json: async () => JSON.parse(text) }; } catch { return { ok: false, status: 404 }; }
+  };
+  const remote = await exportModel('disaster/EvacuationSite', ['geonicdb'], { index: `${DJ}/catalog.json`, fetch: siteFetch });
+  assert.equal(JSON.parse(remote.files[0].content).type, 'EvacuationSite');
+  assert.ok(read.some((u) => u.startsWith(`${DJ}/context/common/`)), 'the import under context/ is asked for');
+  assert.equal(read.includes(away), false, 'its redirect to another site is not followed');
+});

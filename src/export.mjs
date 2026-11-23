@@ -85,7 +85,7 @@ export async function exportModel(target, names, { dir = '.', index, fetch: fetc
     context = { urls: r.urls, languages: r.languages, refs };
     // The terms of the model's context, read from its site (its contextUrl), for the adapters that expand terms.
     // Only contexts of that catalog's own site, as for its schema (remoteModel): the
-    // context itself and every context it imports (#167). An import elsewhere is not
+    // context itself and every context it imports, redirects included (#167). An import elsewhere is not
     // read; resolveContext then leaves the terms open, and the model gets a note.
     if (adapters.some((a) => a.product) && model.links?.contextUrl) {
       const contextRoot = new URL('context/', new URL('.', from)).href;
@@ -96,8 +96,9 @@ export async function exportModel(target, names, { dir = '.', index, fetch: fetc
         const { resolveContext } = await import('./build/check.mjs');
         try {
           const read = getter(fetchUrl, timeout);
+          // Redirects too: a context under context/ may not lead elsewhere (`under`).
           const ownContexts = (url) => (normalUrl(url)?.startsWith(contextRoot)
-            ? read(url)
+            ? read(url, { under: contextRoot })
             : Promise.reject(new Error(`not under ${contextRoot}, not read`)));
           const resolved = await resolveContext(contextUrl, ownContexts);
           if (!resolved.open && !resolved.uncertain.size) context.terms = { [subject.name]: Object.fromEntries([...resolved.iris].filter(([, iri]) => iri)) };
