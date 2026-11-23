@@ -430,7 +430,7 @@ line, and the individual fields of `catalog.yaml`, `notes.yaml`,
 | `export`, `extend` | the model argument (`subject/Type` or a type IRI) | no — command line | resource-name | n/a; a type IRI selects the index of the node that made it | *(documented, src/discover.mjs `indexForModel` comment)* |
 | `export`, `extend` | the other node's catalog entry (type, version, URLs, texts) | **yes** | data, resource-name | nothing; type must be UpperCamelCase and version `x.y.z`; schema and example only under that node's `schema/` and `examples/` | *(documented, CHANGELOG.md 0.3.15 "Security": "so a catalog cannot add lines to the files they write")* |
 | `extend` | the other node's schema and example | **yes** | data, size | the owner reviews what `extend` copied before committing (`D-REMOTE-CONTENT-UNREVIEWED`) | *(maintainer, 2026-10)* |
-| `export --to geonicdb` | the other node's context for the model (`contextUrl`) and the contexts it imports | **yes** | data, resource-name | nothing; read only under that catalog's own `/context/` and through the shared reader; its terms only expand a VocabProperty's allowed terms | *(documented, src/export.mjs `exportModel` comment: "Only a context of that catalog")* |
+| `export --to geonicdb` | the other node's context for the model (`contextUrl`) and the contexts it imports | **yes** | data, resource-name | nothing; the context itself is read only under that catalog's own `/context/`, the contexts it imports from any public https host (geolonia/datamodels-toolkit#167); all through the shared reader; its terms only expand a VocabProperty's allowed terms | *(documented, src/export.mjs `exportModel` comment: "Only a context of that catalog")* |
 | all reads of other nodes | HTTP status, headers, redirects, body size, timing | **yes** | data, size, rate | nothing; at most 5 redirects, each checked; 5 MB; one deadline per read | *(documented, src/adapters/index.mjs `getter` comment: "One deadline for the read")* |
 | all reads of other nodes | DNS answers for the other node's host | **yes** | resource-name | nothing; every address must be public, checked at connection | *(documented, src/adapters/net.mjs `publicLookup` comment: "dns.lookup that refuses a host with any non-public address")* |
 | `check` (JSON-LD) | remote `@context` documents named by examples and contexts | **yes** | data, size | nothing; read through the shared reader; an unread one is a note | *(documented, src/build/examples.mjs `contextLoader`)* |
@@ -505,7 +505,7 @@ may read as instructions).
 | `remote-reads` | reference and object lifecycle | N/A — each command reads afresh; caches live for one run | | §1.5 | *(documented, src/adapters/index.mjs `getter`: "A reader of JSON URLs that reads each once")* |
 | `remote-reads` | concurrency and reentrancy | N/A — reads within one command | | §1.5 | *(documented, src/discover.mjs header)* |
 | `remote-reads` | resource complexity | claimed | 5 MB per response, one deadline per read, 50 nodes | §1.11 `P-REMOTE-READS-BOUNDED` | *(documented, src/adapters/net.mjs `MAX_BYTES`)* |
-| `remote-reads` | x-outbound-requests | claimed | https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's `schema/` or `examples/` stay there; `export --to geonicdb` reads a context only under that catalog's `/context/` | §1.11 `P-PUBLIC-READS` | *(documented, CHANGELOG.md 0.3.15 "Security")* |
+| `remote-reads` | x-outbound-requests | claimed | https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's `schema/` or `examples/` stay there; `export --to geonicdb` reads the model's context only under that catalog's `/context/`, its imports from any public host (#167) | §1.11 `P-PUBLIC-READS` | *(documented, CHANGELOG.md 0.3.15 "Security")* |
 | `remote-reads` | x-agent-instructions | claimed | text from other nodes printed by `search` and `nodes` has no control characters or direction overrides, on one line | §1.11 `P-TERMINAL-TEXT-PLAIN` | *(documented, src/discover.mjs `plain` comment: "an escape sequence could rewrite the screen")* |
 | `init-github` | numeric domain and representational limits | claimed | `--github` must be `owner/name` of letters, digits and `._-` | §1.11 `P-INIT-ONLY-ITS-FILES` | *(documented, src/init.mjs `REPO_NAME`)* |
 | `init-github` | failure and exception atomicity | claimed | settings are checked before anything is written; with `--github`, other files or changes in the working tree, or other files in any earlier commit, stop it before a commit; the earlier contents of init's own files are pushed as they are (`D-INIT-PUSHES-HISTORY`) | §1.11 `P-INIT-ONLY-ITS-FILES` | *(documented, src/init.mjs `publishToGitHub` comment: "Every file in the history must be one init writes")* |
@@ -784,25 +784,29 @@ are listed; candidates that rest only on code are §1.18 questions.
     `bin/datamodels.mjs:388`, and the repeated-header error in `parseCsv`.
     Search: `grep -n "visible" bin/datamodels.mjs src/convert.mjs`.
 
-- **`P-WORK-BOUNDED` — a small input cannot make the toolkit's work grow
-  exponentially.** The expansions that grew exponentially stop with an error:
-  `convert` expands at most 1000 `via` references per row, `check` walks at
-  most 10000 `@context` parts in all, counting each import every time it
-  comes, and the `ai` adapter converts at most 10000 schema parts per model
+- **`P-WORK-BOUNDED` — a small input cannot make the toolkit's own expansions
+  grow exponentially.** The expansions that grew exponentially stop with an error:
+  `convert` expands at most 1000 `via` references per row; each resolution of
+  a context in `check` (one per subject, and one per other site's context it
+  reads) walks at most 10000 `@context` parts, counting each import every time
+  it comes, so one `check` walks at most 10000 parts per resolution, not in
+  all (`src/build/check.mjs:117`); and the `ai` adapter converts at most 10000 schema parts per model
   (no AI file otherwise); `parseCsv` finds repeated header names in one pass
   *(documented, CHANGELOG.md 0.3.18 "Security": "Inputs that grew exponentially now stop with an error")*.
   `unclosedRings` stops after `limit` paths when the caller passes one
   *(documented, CHANGELOG.md 0.3.17 "Added")*.
-  - Threshold: work that grows exponentially with a file's size, or with the
-    square of a CSV's columns, is a bug; work in proportion to a large input
-    is `D-NO-INPUT-LIMITS` *(documented, src/convert.mjs `parseCsv` comment: "indexOf inside filter was quadratic in the number of columns")*.
+  - Threshold: work in the expansions and walks named here that grows
+    exponentially with a file's size, or with the square of a CSV's columns,
+    is a bug; work in proportion to a large input is `D-NO-INPUT-LIMITS`, and
+    compiling a schema or running its `pattern` is `D-SCHEMA-COMPILE-COST` *(documented, src/convert.mjs `parseCsv` comment: "indexOf inside filter was quadratic in the number of columns")*.
   - Symptom: `hang` or `unbounded-allocation`.
   - Tier: security-critical: GHSA-24fg-6rqx-h84h, GHSA-ccww-2qjg-333j,
     GHSA-3vxv-f434-vprx and GHSA-pm47-v2m2-3cc2 relied on it
     *(maintainer, 2026-11)*.
   - Covers: CSV files, node files, and other nodes' schemas and contexts; also
     mapping files, which are trusted for what they name but not for the work
-    they cause *(maintainer, 2026-11)*.
+    they cause *(maintainer, 2026-11)*. Not covered: Ajv compiling a schema and
+    the regular expressions of its `pattern`s (`D-SCHEMA-COMPILE-COST`).
   - *Voided by*: `unclosedRings` without `limit` reports every path —
     `src/ngsi.mjs:212`. The caps are at `src/convert.mjs:471`,
     `src/build/check.mjs:120` and `src/adapters/ai/index.mjs:57`; the header
@@ -1027,7 +1031,7 @@ what remains.
 | --- | --- | --- | --- | --- | --- |
 | `D-NOT-A-SANDBOX` | isolation of the files it processes from the rest of the machine | stated by the maintainer. Commands run with the rights of the person or job; a mapping file's `via` may name any `.yaml` file the user can read; `check --base` runs `git` in the node folder. Not covered: code execution from a node folder, which `P-NODE-FILES-ARE-DATA` claims, and files outside the node published or written through a link in `models/` or a key of `subject.yaml`, which `P-NODE-STAYS-IN-FOLDER` claims | security-critical | no | *(maintainer, 2026-10)* |
 | `D-VALIDATION-NOT-TRUTH` | any statement beyond shape from `check` or `convert` | stated. They check the JSON Schema, the NGSI-LD and JSON-LD rules and the `@context` terms; not truth, safety for HTML or SQL, licences, or personal data | correctness-only | yes: "valid" is not "safe" or "true" | *(documented, datamodels.jp/en/toolkit/check "What check checks")* |
-| `D-NO-INPUT-LIMITS` | limits on the size, nesting or number of items of local input (CSV, YAML, JSON, schemas, contexts) and of data passed to the library | stated by the maintainer. A CSV is read whole; parsers run with their defaults; the process is the user's own. Not covered: work that grows exponentially with the input, which `P-WORK-BOUNDED` caps | correctness-only | no | *(maintainer, 2026-10)* |
+| `D-NO-INPUT-LIMITS` | limits on the size, nesting or number of items of local input (CSV, YAML, JSON, schemas, contexts) and of data passed to the library | stated by the maintainer. A CSV is read whole; parsers run with their defaults; the process is the user's own. Not covered: work that grows exponentially in the expansions `P-WORK-BOUNDED` names (not schema compilation, `D-SCHEMA-COMPILE-COST`) | correctness-only | no | *(maintainer, 2026-10)* |
 | `D-SCHEMA-COMPILE-COST` | protection from slow or huge JSON Schemas | stated by the maintainer. Schemas are compiled by Ajv; `pattern` becomes a JavaScript regular expression (ReDoS); in `check` a `$ref` to another public site is compiled too | correctness-only | no | *(maintainer, 2026-10)* |
 | `D-OUTPUT-TEXT-AS-INPUT` | escaping or sanitising of converted values | stated by the maintainer. Entities carry CSV text as it is after the transforms, `json` cells as parsed JSON; validated, not sanitised | security-critical | no | *(maintainer, 2026-10)* |
 | `D-LOCAL-TEXT-ECHOED` | filtering of text from local files in terminal output, other than CSV text in `convert` and `mapping` | stated by the maintainer. Notes and errors print text from mapping files and node files, and paths, as they are; the file is the user's. Since 0.3.18 CSV text in the messages of `convert` and `mapping` is shown escaped (`P-CSV-MESSAGES-VISIBLE`) | correctness-only | no | *(maintainer, 2026-10)* |
@@ -1199,6 +1203,7 @@ Revise the model when any of these happens:
 - The agent skill moves into the npm package or another distribution.
 - The catalogue's model changes what it relies on from the toolkit.
 - A change to a cap of `P-WORK-BOUNDED`, or a new expansion without one.
+- `export --to geonicdb` restricting the contexts a model's context imports to that catalog's `/context/` (geolonia/datamodels-toolkit#167): the §1.7 row and the `remote-reads` x-outbound-requests row widen again.
 - A new product adapter, or a change in what the GeonicDB adapter leaves out
   of a body or where it points `contextUrl`.
 - A new advisory for this repository.

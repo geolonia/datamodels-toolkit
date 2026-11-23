@@ -266,7 +266,9 @@ three questions; the maintainer accepted each proposed answer on 2026-11-23.
   existing repository reviews that history first or uses a new folder.
 - **Q3** — Does a published advisory make a property security-critical?
   Answer: yes. A property that a published advisory relied on is
-  security-critical; properties without one stay correctness-only. What is
+  security-critical. An advisory is one basis for the tier, not the only one:
+  a property can be security-critical by the maintainer's decision without one,
+  as `P-NODE-FILES-ARE-DATA` is; other properties keep their tiers. What is
   left in `D-LOCAL-TEXT-ECHOED` and `D-NO-INPUT-LIMITS` stays
   correctness-only.
 

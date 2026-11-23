@@ -840,7 +840,7 @@
       "property": "P-WORK-BOUNDED",
       "violation_symptom": "hang, unbounded-allocation",
       "severity_tier": "security",
-      "conditions": "via expansions at most 1000 per row; @context parts at most 10000; AI strict form at most 10000 parts per model; parseCsv header check in one pass; unclosedRings stops at limit when given; mapping files covered too (maintainer, 2026-11)",
+      "conditions": "via expansions at most 1000 per row; @context parts at most 10000 per context resolution (not per check); not schema compilation (D-SCHEMA-COMPILE-COST); AI strict form at most 10000 parts per model; parseCsv header check in one pass; unclosedRings stops at limit when given; mapping files covered too (maintainer, 2026-11)",
       "provenance": "documented",
       "source": "CHANGELOG.md 0.3.18 \"Security\""
     },
@@ -958,7 +958,7 @@
     },
     {
       "property": "D-NO-INPUT-LIMITS",
-      "reason": "stated by the maintainer. A CSV is read whole; parsers run with their defaults; the process is the user's own. Not covered: exponential work, which P-WORK-BOUNDED caps",
+      "reason": "stated by the maintainer. A CSV is read whole; parsers run with their defaults; the process is the user's own. Not covered: exponential work in the expansions P-WORK-BOUNDED names (not schema compilation)",
       "false_friend": false,
       "provenance": "documented",
       "source": "maintainer ruling, 2026-10"
