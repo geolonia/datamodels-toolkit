@@ -6,6 +6,18 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-11-23
+
+A security release: `export --to geonicdb` reads a remote model's context and the contexts it imports only under that catalog's `context/`, redirects included (#168, closes #167); `init` pins the Action v0.4.3.
+
+### Changed
+
+- `datamodels init` writes a workflow pinned to the v0.4.3 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.4.3`. This repository's README shows that workflow and runs `npx @geolonia/datamodels@0.4.4`, whose `init` writes it (before, its commands ran the release whose `init` wrote the Action before it).
+
+### Security
+
+- `datamodels export --to geonicdb` reads the contexts that a remote model's context imports only under that catalog's own `context/` path, as it already did for the context itself, and follows no redirect out of that path, for the context itself too (#167). An import elsewhere is not read: the model's context terms stay open, and a model that needs them gets a note instead of a body. Before, such an import was read from any public https host (always through the shared reader), and its terms could become a VocabProperty's allowed terms in the generated body.
+
 ## [0.4.3] - 2026-11-23
 
 The GeonicDB adapter sends target types and list rules, and Task registers on GeonicDB v0.25.0 and later again (#164, geolonia/datamodels#300); `init` pins the Action v0.4.2, which accepts LanguageProperty (#158, closes #162).
@@ -433,7 +445,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.3...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.4...main
+[0.4.4]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.0...v0.4.1
