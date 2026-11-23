@@ -1,14 +1,14 @@
 # threat-model.yaml — derived index; the prose threat model (threat-model.md) is canonical.
 schema: threat-model-sidecar/v2
 project: datamodels-toolkit
-prose_version: "threat-model.md@sha256:14698344ec7a79fe59814a6f701d62466af1698c86accb7047ac227689147836"
-model_status: accepted
+prose_version: "threat-model.md@sha256:974c881f3551d6e6905f81490fd164b4fa9a2a0bc90b62ab48a5c27bcaac66e8"
+model_status: under-review
 triage_policy: strict
 confidence:
-  documented: 194
-  maintainer: 97
+  documented: 253
+  maintainer: 82
   inferred: 0
-  assumption: 0
+  assumption: 2
 generation:
   model: Claude Opus 5.5 (claude-opus-5-5)
   effort: session default
@@ -93,13 +93,19 @@ components:
   provenance:
     kind: maintainer
     date: 2026-10
+- name: geonicdb
+  scope: out
+  reason: "GeonicDB registers a GeonicDB body; how it reads and applies it is GeonicDB's, per §1.3"
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.4.3 \"Fixed\""
 host_side_effects:
 - effect: outbound-network-shared-reader
   stance: present
   components:
   - remote-reads
   - node-tools
-  conditions: "search, nodes, export, extend; check and build for other nodes' schemas, contexts and indexes; none with --offline"
+  conditions: "search, nodes, export, extend; check and build for other nodes' schemas, contexts and indexes; check and release for the node's own published files; build with the GeonicDB adapter and export --to geonicdb for the contexts a model's context imports; none with --offline"
   provenance:
     kind: documented
     source: "src/adapters/index.mjs getter comment: \"with the global fetch (the default everywhere), it reads through publicFetch\""
@@ -108,17 +114,17 @@ host_side_effects:
   components:
   - convert
   - node-tools
-  conditions: "convert and mapping read --site (default https://datamodels.jp) with the global fetch; check and release read the node's own published files under baseUrl; upgrade reads https://api.github.com/repos/geolonia/datamodels-toolkit/"
+  conditions: "convert and mapping read --site (default https://datamodels.jp) with the global fetch; upgrade reads https://api.github.com/repos/geolonia/datamodels-toolkit/"
   provenance:
-    kind: maintainer
-    date: 2026-10
+    kind: documented
+    source: "issue #144: \"are still outside the shared reader\""
 - effect: child-processes
   stance: present
   components:
   - node-tools
   - init-github
   - action
-  conditions: "git rev-parse, git show, git diff for check --base; gh and git for init --github; the Action runs npm ci and git fetch. Search: grep -rn \"execFile\" src bin — 2 files, src/build/published.mjs and bin/datamodels.mjs (for init)"
+  conditions: "git rev-parse, git show, git diff for check --base; gh and git (status, log, init, add, commit) for init --github; the Action runs npm ci and git fetch. Search: grep -rn \"execFile\" src bin — 2 files, src/build/published.mjs and bin/datamodels.mjs (for init)"
   provenance:
     kind: maintainer
     date: 2026-10
@@ -129,7 +135,7 @@ host_side_effects:
   - node-tools
   - remote-reads
   - init-github
-  conditions: "only the named outputs: --out of convert (overwrites), mapping (never overwrites), export (overwrites files of the same name), build into _site/ or --out; init, add, extend, release, bump, upgrade write into the node folder; check builds into a temporary folder and removes it"
+  conditions: "only the named outputs: --out of convert (overwrites), mapping (never overwrites), export (overwrites files of the same name), build into _site/ or --out; init, add, extend, release, bump, upgrade write into the node folder, and release, add and extend refuse a symbolic link in models/ and do not write through one; check builds into a temporary folder and removes it"
   provenance:
     kind: maintainer
     date: 2026-10
@@ -187,10 +193,10 @@ entry_points:
     control_kinds:
     - data
     obligation_id: review-generated-mapping
-    caller_must_enforce: review the generated mapping file before use (Q12)
+    caller_must_enforce: "nothing: P-CSV-TEXT-NO-NEW-LINES and P-CSV-MESSAGES-VISIBLE; review the generated mapping file before use"
     provenance:
-      kind: maintainer
-      date: 2026-10
+      kind: documented
+      source: "CHANGELOG.md 0.3.18 \"Security\": \"keeps a CSV header with a line break inside its comment\""
   - name: cell_values
     attacker_controllable: true
     control_kinds:
@@ -228,7 +234,7 @@ entry_points:
     - resource-name
     - data
     obligation_id: review-own-config
-    caller_must_enforce: write or review the mapping file (D-NOT-A-SANDBOX)
+    caller_must_enforce: "write or review the mapping file (D-NOT-A-SANDBOX); via expansions capped by P-WORK-BOUNDED whoever wrote it (Q1)"
     provenance:
       kind: maintainer
       date: 2026-10
@@ -285,11 +291,10 @@ entry_points:
     attacker_controllable: true
     control_kinds:
     - resource-name
-    obligation_id: trusted-urls-only
-    caller_must_enforce: use https or a local directory (D-OWN-SITE-READS)
+    caller_must_enforce: none — P-PUBLIC-READS
     provenance:
-      kind: maintainer
-      date: 2026-10
+      kind: documented
+      source: "CHANGELOG.md 0.3.18 \"Security\": \"A baseUrl or a redirect that points elsewhere is not read\""
   - name: subject_context
     attacker_controllable: true
     control_kinds:
@@ -345,6 +350,23 @@ entry_points:
     provenance:
       kind: maintainer
       date: 2026-10
+  - name: symbolic_links_in_models
+    attacker_controllable: true
+    control_kinds:
+    - resource-name
+    caller_must_enforce: none — P-NODE-STAYS-IN-FOLDER
+    provenance:
+      kind: documented
+      source: "CHANGELOG.md 0.3.17 \"Security\": \"refuse a symbolic link anywhere in models/\""
+  - name: reserved_subject_yaml_keys
+    attacker_controllable: true
+    control_kinds:
+    - resource-name
+    - data
+    caller_must_enforce: none — P-NODE-STAYS-IN-FOLDER
+    provenance:
+      kind: documented
+      source: "src/build/load.mjs loadSubjects comment: \"subject.yaml must not replace them\""
 - id: check --base
   component: node-tools
   parameters:
@@ -374,11 +396,10 @@ entry_points:
     control_kinds:
     - data
     - size
-    obligation_id: trusted-urls-only
-    caller_must_enforce: use https or a local directory (D-OWN-SITE-READS)
+    caller_must_enforce: none — P-PUBLIC-READS
     provenance:
-      kind: maintainer
-      date: 2026-10
+      kind: documented
+      source: "src/adapters/index.mjs bytesReader comment: \"the URL and every redirect must be a publicUrl\""
 - id: upgrade
   component: node-tools
   parameters:
@@ -564,7 +585,7 @@ entry_points:
     caller_must_enforce: none — P-ACTION-INPUTS-AS-DATA
     provenance:
       kind: documented
-      source: "action.yml step \"Check\", env BASE_REF"
+      source: "action.yml steps \"Fetch the base branch\" and \"Check\", env BASE_REF"
   - name: checked_out_repository
     attacker_controllable: true
     control_kinds:
@@ -583,7 +604,16 @@ entry_points:
     caller_must_enforce: "grant the check job contents: read only; make the check required"
     provenance:
       kind: documented
-      source: "action.yml comment: \"the token is passed to this one fetch in the environment\""
+      source: "action.yml comment: \"the job token, in the environment, never on the command line\""
+  - name: calling_job_env
+    attacker_controllable: false
+    control_kinds:
+    - data
+    obligation_id: no-secrets-in-job-env
+    caller_must_enforce: "put no secrets in the calling job's env: (D-CALLER-ENV-SECRETS)"
+    provenance:
+      kind: documented
+      source: "CHANGELOG.md 0.3.19 \"Security\": \"Put no secrets in that env: every step inherits it\""
 - id: "library: fetch option"
   component: library
   parameters:
@@ -596,6 +626,30 @@ entry_points:
     provenance:
       kind: maintainer
       date: 2026-10
+- id: "library: toCustomDataModel options"
+  component: library
+  parameters:
+  - name: to_custom_data_model_options
+    attacker_controllable: false
+    control_kinds:
+    - data
+    obligation_id: review-geonicdb-extend
+    caller_must_enforce: "review what extend adds: it passes through as written"
+    provenance:
+      kind: documented
+      source: "src/adapters/geonicdb/custom-data-model.mjs toCustomDataModel comment: \"pass through as written\""
+- id: "export --to geonicdb: remote context"
+  component: remote-reads
+  parameters:
+  - name: remote_model_context
+    attacker_controllable: true
+    control_kinds:
+    - data
+    - resource-name
+    caller_must_enforce: none — P-PUBLIC-READS
+    provenance:
+      kind: documented
+      source: "src/export.mjs exportModel comment: \"Only a context of that catalog\""
 - id: "agent-skill: text read by the agent"
   component: agent-skill
   parameters:
@@ -665,7 +719,7 @@ contract_dimensions:
 - component: convert
   dimension: resource-complexity
   status: disclaimed
-  conditions: "no limit on file size, rows or columns; the whole CSV is in memory"
+  conditions: "no limit on file size, rows or columns; the whole CSV is in memory; what grew exponentially is capped (P-WORK-BOUNDED)"
   property_id: D-NO-INPUT-LIMITS
   provenance:
     kind: maintainer
@@ -681,11 +735,11 @@ contract_dimensions:
 - component: convert
   dimension: x-agent-instructions
   status: claimed
-  conditions: "text from a CSV never adds lines to the mapping file mapping writes; violated at the bound commit by unused header names, a VALID finding"
+  conditions: "text from a CSV never adds lines to the mapping file mapping writes; a line break in comment text becomes a space (fixed in 0.3.18)"
   property_id: P-CSV-TEXT-NO-NEW-LINES
   provenance:
-    kind: maintainer
-    date: 2026-10
+    kind: documented
+    source: "src/mapping.mjs startMapping comment: \"so it becomes a space\""
 - component: node-tools
   dimension: numeric-domain
   status: claimed
@@ -729,11 +783,11 @@ contract_dimensions:
 - component: node-tools
   dimension: reference-lifecycle
   status: claimed
-  conditions: a released version keeps a snapshot; a published version without one is noted
-  property_id: P-PUBLISHED-COMPARISON
+  conditions: "a released version keeps a snapshot of real files: a symbolic link in models/ is refused and release writes through none; a published version without a snapshot is noted"
+  property_id: P-NODE-STAYS-IN-FOLDER
   provenance:
     kind: documented
-    source: "datamodels.jp/en/toolkit/versions \"How a published version is kept\""
+    source: "CHANGELOG.md 0.3.17 \"Security\""
 - component: node-tools
   dimension: concurrency-reentrancy
   status: claimed
@@ -745,23 +799,23 @@ contract_dimensions:
 - component: node-tools
   dimension: resource-complexity
   status: disclaimed
-  conditions: no limit on node files; reads of other nodes bounded as in remote-reads
+  conditions: "no limit on node files; @context parts and the AI adapter's schema parts capped (P-WORK-BOUNDED); reads of other nodes bounded as in remote-reads"
   property_id: D-NO-INPUT-LIMITS
   provenance:
     kind: maintainer
     date: 2026-10
 - component: node-tools
   dimension: x-outbound-requests
-  status: disclaimed
-  conditions: "the node's own published files are read under baseUrl with the global fetch"
-  property_id: D-OWN-SITE-READS
+  status: claimed
+  conditions: "the node's own published files are read under baseUrl through the shared reader; upgrade's read of GitHub's API is outside it (D-OWN-SITE-READS)"
+  property_id: P-PUBLIC-READS
   provenance:
-    kind: maintainer
-    date: 2026-10
+    kind: documented
+    source: "CHANGELOG.md 0.3.18 \"Security\""
 - component: node-tools
   dimension: x-version-immutability
   status: claimed
-  conditions: "check --base fails on a changed or removed snapshot file, except during the pre-release"
+  conditions: "check --base fails on a changed or removed snapshot file, except during the pre-release; adapter files, GeonicDB bodies included, are rebuilt with the node (D-GEONICDB-BODY-NOT-THE-SCHEMA)"
   property_id: P-BASE-COMPARISON
   provenance:
     kind: documented
@@ -769,7 +823,7 @@ contract_dimensions:
 - component: node-tools
   dimension: x-agent-instructions
   status: disclaimed
-  conditions: "model text goes unfiltered into llms.txt, catalog.json and the AI adapter's schema descriptions"
+  conditions: "model text goes unfiltered into llms.txt, catalog.json, the AI adapter's schema descriptions and the GeonicDB body's descriptions"
   property_id: D-AGENT-TEXT
   provenance:
     kind: maintainer
@@ -838,7 +892,7 @@ contract_dimensions:
 - component: remote-reads
   dimension: x-outbound-requests
   status: claimed
-  conditions: "https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's schema/ or examples/ stay there"
+  conditions: "https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's schema/ or examples/ stay there; export --to geonicdb reads a context only under that catalog's /context/"
   property_id: P-PUBLIC-READS
   provenance:
     kind: documented
@@ -862,11 +916,11 @@ contract_dimensions:
 - component: init-github
   dimension: failure-atomicity
   status: claimed
-  conditions: "settings are checked before anything is written; with --github, other files or changes in the working tree stop it before a commit; the earlier history of an existing repository is pushed as it is (D-INIT-PUSHES-HISTORY)"
+  conditions: "settings are checked before anything is written; with --github, other files or changes in the working tree, or other files in any earlier commit, stop it before a commit; the earlier contents of init's own files are pushed as they are (D-INIT-PUSHES-HISTORY)"
   property_id: P-INIT-ONLY-ITS-FILES
   provenance:
     kind: documented
-    source: "src/init.mjs publishToGitHub comment: \"anything else in the folder stops it, so nothing else is published\""
+    source: "src/init.mjs publishToGitHub comment: \"Every file in the history must be one init writes\""
 - component: init-github
   dimension: recursive-cyclic-topology
   status: not-applicable
@@ -935,7 +989,7 @@ contract_dimensions:
 - component: action
   dimension: callback-execution
   status: claimed
-  conditions: inputs reach the shell only through environment variables; the token only for one git fetch
+  conditions: inputs reach the shell only through environment variables; the job token only for the base git fetch and the Pages actions
   property_id: P-ACTION-INPUTS-AS-DATA
   provenance:
     kind: documented
@@ -950,11 +1004,11 @@ contract_dimensions:
 - component: action
   dimension: reference-lifecycle
   status: disclaimed
-  conditions: "the token is in the environment of the whole \"Check\" step, so the toolkit process and its dependencies run with it"
-  property_id: D-TOKEN-IN-STEP-ENV
+  conditions: "what code in the Check or Build step writes to $GITHUB_ENV, $GITHUB_PATH or $GITHUB_OUTPUT reaches the later steps, the Pages actions with the token and the OIDC request variables included"
+  property_id: D-STEP-FILES-TO-LATER-STEPS
   provenance:
-    kind: maintainer
-    date: 2026-10
+    kind: documented
+    source: "issue #144 comment: \"code running in Check or Build could still write\""
 - component: action
   dimension: concurrency-reentrancy
   status: not-applicable
@@ -1020,7 +1074,7 @@ contract_dimensions:
 - component: library
   dimension: serialization-reconstruction
   status: claimed
-  conditions: __proto__ keys stay own properties
+  conditions: __proto__ keys stay own properties, also in a GeonicDB body
   property_id: P-NGSI-PROTO-AS-DATA
   provenance:
     kind: documented
@@ -1042,7 +1096,7 @@ contract_dimensions:
 - component: library
   dimension: resource-complexity
   status: disclaimed
-  conditions: no limit on the data the caller passes
+  conditions: "no limit on the data the caller passes; unclosedRings stops after limit paths when the caller passes one (P-WORK-BOUNDED)"
   property_id: D-NO-INPUT-LIMITS
   provenance:
     kind: maintainer
@@ -1194,7 +1248,7 @@ outputs:
   invariants: []
   downstream_must_not_assume:
   - id: summary-constant-text
-    statement: that it is constant text or free of terminal control characters
+    statement: "that it is constant text; that text from the mapping file or a path is free of terminal control characters (CSV text is shown escaped, P-CSV-MESSAGES-VISIBLE)"
     provenance: *id002
 - component: convert
   channel: generated-mapping-file
@@ -1205,7 +1259,7 @@ outputs:
   invariants: []
   downstream_must_not_assume:
   - id: mapping-lines-from-model
-    statement: that every line comes from the model
+    statement: "that a name in a comment is the CSV's exact header name; that the rows are right (text from the CSV adds no lines, P-CSV-TEXT-NO-NEW-LINES)"
     provenance: *id003
 - component: node-tools
   channel: built-site
@@ -1269,6 +1323,19 @@ outputs:
   - id: ai-schema-free-of-instructions
     statement: "that the AI schema descriptions are free of instructions or the SQL reviewed for the reader's database"
     provenance: *id007
+- component: node-tools
+  channel: geonicdb-bodies
+  taint: constrained
+  taint_provenance:
+    kind: documented
+    source: "src/adapters/geonicdb/index.mjs header: \"a ready-made Custom Data Model request body per entity\""
+  invariants: []
+  downstream_must_not_assume:
+  - id: geonicdb-checks-the-schema
+    statement: "that GeonicDB checks everything the schema checks; that the file keeps its bytes; that its descriptions are free of instructions; that its patterns are cheap to run"
+    provenance:
+      kind: documented
+      source: "CHANGELOG.md 0.4.3 \"Fixed\": \"GeonicDB then does not check the duration\""
 - component: remote-reads
   channel: extend-written-files
   taint: same-as-input
@@ -1415,6 +1482,8 @@ adversaries:
   - change-published-version
   - slip-remote-import
   - obtain-write-token
+  - publish-file-outside-node
+  - write-outside-node
   provenance:
     kind: maintainer
     date: 2026-10
@@ -1436,6 +1505,7 @@ adversaries:
   - add-lines-to-written-files
   - terminal-escape
   - hang-command
+  - exponential-work
   - steer-agent
   provenance:
     kind: documented
@@ -1763,6 +1833,32 @@ build_flags:
   provenance:
     kind: maintainer
     date: 2026-10
+- name: node-yaml-adapters-geonicdb
+  default: "absent: product adapters off"
+  security_relevant: false
+  maintainer_stance: supported
+  affects_properties: []
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.4.0 \"Added\": \"A GeonicDB adapter for every node, off by default\""
+- name: unclosed-rings-limit
+  default: "none: every path"
+  security_relevant: true
+  maintainer_stance: supported
+  affects_properties:
+  - property_id: P-WORK-BOUNDED
+    effect: narrows
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.17 \"Added\""
+- name: to-custom-data-model-options
+  default: "none: the default body"
+  security_relevant: false
+  maintainer_stance: supported
+  affects_properties: []
+  provenance:
+    kind: documented
+    source: "src/adapters/geonicdb/custom-data-model.mjs toCustomDataModel comment: \"pass through as written\""
 - name: github
   default: "off"
   security_relevant: false
@@ -1787,7 +1883,7 @@ properties_claimed:
   - node-tools
   - library
   tier: security-critical
-  conditions: "reads of other nodes through getter: https, public host names, public addresses at connection, redirects checked, at most 5, prefix kept"
+  conditions: "reads of other nodes through getter, and of the node's own published files through bytesReader: https, public host names, public addresses at connection, redirects checked, at most 5, prefix kept; not --site or upgrade"
   violation_symptoms:
   - x-ssrf
   provenance:
@@ -1799,7 +1895,7 @@ properties_claimed:
   - remote-reads
   - node-tools
   tier: correctness-only
-  conditions: "5 MB per answer; one deadline per read: 15 s in search and nodes, 20 s in check, build, export and extend, 5 s for the guess at a type IRI own index; depth 5, 50 nodes"
+  conditions: "5 MB per answer; one deadline per read: 15 s in search and nodes, 20 s in check, build, export and extend and for each own published file in check and release, 5 s for the guess at a type IRI own index; depth 5, 50 nodes"
   violation_symptoms:
   - hang
   - unbounded-allocation
@@ -1871,13 +1967,39 @@ properties_claimed:
   kind: integrity
   components:
   - convert
-  tier: correctness-only
-  conditions: "text from a CSV never adds lines to the mapping file mapping writes; violated at the bound commit by unused header names (src/mapping.mjs:444)"
+  tier: security-critical
+  conditions: "text from a CSV never adds lines to the mapping file mapping writes; a line break in comment text becomes a space (since 0.3.18; tier from GHSA-7489-995x-5hjg, Q3)"
   violation_symptoms:
   - x-file-injection
   provenance:
-    kind: maintainer
-    date: 2026-10
+    kind: documented
+    source: "CHANGELOG.md 0.3.18 \"Security\""
+- id: P-CSV-MESSAGES-VISIBLE
+  kind: output-sanitization
+  components:
+  - convert
+  tier: security-critical
+  conditions: "CSV text in the messages of convert and mapping is shown with line breaks and control characters escaped; not other local text"
+  violation_symptoms:
+  - x-terminal-injection
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.18 \"Security\""
+- id: P-WORK-BOUNDED
+  kind: resource-bound
+  components:
+  - convert
+  - node-tools
+  - remote-reads
+  - library
+  tier: security-critical
+  conditions: "via expansions at most 1000 per row; @context parts at most 10000; AI strict form at most 10000 parts per model; parseCsv header check in one pass; unclosedRings stops at limit when given; mapping files covered too (Q1)"
+  violation_symptoms:
+  - hang
+  - unbounded-allocation
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.18 \"Security\""
 - id: P-ROWS-VALIDATED
   kind: correctness
   components:
@@ -1895,7 +2017,7 @@ properties_claimed:
   - library
   - convert
   tier: correctness-only
-  conditions: an attribute named __proto__ stays an own property
+  conditions: an attribute named __proto__ stays an own property, also in toCustomDataModel
   violation_symptoms:
   - wrong-output
   provenance:
@@ -1912,6 +2034,19 @@ properties_claimed:
   provenance:
     kind: maintainer
     date: 2026-10
+- id: P-NODE-STAYS-IN-FOLDER
+  kind: integrity
+  components:
+  - node-tools
+  - remote-reads
+  tier: security-critical
+  conditions: "no symbolic link in models/ (and no linked node.yaml for extend); snapshots are real files; writes do not follow a link; subject.yaml may not set dir, context, imports, inlineTerms or models"
+  violation_symptoms:
+  - info-leak
+  - integrity-bypass
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.17 \"Security\"; CHANGELOG.md 0.3.18 \"Security\""
 - id: P-PAGES-ESCAPED
   kind: output-sanitization
   components:
@@ -1932,6 +2067,18 @@ properties_claimed:
   violation_symptoms:
   - x-sql-injection
   provenance: *id019
+- id: P-CSV-HEADER-ENCODED
+  kind: output-sanitization
+  components:
+  - node-tools
+  - remote-reads
+  tier: security-critical
+  conditions: "CSV template column names quoted per RFC 4180 when needed; a leading ' before =, +, -, @, tab, CR or LF"
+  violation_symptoms:
+  - x-formula-injection
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.18 \"Security\""
 - id: P-ACTION-INPUTS-AS-DATA
   kind: integrity
   components:
@@ -1948,13 +2095,13 @@ properties_claimed:
   components:
   - action
   tier: security-critical
-  conditions: "the token only for the base fetch, masked, via environment; no writes to the repository"
+  conditions: "the job token the Action passes only to the base fetch step, which runs only git, and to the Pages actions; the toolkit's steps unset GITHUB_TOKEN, GH_TOKEN and the OIDC request variables; no writes to the repository; not secrets in the calling job's env"
   violation_symptoms:
   - info-leak
   - integrity-bypass
   provenance:
     kind: documented
-    source: "action.yml comment: \"passed to this one fetch in the environment\""
+    source: "CHANGELOG.md 0.3.19 \"Security\": \"The other steps run without it\""
 - id: P-INSTALL-NO-SCRIPTS
   kind: integrity
   components:
@@ -1981,7 +2128,7 @@ properties_claimed:
   components:
   - init-github
   tier: security-critical
-  conditions: never overwrites; with --github commits only files init wrote and stops on other files; no shell
+  conditions: "never overwrites; with --github commits only files init wrote and stops on other files in the working tree or in any earlier commit; no shell"
   violation_symptoms:
   - info-leak
   provenance:
@@ -1992,7 +2139,7 @@ properties_disclaimed:
   components:
   - convert
   - node-tools
-  conditions: "stated by the maintainer. Commands run with the rights of the person or job; a mapping file's via may name any .yaml file the user can read; check --base runs git in the node folder. Not covered: code execution from a node folder, which P-NODE-FILES-ARE-DATA claims"
+  conditions: "stated by the maintainer. Commands run with the rights of the person or job; a mapping file's via may name any .yaml file the user can read; check --base runs git in the node folder. Not covered: code execution from a node folder, which P-NODE-FILES-ARE-DATA claims, and files outside the node published or written through a link or a subject.yaml key, which P-NODE-STAYS-IN-FOLDER claims"
   tier: security-critical
   false_friend: false
   provenance:
@@ -2013,7 +2160,7 @@ properties_disclaimed:
   - convert
   - node-tools
   - library
-  conditions: "stated by the maintainer. A CSV is read whole; parsers run with their defaults; the process is the user's own"
+  conditions: "stated by the maintainer. A CSV is read whole; parsers run with their defaults; the process is the user's own. Not covered: exponential work, which P-WORK-BOUNDED caps"
   tier: correctness-only
   false_friend: false
   provenance:
@@ -2042,7 +2189,7 @@ properties_disclaimed:
   components:
   - convert
   - node-tools
-  conditions: "stated by the maintainer. The summary, notes and errors print header names, cell values and paths as they are; the file is the user's"
+  conditions: "stated by the maintainer. Notes and errors print text from mapping files and node files, and paths, as they are; CSV text in convert and mapping is shown escaped (P-CSV-MESSAGES-VISIBLE)"
   tier: correctness-only
   false_friend: false
   provenance:
@@ -2052,12 +2199,12 @@ properties_disclaimed:
   components:
   - convert
   - node-tools
-  conditions: "stated by the maintainer. --site of convert, the node's own published files in check and release, and GitHub's API in upgrade are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site). In a node's pull_request job the baseUrl read happens before merge, on input the contributor chose"
+  conditions: "stated. --site of convert and mapping, and GitHub's API in upgrade, are read with the global fetch: redirects followed, no address check, no size cap (and no deadline for --site). The node's own published files are read through the shared reader since 0.3.18"
   tier: security-critical
   false_friend: false
   provenance:
-    kind: maintainer
-    date: 2026-10
+    kind: documented
+    source: "issue #144: \"are still outside the shared reader\""
 - id: D-CALLER-FETCH
   components:
   - library
@@ -2096,15 +2243,24 @@ properties_disclaimed:
   provenance:
     kind: documented
     source: "datamodels.jp/en/toolkit/versions \"Before the launch\": \"An earlier version that should not have been published can be removed\""
-- id: D-TOKEN-IN-STEP-ENV
+- id: D-CALLER-ENV-SECRETS
   components:
   - action
-  conditions: "stated by the maintainer. In the Action's \"Check\" step the token is in the environment of the node process and every dependency it loads, on every event. On main, where the job has id-token: write, the runner's OIDC request variables are in that environment too"
+  conditions: "stated. Every step of the job inherits the job's env:, the Action's steps too; they remove only GITHUB_TOKEN, GH_TOKEN and the OIDC request variables"
+  tier: security-critical
+  false_friend: true
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.19 \"Security\": \"Put no secrets in that env: every step inherits it\""
+- id: D-STEP-FILES-TO-LATER-STEPS
+  components:
+  - action
+  conditions: "stated. Code in the Check or Build step, the toolkit or a dependency, can write $GITHUB_ENV, $GITHUB_PATH or $GITHUB_OUTPUT for the later steps, the Pages actions with the job token and the OIDC request variables included; it needs code execution in those steps"
   tier: security-critical
   false_friend: false
   provenance:
-    kind: maintainer
-    date: 2026-10
+    kind: documented
+    source: "issue #144 comment: \"code running in Check or Build could still write\""
 - id: D-AGENT-TEXT
   components:
   - node-tools
@@ -2127,12 +2283,12 @@ properties_disclaimed:
 - id: D-INIT-PUSHES-HISTORY
   components:
   - init-github
-  conditions: "silence: nothing promises it. In a folder that is already a git repository without a remote, init --github pushes the whole local history to the new public repository, older commits included; only the working tree is checked"
+  conditions: "silence: nothing promises it (Q2). init --github checks the file names of every earlier commit, not their contents, and pushes the whole local history: earlier versions of its own files and every commit message and author are published as they are"
   tier: security-critical
   false_friend: false
   provenance:
     kind: documented
-    source: "src/init.mjs publishToGitHub: gh repo create with --public, --source and --push"
+    source: "src/init.mjs publishToGitHub comment: \"Every file in the history must be one init writes\""
 - id: D-RELEASE-SINGLE-GATE
   components:
   - release-pipeline
@@ -2151,6 +2307,17 @@ properties_disclaimed:
   provenance:
     kind: documented
     source: "README \"Releases\""
+- id: D-GEONICDB-BODY-NOT-THE-SCHEMA
+  components:
+  - node-tools
+  - remote-reads
+  - library
+  conditions: "stated. Rules GeonicDB refuses or cannot apply are left out, most with a note (the duration pattern, a VocabProperty's pattern and lengths, item rules of non-scalar lists, scalar rules at the top of a list, string checks in a language map); additionalProperties true unless the schema says false; contextUrl the subject's major-version alias; rebuilt with the node"
+  tier: correctness-only
+  false_friend: true
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.4.3 \"Fixed\": \"GeonicDB then does not check the duration\""
 - id: D-NO-SHRINKWRAP
   components:
   - release-pipeline
@@ -2205,8 +2372,8 @@ downstream_responsibilities:
     kind: maintainer
     date: 2026-10
 - id: R-TRUSTED-URLS
-  component: node-tools
-  statement: use https for --site and baseUrl and do not point them at internal addresses
+  component: convert
+  statement: use https for --site and do not point it at internal addresses; a node whose baseUrl is not public https releases with --offline
   enforces:
   - trusted-urls-only
   provenance:
@@ -2270,14 +2437,48 @@ downstream_responsibilities:
   provenance:
     kind: documented
     source: "datamodels.jp/en/toolkit/versions \"Before the launch\""
-- id: R-TOKEN-STEP
+- id: R-NO-SECRETS-IN-JOB-ENV
   component: action
-  statement: do not rely on the token being hidden from the toolkit process in the Check step
+  statement: "put no secrets in the calling job's env:; give a secret only to the step that needs it"
   enforces:
-  - D-TOKEN-IN-STEP-ENV
+  - no-secrets-in-job-env
+  - D-CALLER-ENV-SECRETS
   provenance:
-    kind: maintainer
-    date: 2026-10
+    kind: documented
+    source: "CHANGELOG.md 0.3.19 \"Security\""
+- id: R-LATER-STEPS
+  component: action
+  statement: treat the steps after the Action's Check and Build as running after the toolkit
+  enforces:
+  - D-STEP-FILES-TO-LATER-STEPS
+  provenance:
+    kind: documented
+    source: "issue #144 comment: \"code running in Check or Build could still write\""
+- id: R-NO-LINKS-IN-MODELS
+  component: node-tools
+  statement: keep models/ free of symbolic links
+  enforces:
+  - P-NODE-STAYS-IN-FOLDER
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.17 \"Security\": \"must replace them with the files\""
+- id: R-INIT-HISTORY
+  component: init-github
+  statement: before init --github in an existing repository, mind that earlier contents of init's files and commit messages are pushed; otherwise use a new folder
+  enforces:
+  - D-INIT-PUSHES-HISTORY
+  provenance:
+    kind: documented
+    source: "src/init.mjs publishToGitHub: \"Run init in a new folder, or make the repository yourself\""
+- id: R-GEONICDB-NOTES
+  component: node-tools
+  statement: register a GeonicDB body only after reading the notes of the build or export
+  enforces:
+  - geonicdb-checks-the-schema
+  - D-GEONICDB-BODY-NOT-THE-SCHEMA
+  provenance:
+    kind: documented
+    source: "src/adapters/geonicdb/custom-data-model.mjs comment: \"They are not sent, and warn says so\""
 - id: R-CALLER-FETCH
   component: library
   statement: "when passing your own fetch, do the address check yourself"
@@ -2286,6 +2487,22 @@ downstream_responsibilities:
   provenance:
     kind: maintainer
     date: 2026-10
+- id: R-UNCLOSED-RINGS-LIMIT
+  component: library
+  statement: pass limit to unclosedRings when reporting errors of untrusted input
+  enforces:
+  - P-WORK-BOUNDED
+  provenance:
+    kind: documented
+    source: "CHANGELOG.md 0.3.17 \"Added\""
+- id: R-REVIEW-GEONICDB-EXTEND
+  component: library
+  statement: with toCustomDataModel, review what you pass in extend
+  enforces:
+  - review-geonicdb-extend
+  provenance:
+    kind: documented
+    source: "src/adapters/geonicdb/custom-data-model.mjs toCustomDataModel comment: \"pass through as written\""
 - id: R-AGENT-TEXT
   component: agent-skill
   statement: treat text the agent reads as data; let it run commands only with confirmation
@@ -2332,7 +2549,7 @@ known_misuses:
   components:
   - convert
   - node-tools
-  pattern: pointing --site or baseUrl at an internal host
+  pattern: pointing --site at an internal host
   safer_alternative: use a local directory for --site
   provenance:
     kind: maintainer
@@ -2371,12 +2588,12 @@ known_non_findings:
   - action
   symptom: credential-exposure
   tool_pattern: "\"the Action reads github.token\" or \"passes a token to git\""
-  conditions: "the token is used only in the \"Check\" step's git fetch of the base branch, through GIT_CONFIG_* environment variables, masked, with persist-credentials: false on the checkout"
+  conditions: "the token is used only in the step \"Fetch the base branch\", which runs only git fetch of the base branch, through GIT_CONFIG_* environment variables, masked, with persist-credentials: false on the checkout; and by actions/deploy-pages, its default, when deploying"
   discharged_by:
   - P-ACTION-TOKEN-USE
   provenance:
     kind: documented
-    source: "action.yml comment: \"passed to this one fetch in the environment\""
+    source: "action.yml comment: \"the job token, in the environment, never on the command line\""
 - id: KNF-OTHER-NODE-DOWN
   components:
   - node-tools
