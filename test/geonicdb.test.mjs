@@ -366,12 +366,16 @@ test('a nullable list is still a list: type [array, null] gets the list rules', 
   const m = { type: 'X', kind: 'entity', examples: {}, catalog: {}, schema: { properties: { id: {}, type: {},
     tags: { type: ['array', 'null'], items: { type: 'string', minLength: 1 }, minItems: 1 },
     note: { type: ['string', 'null'], maxLength: 10 },
+    day: { type: ['string', 'null'], format: 'date' },
+    names: { type: 'array', items: { type: ['string', 'null'], minLength: 1 } },
   } } };
   const d = toCustomDataModel(subject, m, { ...context, terms: { x: {} } }).propertyDetails;
   assert.equal(d.tags.valueType, 'array');
   assert.deepEqual(d.tags.validation, { items: { minLength: 1 }, minItems: 1 });
   assert.equal(d.note.valueType, 'string');
   assert.deepEqual(d.note.validation, { maxLength: 10 });
+  assert.equal(d.day.valueType, 'date', 'a nullable date is a date');
+  assert.deepEqual(d.names.validation, { items: { minLength: 1 } }, 'nullable items keep their rules');
 });
 
 test('the duration pattern is left out of list items too; other rules of the attribute stay', (t) => {

@@ -94,7 +94,7 @@ const ngsiTypeOf = (prop) => prop['x-ngsi']?.type ?? 'Property';
 
 /** True for a string Property that may be a plain date. */
 function mayBeDate(prop) {
-  return ngsiTypeOf(prop) === 'Property' && prop.type === 'string' && dateFormats(prop).includes('date');
+  return ngsiTypeOf(prop) === 'Property' && typeOf(prop) === 'string' && dateFormats(prop).includes('date');
 }
 
 /** The schema's type without 'null': ['array', 'null'] is a list that may be left out. */
@@ -126,7 +126,7 @@ function listValidation(prop, where, warn) {
   const v = {};
   const ngsiType = ngsiTypeOf(prop);
   const items = prop.items && typeof prop.items === 'object' && !Array.isArray(prop.items) ? prop.items : {};
-  const scalar = ['string', 'number', 'integer', 'boolean'].includes(items.type) && !items.$ref && !items.allOf;
+  const scalar = ['string', 'number', 'integer', 'boolean'].includes(typeOf(items)) && !items.$ref && !items.allOf;
   const itemRules = {};
   if (scalar && ngsiType !== 'VocabProperty' && ngsiType !== 'LanguageProperty') {
     for (const k of VALUE_CHECKS) if (items[k] !== undefined) itemRules[k] = items[k];
