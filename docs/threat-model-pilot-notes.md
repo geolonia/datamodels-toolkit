@@ -251,6 +251,30 @@ eleven escalated closes into closes; fail-safe figure still 0 of 9.
 - Q24 Bind to `4d88e4e`, keep `strict`, re-run at the next minor release or a
   §1.16 trigger. Proposed: yes.
 
+## The revision of 2026-11-23 (#144): questions and answers
+
+The revision re-bound the model to v0.4.3 after the security releases 0.3.17
+to 0.3.19 and folded the 11 published advisories into the backtest. It asked
+three questions; the maintainer accepted each proposed answer on 2026-11-23.
+
+- **Q1** — Is a mapping file trusted for the work it causes? Answer: no. It
+  is trusted for what it names, not for the work it causes, so exponential
+  `via` expansion (GHSA-3vxv-f434-vprx) routes `VALID` against
+  `P-WORK-BOUNDED`, not `OUT-OF-MODEL: trusted-input`.
+- **Q2** — Is the narrowed `D-INIT-PUSHES-HISTORY` a stated limit? Answer:
+  yes. The history check is by file name; whoever runs `init --github` in an
+  existing repository reviews that history first or uses a new folder.
+- **Q3** — Does a published advisory make a property security-critical?
+  Answer: yes. A property that a published advisory relied on is
+  security-critical; properties without one stay correctness-only. What is
+  left in `D-LOCAL-TEXT-ECHOED` and `D-NO-INPUT-LIMITS` stays
+  correctness-only.
+
+The maintainer also confirmed `D-GEONICDB-BODY-NOT-THE-SCHEMA` as
+correctness-only. Lesson for the bank: an advisory is the project's own
+record of a tier decision; check the published advisories before ruling a
+tier, and fold them into the backtest as real items.
+
 ## Candidate issues (not in the model)
 
 The model describes the toolkit as it is. These came up while reading and

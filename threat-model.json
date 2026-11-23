@@ -6,8 +6,8 @@
   "scope_subpath": null,
   "description": "datamodels-toolkit is a command line and a GitHub Action for data models in the style of datamodels.jp. People use it to turn a CSV list into NGSI-LD entities, to start and maintain a *node* (a site of their own that publishes JSON Schemas, JSON-LD @context files and vocabularies at fixed URLs), to find models on other nodes, and to export a model for other tools (a CSV template, a Table Schema, a JSON Schema for AI output, a PostgreSQL table, and, for a node that turns it on, a GeonicDB Custom Data Model body). It runs on the user's machine or in the user's GitHub Actions job, with the user's rights. It has no server, stores nothing of its own and holds no credential except the job token the Action is given, which it passes only to the fetch of a pull request's base branch and to GitHub's Pages actions.",
   "confidence": {
-    "documented": 335,
-    "inferred": 2
+    "documented": 340,
+    "inferred": 0
   },
   "components": [
     {
@@ -163,7 +163,7 @@
     },
     {
       "component": "action",
-      "boundary": "Pull-request and publish boundaries of a node: on pull_request the job runs the contributor's merge commit with a read-only token; on main the calling job grants pages: write and id-token: write. The Action passes the job token only to the base-branch fetch and GitHub's Pages actions; the toolkit's steps run without it and without the OIDC request variables.",
+      "boundary": "Pull-request and publish boundaries of a node: on pull_request the job runs the contributor's merge commit with a read-only token; on main the calling job grants pages: write and id-token: write. The Action passes the job token only to the base-branch fetch and GitHub's Pages actions; the steps that run the toolkit run without it and unset the OIDC request variables.",
       "provenance": "documented",
       "reachability_precondition": "it is reachable from a node repository's files or a pull request, through the Action's steps, and changes what is deployed or exposes the token"
     },
@@ -237,7 +237,7 @@
       "parameter": "own_mapping_file_and_via",
       "attacker_controllable": "no",
       "component": "convert",
-      "caller_must_enforce": "write or review the mapping file (D-NOT-A-SANDBOX); via expansions capped by P-WORK-BOUNDED whoever wrote it (Q1)",
+      "caller_must_enforce": "write or review the mapping file (D-NOT-A-SANDBOX); via expansions capped by P-WORK-BOUNDED whoever wrote it",
       "provenance": "documented",
       "source": "maintainer ruling, 2026-10"
     },
@@ -824,7 +824,7 @@
       "property": "P-CSV-TEXT-NO-NEW-LINES",
       "violation_symptom": "x-file-injection",
       "severity_tier": "security",
-      "conditions": "text from a CSV never adds lines to the mapping file mapping writes; a line break in comment text becomes a space (since 0.3.18; tier from GHSA-7489-995x-5hjg, Q3)",
+      "conditions": "text from a CSV never adds lines to the mapping file mapping writes; a line break in comment text becomes a space (since 0.3.18; security-critical as GHSA-7489-995x-5hjg relied on it, maintainer 2026-11)",
       "provenance": "documented",
       "source": "CHANGELOG.md 0.3.18 \"Security\""
     },
@@ -840,7 +840,7 @@
       "property": "P-WORK-BOUNDED",
       "violation_symptom": "hang, unbounded-allocation",
       "severity_tier": "security",
-      "conditions": "via expansions at most 1000 per row; @context parts at most 10000; AI strict form at most 10000 parts per model; parseCsv header check in one pass; unclosedRings stops at limit when given; mapping files covered too (Q1)",
+      "conditions": "via expansions at most 1000 per row; @context parts at most 10000; AI strict form at most 10000 parts per model; parseCsv header check in one pass; unclosedRings stops at limit when given; mapping files covered too (maintainer, 2026-11)",
       "provenance": "documented",
       "source": "CHANGELOG.md 0.3.18 \"Security\""
     },
@@ -912,7 +912,7 @@
       "property": "P-ACTION-TOKEN-USE",
       "violation_symptom": "info-leak, integrity-bypass",
       "severity_tier": "security",
-      "conditions": "the job token the Action passes only to the base fetch step, which runs only git, and to the Pages actions; the toolkit's steps unset GITHUB_TOKEN, GH_TOKEN and the OIDC request variables; no writes to the repository; not secrets in the calling job's env",
+      "conditions": "the job token the Action passes only to the base fetch step, which runs only git, and to the Pages actions; the steps that run the toolkit (install, Check, Build) unset GITHUB_TOKEN, GH_TOKEN and the OIDC request variables, which Set up Node, the fetch step and the Pages actions keep; no writes to the repository; not secrets in the calling job's env",
       "provenance": "documented",
       "source": "CHANGELOG.md 0.3.19 \"Security\": \"The other steps run without it\""
     },
@@ -1021,7 +1021,7 @@
     },
     {
       "property": "D-CALLER-ENV-SECRETS",
-      "reason": "stated. Every step of the job inherits the job's env:, the Action's steps too; they remove only GITHUB_TOKEN, GH_TOKEN and the OIDC request variables",
+      "reason": "stated. Every step of the job inherits the job's env:, the Action's steps too; only the steps that run the toolkit (install, Check, Build) remove GITHUB_TOKEN, GH_TOKEN and the OIDC request variables",
       "false_friend": true,
       "provenance": "documented",
       "source": "CHANGELOG.md 0.3.19 \"Security\": \"Put no secrets in that env: every step inherits it\""
@@ -1049,10 +1049,10 @@
     },
     {
       "property": "D-INIT-PUSHES-HISTORY",
-      "reason": "silence: nothing promises it (Q2). init --github checks the file names of every earlier commit, not their contents, and pushes the whole local history: earlier versions of its own files and every commit message and author are published as they are",
+      "reason": "stated by the maintainer: the check is by file name, and whoever runs init --github in an existing repository reviews that history first or uses a new folder. init --github pushes the whole local history: earlier versions of its own files and every commit message and author are published as they are",
       "false_friend": false,
       "provenance": "documented",
-      "source": "src/init.mjs publishToGitHub comment: \"Every file in the history must be one init writes\""
+      "source": "maintainer ruling, 2026-11"
     },
     {
       "property": "D-RELEASE-SINGLE-GATE",
@@ -1070,7 +1070,7 @@
     },
     {
       "property": "D-GEONICDB-BODY-NOT-THE-SCHEMA",
-      "reason": "stated. Rules GeonicDB refuses or cannot apply are left out, most with a note (the duration pattern, a VocabProperty's pattern and lengths, item rules of non-scalar lists, scalar rules at the top of a list, string checks in a language map); additionalProperties true unless the schema says false; contextUrl the subject's major-version alias; rebuilt with the node",
+      "reason": "stated. Rules GeonicDB refuses or cannot apply are left out, most with a note (the duration pattern, a VocabProperty's pattern and lengths, item rules of non-scalar lists, scalar rules at the top of a list, string checks in a language map); additionalProperties true unless the schema says false; contextUrl the model's own context link, the subject's major-version alias only as the last fallback; rebuilt with the node",
       "false_friend": true,
       "provenance": "documented",
       "source": "CHANGELOG.md 0.4.3 \"Fixed\": \"GeonicDB then does not check the duration\""
@@ -1198,18 +1198,5 @@
     "known_non_finding",
     "model_gap"
   ],
-  "open_questions": [
-    {
-      "claim": "Q1: Is a mapping file trusted for the work it causes? Context: GHSA-3vxv-f434-vprx (exponential `via` expansion in `convert`) was published as an advisory, but §1.7 marks a mapping file as trusted configuration, so precedence rule 5 of §1.17 would close such a report as `OUT-OF-MODEL: trusted-input`. Proposed answer: no. A mapping file, the catalogue's included, is trusted for what it names, not for the work it causes; a report of exponential expansion from one routes `VALID` against `P-WORK-BOUNDED`.",
-      "field": "entry_points"
-    },
-    {
-      "claim": "Q2: Is the narrowed `D-INIT-PUSHES-HISTORY` a stated limit? Context: since 0.3.18 `init --github` refuses a history with other file names (#133), but it does not compare the earlier contents of its own files, and it pushes every commit's message and author. Today the disclaimer rests on silence, so it never closes a report. Proposed answer: yes, stated: the check is by file name; whoever runs `init --github` in an existing repository reviews that history first, or runs it in a new folder.",
-      "field": "properties_not_provided"
-    },
-    {
-      "claim": "Q3: Does an advisory the project publishes make the property security-critical? Context: the first revision ruled `P-CSV-TEXT-NO-NEW-LINES` correctness-only and disclaimed terminal text from local files and input limits as correctness-only; the project then published advisories for them (10 low, 1 medium). This revision takes the advisories as the record and sets `P-CSV-TEXT-NO-NEW-LINES`, `P-CSV-MESSAGES-VISIBLE`, `P-WORK-BOUNDED`, `P-NODE-STAYS-IN-FOLDER` and `P-CSV-HEADER-ENCODED` to security-critical. Proposed answer: yes; a property whose violation is published as an advisory is security-critical, whatever the severity. `P-REMOTE-READS-BOUNDED`, `P-CSV-STRICT`, `P-ROWS-VALIDATED` and the other correctness-only properties stay so until an advisory says otherwise.",
-      "field": "properties_provided"
-    }
-  ]
+  "open_questions": []
 }

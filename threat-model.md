@@ -17,7 +17,7 @@
 - **Date / author**: drafted 2026-10-16; ratified by the maintainer, Daniel
   Kastl, on 2026-10-17, who accepted every proposed answer of the 24 questions
   of the first draft in one batch. Revised on 2026-11-23 for issue #144 (see
-  Revisions); the revision is not yet ratified.
+  Revisions); the maintainer answered its three questions the same day.
 - **Generation metadata**: produced with AI assistance. Model/agent: Claude
   Opus 5.5 (`claude-opus-5-5`) in Claude Code; effort: session default.
   Skills used: the Alpha-Omega `threat-model` plugin, version 1.2.1 at commit
@@ -37,10 +37,11 @@
   properties and disclaimers changed by the security releases 0.3.17, 0.3.18
   and 0.3.19, and a new adapter and library export in 0.4.0 and 0.4.1).
   `P-CSV-TEXT-NO-NEW-LINES` holds now (#126). `init --github` checks the
-  whole history (#133), so `D-INIT-PUSHES-HISTORY` is narrowed to the earlier
+  whole history (issue #133, fixed in #139), so `D-INIT-PUSHES-HISTORY` is narrowed to the earlier
   contents of init's own files and the commit metadata. `check` and `release`
-  read the node's own published files through the shared reader (#128), so
-  `D-OWN-SITE-READS` keeps only `--site` and `upgrade`. The Action passes the
+  read the node's own published files through the shared reader (#139,
+  0.3.18), so `D-OWN-SITE-READS` keeps only `--site` and `upgrade` (still
+  open in #128). The Action passes the
   job token only to the base-branch fetch and the Pages actions (#127, #145):
   `D-TOKEN-IN-STEP-ENV` is retired and replaced by `D-CALLER-ENV-SECRETS` and
   `D-STEP-FILES-TO-LATER-STEPS`. New claims from the fixes of #137 and #139:
@@ -48,15 +49,19 @@
   `P-CSV-HEADER-ENCODED`. The GeonicDB adapter (0.4.0 to 0.4.3) adds inputs,
   an output and `D-GEONICDB-BODY-NOT-THE-SCHEMA`; LanguageProperty and the
   list and `objectType` rules change no security claim. The 11 advisories
-  joined the backtest.
+  joined the backtest. The maintainer answered the revision's three
+  questions on 2026-11-23 (tagged *maintainer, 2026-11*): mapping files are
+  trusted for what they name, not for the work they cause; the narrowed
+  `D-INIT-PUSHES-HISTORY` is a stated limit; a property a published advisory
+  relied on is security-critical.
 - **Reporting cross-reference**: a finding that violates a §1.11 claimed
   property is reported through GitHub's private vulnerability reporting for
   this repository, which is enabled, as [`SECURITY.md`](SECURITY.md) asks. A finding that lands in §1.3 or §1.12
   is closed citing this document.
-- **Status**: under maintainer review, 2026-11-23. The model was accepted on
-  2026-10-17 at commit `4d88e4e`; the revision for issue #144 opens three
-  questions in §1.18 (Q1 to Q3) and adds two **assumption** tags, both for
-  Q1. Every other claim is **documented** or **maintainer**. Closure constraint: an **inferred** claim may escalate
+- **Status**: accepted, 2026-11-23 (first accepted 2026-10-17 at commit
+  `4d88e4e`). Every claim is **documented** or **maintainer**; no
+  **inferred** or **assumption** claim remains, and §1.18 has no open
+  question. Closure constraint: an **inferred** claim may escalate
   a report but never close it, and an **assumption** closes only what the
   triage policy below permits; a later revision that adds either kind returns
   the model to review.
@@ -74,7 +79,7 @@
   repository.
 - **Glossary**: a short plain-language glossary is at the end of this document
   (Appendix A).
-- **Confidence**: 253 documented / 82 maintainer / 0 inferred / 2 assumption.
+- **Confidence**: 247 documented / 93 maintainer / 0 inferred / 0 assumption.
   Counted as the plugin's validator counts, over §1.2 to §1.19: one count per
   parenthesised tag, by its first kind; the tags in this header and its legend
   are not counted.
@@ -90,9 +95,9 @@
   advisories the project published on 2026-10-25 for the fixes in 0.3.17 and
   0.3.18 (GHSA, 10 low and 1 medium) join the corpus as real historical items,
   in 7 clusters, so the corpus has 40 items: 20 real, 20 synthesized. All 11
-  route `VALID`; one of them (GHSA-3vxv-f434-vprx) only through the Q1
-  assumption, without which precedence rule 5 would close it as
-  `OUT-OF-MODEL: trusted-input`. Fail-safe figure: 0 of the 20 historically
+  route `VALID`; GHSA-3vxv-f434-vprx does so because the maintainer ruled
+  that a mapping file is trusted for what it names, not for the work it
+  causes *(maintainer, 2026-11)*, so precedence rule 5 does not close it. Fail-safe figure: 0 of the 20 historically
   fixed items route to a closing disposition. Against the model at `4d88e4e`
   the same 11 would have routed 1 `VALID` (the known violation of
   `P-CSV-TEXT-NO-NEW-LINES`), 1 `BY-DESIGN` escalated (the silence-based
@@ -309,9 +314,12 @@ There are five boundaries:
 4. **Publish boundary of a node.** On `main` the Action builds and deploys
    with `pages: write` and `id-token: write`, which the calling job grants
    *(documented, action.yml header comment: "The calling job needs `pages: write` and `id-token: write` to deploy")*.
-   The toolkit's own steps run without the job token and without the
-   runner's OIDC request variables; GitHub's Pages actions get them
-   *(documented, CHANGELOG.md 0.3.19 "Security": "The other steps run without it")*.
+   The steps that run the toolkit (install, Check, Build) run without the
+   job token and unset the runner's OIDC request variables
+   *(documented, action.yml comment: "Only this shell and its processes lose them")*;
+   the other steps (Set up Node, Fetch the base branch, the Pages actions)
+   still have the OIDC variables. CHANGELOG 0.3.19 says "the other steps"
+   more broadly than `action.yml` does.
 5. **Release boundary of the toolkit.** A published GitHub release whose tag
    is `v` plus the package version starts `publish.yml`; npm accepts the job's
    OIDC token and adds provenance *(documented, .github/workflows/publish.yml header comment: "npm adds provenance (the commit and the workflow that built")*.
@@ -397,7 +405,7 @@ line, and the individual fields of `catalog.yaml`, `notes.yaml`,
 | `convert` | cell values | **yes** | data | the user checks the entities; every entity is validated against the schema; values are not escaped for any later use (`D-OUTPUT-TEXT-AS-INPUT`) | *(documented, bin/datamodels.mjs header: "validates every entity against the model's schema")* |
 | `convert` | a cell read with the `json` transform | **yes** | data, object-topology | the value is parsed with `JSON.parse` and placed into the entity; the schema decides what is allowed | *(documented, src/convert.mjs `apply` case `json`)* |
 | `convert` | the mapping argument: a catalogue mapping name, `csv-template` or a path | no — the user chooses it | resource-name | n/a | *(documented, bin/datamodels.mjs header: "The mapping may also be a file of your own")* |
-| `convert`, `mapping` | a mapping file of the user's own and the files its `via` names | no — trusted configuration for what it names; `via` may name any `.yaml` file relative to it | resource-name, data | the user writes or reviews the mapping file (`D-NOT-A-SANDBOX`); the `via` expansions of one row are capped whoever wrote the file, and a report of exponential expansion routes to `P-WORK-BOUNDED`, not to `OUT-OF-MODEL: trusted-input` *(assumption, Q1)* | *(maintainer, 2026-10)* |
+| `convert`, `mapping` | a mapping file of the user's own and the files its `via` names | no — trusted configuration for what it names; `via` may name any `.yaml` file relative to it | resource-name, data | the user writes or reviews the mapping file (`D-NOT-A-SANDBOX`); the `via` expansions of one row are capped whoever wrote the file, and a report of exponential expansion routes to `P-WORK-BOUNDED`, not to `OUT-OF-MODEL: trusted-input` *(maintainer, 2026-11)* | *(maintainer, 2026-10)* |
 | `convert`, `mapping` | `--site` | no — the user chooses it | resource-name | n/a; a local directory is read only inside it | *(documented, src/catalog.mjs `siteReader` comment: "the file must stay inside the site directory")* |
 | `convert`, `mapping` | `catalog.json`, schemas and mapping files read from the site | no — the catalogue is trusted for content (§1.9); only `https://datamodels.jp` URLs are read, by path | data | n/a | *(documented, src/catalog.mjs header: "URLs in the catalog always name https://datamodels.jp")* |
 | `convert` | `--set attribute=value` | no — command line | data | n/a | *(documented, bin/datamodels.mjs header: "--set attribute=value (for what the list does not carry")* |
@@ -436,7 +444,7 @@ line, and the individual fields of `catalog.yaml`, `notes.yaml`,
 | Action | `github.base_ref` | **yes** in principle, the base branch name of a pull request, chosen among existing branches | resource-name | n/a; passed in the environment, used inside a refspec | *(documented, action.yml steps "Fetch the base branch" and "Check", env `BASE_REF`)* |
 | Action | the checked-out node repository (on a pull request, the merge commit) | **yes**, a contributor | data, callback-code | the owner's workflow decides what runs; on `pull_request` the contributor's workflow file runs as well (§1.10) | *(maintainer, 2026-10)* |
 | Action | `github.token` | no — GitHub | collaborator-implementation | the owner grants the job only what it needs; the Action passes it only to the base fetch and the Pages actions (`P-ACTION-TOKEN-USE`) | *(documented, action.yml comment: "the job token, in the environment, never on the command line")* |
-| Action | the calling job's `env:` | no — the owner's workflow | data | put no secrets there: every step inherits it, and the Action removes only `GITHUB_TOKEN`, `GH_TOKEN` and the OIDC request variables (`D-CALLER-ENV-SECRETS`) | *(documented, CHANGELOG.md 0.3.19 "Security": "Put no secrets in that `env:`: every step inherits it")* |
+| Action | the calling job's `env:` | no — the owner's workflow | data | put no secrets there: every step inherits it, and only the steps that run the toolkit remove `GITHUB_TOKEN`, `GH_TOKEN` and the OIDC request variables (`D-CALLER-ENV-SECRETS`) | *(documented, CHANGELOG.md 0.3.19 "Security": "Put no secrets in that `env:`: every step inherits it")* |
 | library | the `fetch` option | no — the calling program | collaborator-implementation | the caller does the address check its own `fetch` skips (§1.6) | *(maintainer, 2026-10)* |
 | library | the options of `toCustomDataModel` (`extend`, `rename`, `typePrefix`, `typeName`, `contextUrl`, `allowAdditional`) | no — the calling program | data | the caller owns what `extend` adds, which passes through as written; an alias must match `[A-Za-z0-9_]+` and an extension may not redefine an attribute of the model | *(documented, src/adapters/geonicdb/custom-data-model.mjs `toCustomDataModel` comment: "pass through as written")* |
 | `agent-skill` | text the agent reads while following it (`llms.txt`, `catalog.json`, MCP answers, CSV content) | **yes**, the authors of that text | x-agent-text | the user and the agent's own controls (`D-AGENT-TEXT`) | *(maintainer, 2026-10)* |
@@ -512,7 +520,7 @@ may read as instructions).
 | `action` | recursive or cyclic topology | N/A — no recursive input | | §1.7 | *(documented, action.yml `runs`)* |
 | `action` | callback and collaborator execution | claimed | inputs reach the shell only through environment variables; the job token only for the base `git fetch` and the Pages actions | §1.11 `P-ACTION-INPUTS-AS-DATA`, `P-ACTION-TOKEN-USE` | *(documented, action.yml header comment)* |
 | `action` | serialization and reconstruction | N/A — no serialized state | | §1.7 | *(documented, action.yml `runs`)* |
-| `action` | reference and object lifecycle | disclaimed | what code in the Check or Build step writes to `$GITHUB_ENV`, `$GITHUB_PATH` or `$GITHUB_OUTPUT` reaches the later steps, the Pages actions with the token and the OIDC request variables included | §1.12 `D-STEP-FILES-TO-LATER-STEPS` | *(documented, issue #144 comment: "code running in Check or Build could still write")* |
+| `action` | reference and object lifecycle | disclaimed | what code in the Check or Build step writes to `$GITHUB_ENV`, `$GITHUB_PATH` or `$GITHUB_OUTPUT` reaches the later steps, the Pages actions with the token and the OIDC request variables included, and the upload step | §1.12 `D-STEP-FILES-TO-LATER-STEPS` | *(documented, issue #144 comment: "code running in Check or Build could still write")* |
 | `action` | concurrency and reentrancy | N/A — the caller's `concurrency` group serialises Pages deploys | | §1.13 | *(documented, README "The whole workflow that init writes": `concurrency: group: pages`)* |
 | `action` | resource complexity | N/A — the caller's `timeout-minutes` bounds the job | | §1.13 | *(documented, README "The whole workflow that init writes": `timeout-minutes: 10`)* |
 | `action` | x-outbound-requests | claimed | `npm ci` from the lockfile with `--ignore-scripts`; one `git fetch` of the base branch; the toolkit's own reads as in `node-tools` | §1.11 `P-INSTALL-NO-SCRIPTS` | *(documented, action.yml step "Install the toolkit")* |
@@ -554,7 +562,7 @@ may read as instructions).
 | Model pages (HTML) | `node-tools` | node text escaped by the template engine; links taken from model files only when http(s) | that a description is free of misleading links or text | *(documented, src/build/pages.mjs `httpOnly` comment: "A link only for an http(s) URL")* |
 | `llms.txt` | `node-tools` | node titles and descriptions, each on one line | that it is free of instructions aimed at agents | *(documented, src/build/llms.mjs `llmsTxt` comment: "on one line")* |
 | Adapter files: CSV template, Table Schema, AI JSON Schema, PostGIS SQL (from `build` and `export`) | `node-tools`, `remote-reads` | constrained: built from the model; SQL identifiers and literals quoted; CSV column names encoded as CSV fields, a formula-like name prefixed with `'` (`P-CSV-HEADER-ENCODED`); AI schema descriptions carry model text | that the AI schema's descriptions are free of instructions; that the SQL is reviewed for the reader's database | *(documented, src/adapters/postgis/index.mjs `num` comment: "so a schema can never add SQL of its own")* |
-| GeonicDB bodies: `/adapters/geonicdb/<subject>/<Type>.json` from `build` with `adapters: [geonicdb]`, `export --to geonicdb`, `toCustomDataModel` | `node-tools`, `remote-reads`, `library` | constrained: built from the model; descriptions, the example's values, patterns and allowed values carried as written; `contextUrl` the subject's major-version alias; rules GeonicDB refuses or cannot apply left out with a note; listed in `catalog.json` under `adapters`, not linked from model pages | that GeonicDB checks everything the schema checks; that the file keeps its bytes; that its descriptions are free of instructions; that its patterns are cheap to run (`D-GEONICDB-BODY-NOT-THE-SCHEMA`, `D-AGENT-TEXT`) | *(documented, src/adapters/geonicdb/index.mjs header: "a ready-made Custom Data Model request body per entity")* |
+| GeonicDB bodies: `/adapters/geonicdb/<subject>/<Type>.json` from `build` with `adapters: [geonicdb]`, `export --to geonicdb`, `toCustomDataModel` | `node-tools`, `remote-reads`, `library` | constrained: built from the model; descriptions, the example's values, patterns and allowed values carried as written; `contextUrl` the model's own context link, or the subject's major-version alias as the last fallback; rules GeonicDB refuses or cannot apply left out with a note; listed in `catalog.json` under `adapters`, not linked from model pages | that GeonicDB checks everything the schema checks; that the file keeps its bytes; that its descriptions are free of instructions; that its patterns are cheap to run (`D-GEONICDB-BODY-NOT-THE-SCHEMA`, `D-AGENT-TEXT`) | *(documented, src/adapters/geonicdb/index.mjs header: "a ready-made Custom Data Model request body per entity")* |
 | Files `extend` writes into the node (schema, `catalog.yaml`, example, `notes.yaml`, `node.yaml`, `context.jsonld`) | `remote-reads` | the other node's schema, texts and example copied; names checked; comments on one line | that the copied schema or example was reviewed by anyone | *(maintainer, 2026-10)* |
 | Files `export` writes | `remote-reads` | as adapter files; names from the adapter and the checked type name | that an existing file of the same name in `--out` is kept | *(documented, src/export.mjs `writeExport` comment)* |
 | `search` and `nodes` output | `remote-reads` | other nodes' text reduced to plain one-line text in the listing; `--json` keeps it as JSON strings | that `--json` text is plain; that a listed node is endorsed | *(documented, src/discover.mjs `plain` comment)* |
@@ -602,7 +610,7 @@ machine, or one node repository on GitHub running the Action in its own jobs.
 
 | Actor | In scope? | Capabilities held | Capabilities excluded | Goals | Provenance |
 | --- | --- | --- | --- | --- | --- |
-| Author of a CSV the user converts | yes | every byte of the CSV: header names, cell values, size, encoding | the mapping file, the command line, `--site`, the catalogue's files | wrong or misleading entities, text that harms the broker or app that stores them, lines added to the generated mapping file, a hang or crash | *(maintainer, 2026-10)* |
+| Author of a CSV the user converts | yes | every byte of the CSV: header names, cell values, size, encoding | the mapping file, the command line, `--site`, the catalogue's files | wrong or misleading entities, text that harms the broker or app that stores them, lines added to the generated mapping file, a hang or crash | *(maintainer, 2026-10)*; also escape sequences in the terminal, and spreadsheet formulas through names that reach the CSV template *(documented, GHSA-2rm7-34hp-56hc and GHSA-gvrx-hqcj-2cgr)* |
 | Contributor to a node (pull request) | yes | any file of the pull request: `node.yaml`, `models/`, release snapshots, the workflow file; a `baseUrl` that the check job reads before merge; code execution in the `pull_request` job with that job's token (read-only from a fork) | merging; running the publish job; the publish job's `pages: write` and `id-token: write`; reading secrets | change a published version, slip a remote import or `$ref` into the node, get a token that can write | *(maintainer, 2026-10)*; also publish a file from outside the node through a symbolic link, or move `release` to another folder with a `dir` key *(documented, GHSA-qpc3-f7x5-2727 and GHSA-g873-4hxg-8qvj)* |
 | Operator of another node | yes | the content and HTTP behaviour of their site; their DNS; redirects; a slow or large answer; text in their models | the user's files and command line; reading anything from the user except the requests the toolkit makes | make the toolkit read a private address, add lines to files `extend` or `export` writes, write escape sequences to the terminal, hang a command, make its work grow exponentially, steer an agent through text | *(documented, src/adapters/net.mjs header and src/discover.mjs `plain` comment)* |
 | Author of text aimed at an AI agent | yes, as a CSV author, contributor or node operator | text in any file an agent reads while following the skill | anything beyond those actors' capabilities | make an agent run a command or change data the user did not ask for | *(maintainer, 2026-10)* |
@@ -750,9 +758,9 @@ are listed; candidates that rest only on code are §1.18 questions.
   GHSA-7489-995x-5hjg.
   - Symptom: `x-file-injection` (a line chosen by the CSV's author, such as a
     `fields:` rule, appears in the mapping file).
-  - Tier: security-critical, as the project published its violation as an
-    advisory *(documented, GHSA-7489-995x-5hjg)*; the first revision had it
-    correctness-only (Q3).
+  - Tier: security-critical: a published advisory, GHSA-7489-995x-5hjg,
+    relied on it *(maintainer, 2026-11)*; the first revision had it
+    correctness-only.
   - *Voided by*: nothing. Every comment line goes through `flat` —
     `src/mapping.mjs:363`; values are written with `JSON.stringify` in
     `flowRule`. Search: `grep -n "lines.push(" src/mapping.mjs` — each hit
@@ -766,7 +774,8 @@ are listed; candidates that rest only on code are §1.18 questions.
   *(documented, CHANGELOG.md 0.3.18 "Security": "show CSV text in their messages with line breaks and control characters")*.
   - Symptom: `x-terminal-injection` (an escape sequence acts on the terminal,
     or a forged line appears in a log).
-  - Tier: security-critical *(documented, GHSA-2rm7-34hp-56hc)*.
+  - Tier: security-critical: GHSA-2rm7-34hp-56hc relied on it
+    *(maintainer, 2026-11)*.
   - Covers: CSV text in those messages. Not other text from local files: the
     mapping file's own text, paths, and node files in the notes of other
     commands (`D-LOCAL-TEXT-ECHOED`); not the entities, which are JSON.
@@ -788,16 +797,16 @@ are listed; candidates that rest only on code are §1.18 questions.
     square of a CSV's columns, is a bug; work in proportion to a large input
     is `D-NO-INPUT-LIMITS` *(documented, src/convert.mjs `parseCsv` comment: "indexOf inside filter was quadratic in the number of columns")*.
   - Symptom: `hang` or `unbounded-allocation`.
-  - Tier: security-critical, as the project published each case as an
-    advisory *(documented, GHSA-24fg-6rqx-h84h, GHSA-ccww-2qjg-333j, GHSA-3vxv-f434-vprx and GHSA-pm47-v2m2-3cc2)*;
-    see Q3.
+  - Tier: security-critical: GHSA-24fg-6rqx-h84h, GHSA-ccww-2qjg-333j,
+    GHSA-3vxv-f434-vprx and GHSA-pm47-v2m2-3cc2 relied on it
+    *(maintainer, 2026-11)*.
   - Covers: CSV files, node files, and other nodes' schemas and contexts; also
     mapping files, which are trusted for what they name but not for the work
-    they cause *(assumption, Q1)*.
+    they cause *(maintainer, 2026-11)*.
   - *Voided by*: `unclosedRings` without `limit` reports every path —
     `src/ngsi.mjs:212`. The caps are at `src/convert.mjs:471`,
     `src/build/check.mjs:120` and `src/adapters/ai/index.mjs:57`; the header
-    check is at `src/convert.mjs:70`.
+    check is at `src/convert.mjs:71`.
 
 - **`P-ROWS-VALIDATED` — every converted entity is checked against its
   schema.** `convert` validates each entity against the model's JSON Schema,
@@ -853,7 +862,8 @@ are listed; candidates that rest only on code are §1.18 questions.
   - Symptom: `info-leak` (a file from outside the node published on its
     site) or `integrity-bypass` (`release`, `bump` or `build` writing in
     another folder).
-  - Tier: security-critical *(documented, GHSA-qpc3-f7x5-2727, medium, and GHSA-g873-4hxg-8qvj)*.
+  - Tier: security-critical: GHSA-qpc3-f7x5-2727 (medium) and
+    GHSA-g873-4hxg-8qvj relied on it *(maintainer, 2026-11)*.
   - Covers: `models/`, the release snapshots in it and `subject.yaml`. Not
     the reads with the user's rights that a mapping file's `via` makes
     (`D-NOT-A-SANDBOX`).
@@ -892,7 +902,8 @@ are listed; candidates that rest only on code are §1.18 questions.
   Names may come from another catalog through `export`.
   - Symptom: `x-formula-injection` (a cell of the template runs as a formula,
     or a name splits into several columns).
-  - Tier: security-critical *(documented, GHSA-gvrx-hqcj-2cgr)*.
+  - Tier: security-critical: GHSA-gvrx-hqcj-2cgr relied on it
+    *(maintainer, 2026-11)*.
   - Voided by: nothing. The encoding is `src/adapters/csv/index.mjs:17`.
 - **`P-ACTION-INPUTS-AS-DATA` — the Action's inputs never become shell
   code.** Inputs reach the shell only through environment variables, never
@@ -910,18 +921,22 @@ are listed; candidates that rest only on code are §1.18 questions.
   base branch, which runs only `git`; it is passed in the environment, masked,
   never on the command line, and the checkout keeps no credentials
   *(documented, action.yml comment: "the job token, in the environment, never on the command line")*.
-  The other steps run without it: `actions/setup-node` gets an empty `token`,
-  and the install, Check and Build shells unset `GITHUB_TOKEN`, `GH_TOKEN` and
-  the runner's OIDC request variables `ACTIONS_ID_TOKEN_REQUEST_TOKEN` and
-  `ACTIONS_ID_TOKEN_REQUEST_URL`; only GitHub's Pages actions get them when
-  the Action deploys *(documented, CHANGELOG.md 0.3.19 "Security": "The other steps run without it")*.
+  The other steps do not get it: `actions/setup-node` gets an empty `token`
+  input, and the steps that run the toolkit (install, Check, Build) unset
+  `GITHUB_TOKEN`, `GH_TOKEN` and the runner's OIDC request variables
+  `ACTIONS_ID_TOKEN_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_URL`
+  *(documented, action.yml comment: "Only this shell and its processes lose them")*.
+  The other steps keep the OIDC variables: Set up Node (an empty `token`
+  input clears only the token), Fetch the base branch, which also keeps a
+  `GH_TOKEN` of the calling job, and the Pages actions. CHANGELOG 0.3.19 says
+  "the other steps run without it" more broadly than `action.yml` does.
   The Action pushes nothing and comments nothing; its only writes are the
   Pages artifact and deployment *(documented, action.yml header comment)*.
   - Symptom: `info-leak` (the token or an OIDC token reachable by the toolkit,
     in a log or a file) or `integrity-bypass` (a write to the repository).
   - Tier: security-critical.
-  - Covers: the token the Action passes (`github.token`) and the four
-    variables it unsets. Not secrets that a calling job puts in its own
+  - Covers: the token the Action passes (`github.token`), and the four
+    variables in the steps that run the toolkit. Not secrets that a calling job puts in its own
     `env:`, which every step inherits (`D-CALLER-ENV-SECRETS`).
   - *Voided by*:
     - Code that runs in the Check or Build step, the toolkit or a dependency,
@@ -930,8 +945,9 @@ are listed; candidates that rest only on code are §1.18 questions.
       variables included (`D-STEP-FILES-TO-LATER-STEPS`). The Build step
       writes its own output there — `action.yml:106`. Node files do not run
       as code in those steps (`P-NODE-FILES-ARE-DATA`).
-    - The unset applies only to that shell and its processes — `action.yml:91`
-      *(documented, action.yml comment: "Only this shell and its processes lose them")*.
+    - The unset applies only to the shells of the install, Check and Build
+      steps and their processes — `action.yml:55`, `action.yml:91`,
+      `action.yml:104`.
 
 - **`P-INSTALL-NO-SCRIPTS` — no dependency runs install scripts in the Action
   or the publish job.** The Action installs the toolkit's locked dependencies
@@ -941,7 +957,7 @@ are listed; candidates that rest only on code are §1.18 questions.
   - Symptom: `x-code-execution` (a dependency's install script runs with the
     job's token).
   - Tier: security-critical.
-  - Voided by: nothing. The lines are `action.yml:48` and
+  - Voided by: nothing. The lines are `action.yml:56` and
     `.github/workflows/publish.yml:66`.
 
 - **`P-RELEASE-GATED` — only a published release of this repository puts a
@@ -954,7 +970,8 @@ are listed; candidates that rest only on code are §1.18 questions.
   - Tier: security-critical.
   - *Voided by*:
     - Anyone who may publish a GitHub release of this repository may publish
-      to npm; there is no second approval — `.github/workflows/publish.yml:25`
+      to npm; there is no second approval: the `publish` job has no
+      `environment:` key — `.github/workflows/publish.yml:22`
       (`D-RELEASE-SINGLE-GATE`).
     - A renamed workflow file stops publishing until the npm setting is
       changed; it does not open another path *(documented, README "Releases": "after renaming the file, change that setting too")*.
@@ -996,9 +1013,12 @@ fires first.
 
 The conditions column says what each disclaimer rests on. Every one rests on
 a stated limit: the documentation, an issue or advisory of this repository,
-or the maintainer on 2026-10-17 states it; one, `D-INIT-PUSHES-HISTORY`,
-rests on **silence** (nothing promises it) and so never closes a
-security-critical report (§1.17, Q2). `D-TOKEN-IN-STEP-ENV` was retired on
+or the maintainer (2026-10-17 and 2026-11-23) states it. A disclaimer that
+rested only on **silence** (nothing promises it) would never close a
+security-critical report (§1.17). The cases the advisories covered left
+`D-LOCAL-TEXT-ECHOED` and `D-NO-INPUT-LIMITS` for properties, which are
+security-critical (`P-CSV-MESSAGES-VISIBLE`, `P-WORK-BOUNDED`); what remains
+in those two disclaimers stays correctness-only *(maintainer, 2026-11)*. `D-TOKEN-IN-STEP-ENV` was retired on
 2026-11-23: since 0.3.19 the Action does not pass the job token to the
 toolkit's steps; `D-CALLER-ENV-SECRETS` and `D-STEP-FILES-TO-LATER-STEPS` state
 what remains.
@@ -1016,14 +1036,14 @@ what remains.
 | `D-OTHER-NODES-NOTED` | a failure when another node is down, slow or refused | stated. Another node that cannot be read, or does not answer within the read's deadline (20 seconds in `check` and `build`, 15 in `search` and `nodes`), is only noted; a node that is down never fails someone else's check | correctness-only | yes: a passing `check` is not proof that every extended model was compared | *(documented, datamodels.jp/en/toolkit/check: "a node that is down never fails someone else's check")* |
 | `D-REMOTE-CONTENT-UNREVIEWED` | review of what `extend` copies or `export` reads from another node | stated by the maintainer. Names, URLs and shape are checked; the schema, example and texts are copied as the other node publishes them | correctness-only | no | *(maintainer, 2026-10)* |
 | `D-PRERELEASE-CORRECTIONS` | immutability of a node's published versions during its pre-release | stated. While `prerelease: true` is in `node.yaml` at the base ref and in the change, `check --base` notes changed and removed snapshot files of **any** version, and the online comparison notes changed files; a stricter rule (only the current version) is the node's own policy, kept by review | security-critical | no | *(documented, datamodels.jp/en/toolkit/versions "Before the launch": "An earlier version that should not have been published can be removed")* |
-| `D-CALLER-ENV-SECRETS` | isolation from the toolkit of secrets that the calling job puts in its own `env:` | stated. Every step of the job inherits the job's `env:`, the Action's steps too; they remove only `GITHUB_TOKEN`, `GH_TOKEN` and the OIDC request variables | security-critical | yes: "the toolkit runs without the job token" is not "the toolkit runs without the job's secrets" | *(documented, CHANGELOG.md 0.3.19 "Security": "Put no secrets in that `env:`: every step inherits it")* |
+| `D-CALLER-ENV-SECRETS` | isolation from the toolkit of secrets that the calling job puts in its own `env:` | stated. Every step of the job inherits the job's `env:`, the Action's steps too; only the steps that run the toolkit (install, Check, Build) remove `GITHUB_TOKEN`, `GH_TOKEN` and the OIDC request variables, so Set up Node, Fetch the base branch and the Pages actions keep them | security-critical | yes: "the toolkit runs without the job token" is not "the toolkit runs without the job's secrets" | *(documented, CHANGELOG.md 0.3.19 "Security": "Put no secrets in that `env:`: every step inherits it")* |
 | `D-STEP-FILES-TO-LATER-STEPS` | isolation of the later steps of the job from code that runs in the Check or Build step | stated. Code in those steps, the toolkit or a dependency it loads, can write `$GITHUB_ENV`, `$GITHUB_PATH` or `$GITHUB_OUTPUT`, which change the environment, the path and the inputs of the later steps, including the Pages actions that hold the job token and, on `main`, the OIDC request variables. It needs code execution in those steps: a compromised toolkit or dependency (§1.3), or a break of `P-NODE-FILES-ARE-DATA` | security-critical | no | *(documented, issue #144 comment: "code running in Check or Build could still write")* |
 | `D-AGENT-TEXT` | filtering of text meant to steer AI agents | stated by the maintainer. Model titles and descriptions reach `llms.txt`, `catalog.json`, pages and the AI adapter's schema descriptions as written; the skill sends agents to read such text | security-critical | no | *(maintainer, 2026-10)* |
 | `D-SKILL-GUIDANCE-ONLY` | any control over what an agent does | stated by the maintainer. The skill is instructions; an agent may ignore them, and it runs commands with the user's rights | correctness-only | yes: "the skill says never invent values" is not a guarantee that the agent will not | *(maintainer, 2026-10)* |
-| `D-INIT-PUSHES-HISTORY` | keeping private the earlier contents of the files `init` writes, and the messages and authors of earlier commits | silence: nothing promises it (Q2). In a folder that is already a git repository without a remote, `init --github` checks the file names of every earlier commit, not their contents, and pushes the whole local history to the new public repository: an earlier version of `node.yaml` or `README.md`, and every commit's message and author, are published as they are | security-critical | no | *(documented, src/init.mjs `publishToGitHub` comment: "Every file in the history must be one init writes")* |
+| `D-INIT-PUSHES-HISTORY` | keeping private the earlier contents of the files `init` writes, and the messages and authors of earlier commits | stated by the maintainer: the check is by file name, and whoever runs `init --github` in an existing repository reviews that history first or uses a new folder. In a folder that is already a git repository without a remote, `init --github` checks the file names of every earlier commit, not their contents, and pushes the whole local history to the new public repository: an earlier version of `node.yaml` or `README.md`, and every commit's message and author, are published as they are | security-critical | no | *(maintainer, 2026-11)* |
 | `D-RELEASE-SINGLE-GATE` | a second approval before a version reaches npm | stated. Publishing the GitHub release is the only gate | security-critical | no | *(documented, .github/workflows/publish.yml header: "no second approval on npmjs.com")* |
 | `D-PROVENANCE-NOT-REVIEW` | review or audit evidence from npm provenance | stated. Provenance names the commit and the workflow that built the package | correctness-only | yes: provenance says where a package was built, not that it was reviewed | *(documented, README "Releases")* |
-| `D-GEONICDB-BODY-NOT-THE-SCHEMA` | a GeonicDB body that checks what the model's schema checks, or that keeps its bytes | stated. Rules GeonicDB refuses or cannot apply are left out, most with a note: the ISO 8601 duration `pattern`, a VocabProperty's `pattern` and lengths, the item rules of a list that is not of scalar Property values, scalar rules at the top level of a list, the string checks inside a language map; `additionalProperties` is true unless the schema says false (`src/adapters/geonicdb/custom-data-model.mjs:295`); `contextUrl` is the subject's major-version alias; like every adapter file the body is rebuilt with the node | correctness-only | yes: a model GeonicDB registered from the body does not check all the model's schema checks | *(documented, CHANGELOG.md 0.4.3 "Fixed": "GeonicDB then does not check the duration")* |
+| `D-GEONICDB-BODY-NOT-THE-SCHEMA` | a GeonicDB body that checks what the model's schema checks, or that keeps its bytes | stated. Rules GeonicDB refuses or cannot apply are left out, most with a note: the ISO 8601 duration `pattern`, a VocabProperty's `pattern` and lengths, the item rules of a list that is not of scalar Property values, scalar rules at the top level of a list, the string checks inside a language map; `additionalProperties` is true unless the schema says false (`src/adapters/geonicdb/custom-data-model.mjs:295`); `contextUrl` is, without an `extend.contextUrl`, a `contextUrl` option or the model's own context link, the subject's major-version alias; like every adapter file the body is rebuilt with the node | correctness-only *(maintainer, 2026-11)* | yes: a model GeonicDB registered from the body does not check all the model's schema checks | *(documented, CHANGELOG.md 0.4.3 "Fixed": "GeonicDB then does not check the duration")* |
 | `D-NO-SHRINKWRAP` | a fixed dependency tree for `npx` and `npm install` users | stated by the maintainer. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile | security-critical | no | *(maintainer, 2026-10)* |
 
 Well-known attack classes for a tool of this kind that the project leaves to
@@ -1237,43 +1257,7 @@ Report both, as `DISPOSITION (status)`. An escalated finding is not a
 
 ## 1.18 Open questions for the maintainers
 
-The 24 questions of the first draft were answered on 2026-10-17; the
-ratified claims carry *(maintainer, 2026-10)* and the list is kept in
-`docs/threat-model-pilot-notes.md`. The revision of 2026-11-23 (issue #144)
-opens three. Answer them in a batch ("Q1 yes, Q2 yes, Q3 no"); the model
-returns to *accepted* when they are answered.
-
-- **Q1** — Is a mapping file trusted for the work it causes? Context:
-  GHSA-3vxv-f434-vprx (exponential `via` expansion in `convert`) was
-  published as an advisory, but §1.7 marks a mapping file as trusted
-  configuration, so precedence rule 5 of §1.17 would close such a report as
-  `OUT-OF-MODEL: trusted-input`. Proposed answer: no. A mapping file, the
-  catalogue's included, is trusted for what it names, not for the work it
-  causes; a report of exponential expansion from one routes `VALID` against
-  `P-WORK-BOUNDED`.
-  Lands in: §1.7 (the mapping-file row), §1.11 `P-WORK-BOUNDED` ("Covers").
-- **Q2** — Is the narrowed `D-INIT-PUSHES-HISTORY` a stated limit? Context:
-  since 0.3.18 `init --github` refuses a history with other file names
-  (#133), but it does not compare the earlier contents of its own files, and
-  it pushes every commit's message and author. Today the disclaimer rests on
-  silence, so it never closes a report. Proposed answer: yes, stated: the
-  check is by file name; whoever runs `init --github` in an existing
-  repository reviews that history first, or runs it in a new folder.
-  Lands in: §1.12 (`D-INIT-PUSHES-HISTORY`, basis "stated"), §1.13.
-- **Q3** — Does an advisory the project publishes make the property
-  security-critical? Context: the first revision ruled
-  `P-CSV-TEXT-NO-NEW-LINES` correctness-only and disclaimed terminal text
-  from local files and input limits as correctness-only; the project then
-  published advisories for them (10 low, 1 medium). This revision takes the
-  advisories as the record and sets `P-CSV-TEXT-NO-NEW-LINES`,
-  `P-CSV-MESSAGES-VISIBLE`, `P-WORK-BOUNDED`, `P-NODE-STAYS-IN-FOLDER` and
-  `P-CSV-HEADER-ENCODED` to security-critical. Proposed answer: yes; a
-  property whose violation is published as an advisory is security-critical,
-  whatever the severity. `P-REMOTE-READS-BOUNDED`, `P-CSV-STRICT`,
-  `P-ROWS-VALIDATED` and the other correctness-only properties stay so until
-  an advisory says otherwise.
-  Lands in: §1.11 (tiers), §1.12 (the tiers of `D-NO-INPUT-LIMITS` and
-  `D-LOCAL-TEXT-ECHOED`).
+Not applicable — the 24 questions of the first draft (2026-10-17) and the three of the revision for issue #144 (2026-11-23) are answered; the ratified claims carry *(maintainer, 2026-10)* or *(maintainer, 2026-11)*, and the questions are kept in `docs/threat-model-pilot-notes.md`.
 
 ## 1.19 Machine-readable companions
 
@@ -1288,9 +1272,8 @@ The JSON's disposition list has exactly nine values and none for
 `OUT-OF-MODEL: dependency-contract`; a JSON-only consumer cannot route such a
 report, which is one more reason the JSON is never a triage input. The JSON has
 no `maintainer` kind: the exporter folds **maintainer** tags into
-`documented` (its confidence reads 335 documented, the 253 documented
-plus 82 maintainer of the header, and 2 inferred, the 2 **assumption** tags,
-which it folds into `inferred`), and a trust boundary resting on a
+`documented` (its confidence reads 340 documented, the 247 documented
+plus 93 maintainer of the header), and a trust boundary resting on a
 maintainer ruling is exported as `documented`. The exporter cuts citations
 that hold parentheses or quotes, so the companions name some sources more
 briefly than the prose.

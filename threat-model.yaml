@@ -1,14 +1,14 @@
 # threat-model.yaml — derived index; the prose threat model (threat-model.md) is canonical.
 schema: threat-model-sidecar/v2
 project: datamodels-toolkit
-prose_version: "threat-model.md@sha256:974c881f3551d6e6905f81490fd164b4fa9a2a0bc90b62ab48a5c27bcaac66e8"
-model_status: under-review
+prose_version: "threat-model.md@sha256:db4c3638c9933fc84cfcfddc02676643079f11a1ac73172f6048c6c4c0b342c3"
+model_status: accepted
 triage_policy: strict
 confidence:
-  documented: 253
-  maintainer: 82
+  documented: 247
+  maintainer: 93
   inferred: 0
-  assumption: 2
+  assumption: 0
 generation:
   model: Claude Opus 5.5 (claude-opus-5-5)
   effort: session default
@@ -234,7 +234,7 @@ entry_points:
     - resource-name
     - data
     obligation_id: review-own-config
-    caller_must_enforce: "write or review the mapping file (D-NOT-A-SANDBOX); via expansions capped by P-WORK-BOUNDED whoever wrote it (Q1)"
+    caller_must_enforce: "write or review the mapping file (D-NOT-A-SANDBOX); via expansions capped by P-WORK-BOUNDED whoever wrote it"
     provenance:
       kind: maintainer
       date: 2026-10
@@ -1004,7 +1004,7 @@ contract_dimensions:
 - component: action
   dimension: reference-lifecycle
   status: disclaimed
-  conditions: "what code in the Check or Build step writes to $GITHUB_ENV, $GITHUB_PATH or $GITHUB_OUTPUT reaches the later steps, the Pages actions with the token and the OIDC request variables included"
+  conditions: "what code in the Check or Build step writes to $GITHUB_ENV, $GITHUB_PATH or $GITHUB_OUTPUT reaches the later steps, the Pages actions with the token and the OIDC request variables included, and the upload step"
   property_id: D-STEP-FILES-TO-LATER-STEPS
   provenance:
     kind: documented
@@ -1968,7 +1968,7 @@ properties_claimed:
   components:
   - convert
   tier: security-critical
-  conditions: "text from a CSV never adds lines to the mapping file mapping writes; a line break in comment text becomes a space (since 0.3.18; tier from GHSA-7489-995x-5hjg, Q3)"
+  conditions: "text from a CSV never adds lines to the mapping file mapping writes; a line break in comment text becomes a space (since 0.3.18; security-critical as GHSA-7489-995x-5hjg relied on it, maintainer 2026-11)"
   violation_symptoms:
   - x-file-injection
   provenance:
@@ -1993,7 +1993,7 @@ properties_claimed:
   - remote-reads
   - library
   tier: security-critical
-  conditions: "via expansions at most 1000 per row; @context parts at most 10000; AI strict form at most 10000 parts per model; parseCsv header check in one pass; unclosedRings stops at limit when given; mapping files covered too (Q1)"
+  conditions: "via expansions at most 1000 per row; @context parts at most 10000; AI strict form at most 10000 parts per model; parseCsv header check in one pass; unclosedRings stops at limit when given; mapping files covered too (maintainer, 2026-11)"
   violation_symptoms:
   - hang
   - unbounded-allocation
@@ -2095,7 +2095,7 @@ properties_claimed:
   components:
   - action
   tier: security-critical
-  conditions: "the job token the Action passes only to the base fetch step, which runs only git, and to the Pages actions; the toolkit's steps unset GITHUB_TOKEN, GH_TOKEN and the OIDC request variables; no writes to the repository; not secrets in the calling job's env"
+  conditions: "the job token the Action passes only to the base fetch step, which runs only git, and to the Pages actions; the steps that run the toolkit (install, Check, Build) unset GITHUB_TOKEN, GH_TOKEN and the OIDC request variables, which Set up Node, the fetch step and the Pages actions keep; no writes to the repository; not secrets in the calling job's env"
   violation_symptoms:
   - info-leak
   - integrity-bypass
@@ -2246,7 +2246,7 @@ properties_disclaimed:
 - id: D-CALLER-ENV-SECRETS
   components:
   - action
-  conditions: "stated. Every step of the job inherits the job's env:, the Action's steps too; they remove only GITHUB_TOKEN, GH_TOKEN and the OIDC request variables"
+  conditions: "stated. Every step of the job inherits the job's env:, the Action's steps too; only the steps that run the toolkit (install, Check, Build) remove GITHUB_TOKEN, GH_TOKEN and the OIDC request variables"
   tier: security-critical
   false_friend: true
   provenance:
@@ -2283,12 +2283,12 @@ properties_disclaimed:
 - id: D-INIT-PUSHES-HISTORY
   components:
   - init-github
-  conditions: "silence: nothing promises it (Q2). init --github checks the file names of every earlier commit, not their contents, and pushes the whole local history: earlier versions of its own files and every commit message and author are published as they are"
+  conditions: "stated by the maintainer: the check is by file name, and whoever runs init --github in an existing repository reviews that history first or uses a new folder. init --github pushes the whole local history: earlier versions of its own files and every commit message and author are published as they are"
   tier: security-critical
   false_friend: false
   provenance:
-    kind: documented
-    source: "src/init.mjs publishToGitHub comment: \"Every file in the history must be one init writes\""
+    kind: maintainer
+    date: 2026-11
 - id: D-RELEASE-SINGLE-GATE
   components:
   - release-pipeline
@@ -2312,7 +2312,7 @@ properties_disclaimed:
   - node-tools
   - remote-reads
   - library
-  conditions: "stated. Rules GeonicDB refuses or cannot apply are left out, most with a note (the duration pattern, a VocabProperty's pattern and lengths, item rules of non-scalar lists, scalar rules at the top of a list, string checks in a language map); additionalProperties true unless the schema says false; contextUrl the subject's major-version alias; rebuilt with the node"
+  conditions: "stated. Rules GeonicDB refuses or cannot apply are left out, most with a note (the duration pattern, a VocabProperty's pattern and lengths, item rules of non-scalar lists, scalar rules at the top of a list, string checks in a language map); additionalProperties true unless the schema says false; contextUrl the model's own context link, the subject's major-version alias only as the last fallback; rebuilt with the node"
   tier: correctness-only
   false_friend: true
   provenance:
