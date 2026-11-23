@@ -5,8 +5,8 @@ exit: 0
 
 --- stderr
 .: 1 subject(s), 2 model(s), written to _site
---- added my-models/_site/_headers
 --- added my-models/_site/404.html
+--- added my-models/_site/_headers
 --- added my-models/_site/adapters/ai/road/RoadPatrol.ai.json
 --- added my-models/_site/adapters/csv/road/RoadPatrol.csv
 --- added my-models/_site/adapters/postgis/road/RoadPatrol.sql

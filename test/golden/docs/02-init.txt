@@ -78,7 +78,22 @@ jobs:
 --- added my-models/.gitignore
 _site/
 node_modules/
---- added my-models/LICENSE (7048 bytes)
+--- added my-models/LICENSE (sha256 a2010f343487d3f7)
+--- added my-models/README.md
+# Data models by Example Inc.
+
+A data model node: JSON Schemas, JSON-LD @contexts and vocabularies at https://models.example.org, built with [datamodels-toolkit](https://github.com/geolonia/datamodels-toolkit) (what a node publishes: [docs/node.md](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
+
+- `node.yaml`: the settings.
+- `models/road/`: the first subject. A model is a folder in it with `schema.json`, `catalog.yaml` and `examples/example.json`, laid out as in [datamodels.jp](https://github.com/geolonia/datamodels/tree/main/models).
+- `.github/workflows/publish.yml`: checks pull requests, and publishes main to GitHub Pages.
+
+Licence: [CC0-1.0](LICENSE).
+
+```bash
+npx @geolonia/datamodels@<version> check
+npx @geolonia/datamodels@<version> build   # into _site/
+```
 --- added my-models/models/road/context.jsonld
 {
   "@context": {
@@ -113,18 +128,3 @@ license: CC0-1.0
 # The title names the site on every page and in catalog.json; the home page shows the description.
 # title: { ja: "", en: "" }
 # description: { ja: "", en: "" }
---- added my-models/README.md
-# Data models by Example Inc.
-
-A data model node: JSON Schemas, JSON-LD @contexts and vocabularies at https://models.example.org, built with [datamodels-toolkit](https://github.com/geolonia/datamodels-toolkit) (what a node publishes: [docs/node.md](https://github.com/geolonia/datamodels/blob/main/docs/node.md)).
-
-- `node.yaml`: the settings.
-- `models/road/`: the first subject. A model is a folder in it with `schema.json`, `catalog.yaml` and `examples/example.json`, laid out as in [datamodels.jp](https://github.com/geolonia/datamodels/tree/main/models).
-- `.github/workflows/publish.yml`: checks pull requests, and publishes main to GitHub Pages.
-
-Licence: [CC0-1.0](LICENSE).
-
-```bash
-npx @geolonia/datamodels@<version> check
-npx @geolonia/datamodels@<version> build   # into _site/
-```

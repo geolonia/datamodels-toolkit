@@ -10,6 +10,39 @@ exit: 0
   changed models/road/RoadPatrol/schema.json
   changed models/road/Segment/schema.json
 road: 0.1.0 → 0.2.0. Commit both; the site keeps v0.1.0 and adds v0.2.0.
+--- changed my-models/models/road/RoadPatrol/schema.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/RoadPatrol/v0.2.0.json",
+  "title": "RoadPatrol",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "description": "Entity id (URN)"
+    },
+    "type": {
+      "type": "string",
+      "const": "RoadPatrol",
+      "description": "Entity type"
+    }
+  },
+  "required": [
+    "id",
+    "type"
+  ]
+}
+--- changed my-models/models/road/Segment/schema.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://models.example.org/schema/road/Segment/v0.2.0.json",
+  "title": "Segment",
+  "x-kind": "value",
+  "type": "object",
+  "properties": {},
+  "required": []
+}
 --- added my-models/models/road/releases/v0.1.0/context.jsonld
 {
   "@context": {
@@ -123,39 +156,6 @@ road: 0.1.0 → 0.2.0. Commit both; the site keeps v0.1.0 and adds v0.2.0.
       "seeAlso": "https://models.example.org/models/road/Segment/"
     }
   ]
-}
---- changed my-models/models/road/RoadPatrol/schema.json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://models.example.org/schema/road/RoadPatrol/v0.2.0.json",
-  "title": "RoadPatrol",
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "format": "uri",
-      "description": "Entity id (URN)"
-    },
-    "type": {
-      "type": "string",
-      "const": "RoadPatrol",
-      "description": "Entity type"
-    }
-  },
-  "required": [
-    "id",
-    "type"
-  ]
-}
---- changed my-models/models/road/Segment/schema.json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://models.example.org/schema/road/Segment/v0.2.0.json",
-  "title": "Segment",
-  "x-kind": "value",
-  "type": "object",
-  "properties": {},
-  "required": []
 }
 --- changed my-models/models/road/subject.yaml
 # A subject: models that share one @context and one vocabulary. Write the title and description in each language.

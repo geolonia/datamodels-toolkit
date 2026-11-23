@@ -10,14 +10,6 @@ exit: 0
   added models/road/Segment/notes.yaml
   changed models/road/context.jsonld
 road/Segment: https://models.example.org/ns/road#Segment. Next: its attributes in schema.json (each with x-iri) and catalog.yaml, then datamodels check.
---- changed my-models/models/road/context.jsonld
-{
-  "@context": {
-    "road": "https://models.example.org/ns/road#",
-    "RoadPatrol": "road:RoadPatrol",
-    "Segment": "road:Segment"
-  }
-}
 --- added my-models/models/road/Segment/catalog.yaml
 # Write the title and description in each language. Every attribute in schema.json
 # needs a description here, under attributes (name: { ja: …, en: … }).
@@ -45,4 +37,12 @@ notes: []
   "type": "object",
   "properties": {},
   "required": []
+}
+--- changed my-models/models/road/context.jsonld
+{
+  "@context": {
+    "road": "https://models.example.org/ns/road#",
+    "RoadPatrol": "road:RoadPatrol",
+    "Segment": "road:Segment"
+  }
 }
