@@ -12,7 +12,7 @@ A security release: `export --to geonicdb` reads a remote model's context and th
 
 ### Changed
 
-- `datamodels init` writes a workflow pinned to the v0.4.3 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.4.3`. The README uses 0.4.3 too.
+- `datamodels init` writes a workflow pinned to the v0.4.3 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.4.3`. This repository's README shows that workflow and runs `npx @geolonia/datamodels@0.4.4`, whose `init` writes it (before, its commands ran the release whose `init` wrote the Action before it).
 
 ### Security
 
