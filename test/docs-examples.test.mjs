@@ -72,12 +72,14 @@ const stable = (text) => text
   .replaceAll(`@geolonia/datamodels@${version}`, '@geolonia/datamodels@<version>');
 
 const byCodePoint = ([a], [b]) => (a < b ? -1 : a > b ? 1 : 0);
+/** The command as a POSIX shell reads it: an argument with spaces or other special characters in single quotes. */
+const shell = (args) => args.map((a) => (/^[\w@%+=:,./-]+$/.test(a) ? a : `'${a.replaceAll("'", "'\\''")}'`)).join(' ');
 
 /** The golden text of a command: the page, the command, its exit code, output and the files it added or changed. */
 async function record(page, args, r, before) {
   const lines = [
     `# ${PAGES}/${page}`,
-    `$ ${relative(work, cwd) ? `cd ${relative(work, cwd)} && ` : ''}datamodels ${args.join(' ')}`,
+    `$ ${relative(work, cwd) ? `cd ${shell([relative(work, cwd)])} && ` : ''}datamodels ${shell(args)}`,
     `exit: ${r.code}`,
     '--- stdout', r.stdout.trimEnd(),
     '--- stderr', r.stderr.trimEnd(),

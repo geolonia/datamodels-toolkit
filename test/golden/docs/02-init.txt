@@ -1,5 +1,5 @@
 # https://datamodels.jp/en/toolkit/start
-$ datamodels init my-models --base-url https://models.example.org --iris hash --languages ja,en --publisher Example Inc. --publisher-url https://example.org/ --license CC0-1.0 --subject road --yes
+$ datamodels init my-models --base-url https://models.example.org --iris hash --languages ja,en --publisher 'Example Inc.' --publisher-url https://example.org/ --license CC0-1.0 --subject road --yes
 exit: 0
 --- stdout
 
