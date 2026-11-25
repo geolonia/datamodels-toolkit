@@ -8,8 +8,9 @@
   "Data model node (datamodels.jp)" in `action.yml`, and the agent skill in
   `skills/datamodels/`.
 - **Repository**: https://github.com/geolonia/datamodels-toolkit
-- **Version binding**: commit `42022cd67ef94bb0aa9d6bc328ab26cf4f8f5fac` on
-  `main` (2026-11-23), tagged `v0.4.3`. The first revision was bound to commit
+- **Version binding**: commit `c17a11a7e5d05fe42316b43a395d859bff4fe258` on
+  `main` (2026-11-23), tagged `v0.4.4`. The revision before was bound to commit
+  `42022cd` (2026-11-23, tagged `v0.4.3`); the first revision was bound to commit
   `4d88e4e` (2026-10-15: release `v0.3.16` plus one commit that only changes
   the version `init` pins and the README). A report against another release is
   triaged against the model as it stood at that release, not against this
@@ -18,6 +19,7 @@
   Kastl, on 2026-10-17, who accepted every proposed answer of the 24 questions
   of the first draft in one batch. Revised on 2026-11-23 for issue #144 (see
   Revisions); the maintainer answered its three questions the same day.
+  Re-bound to `v0.4.4` on 2026-11-26 (see Revisions).
 - **Generation metadata**: produced with AI assistance. Model/agent: Claude
   Opus 5.5 (`claude-opus-5-5`) in Claude Code; effort: session default.
   Skills used: the Alpha-Omega `threat-model` plugin, version 1.2.1 at commit
@@ -32,8 +34,12 @@
   Geolonia skill `threat-model-geolonia` (its validator quirks; no new question
   bank sections), without an interview: every changed claim was checked
   against the code at `42022cd`, `CHANGELOG.md` 0.3.17 to 0.4.3, the 11
-  published advisories and the comment on issue #144.
-- **Revisions**: 2026-11-23, for geolonia/datamodels-toolkit#167, on `main` after the binding: `export --to geonicdb` reads a model's context and the contexts it imports only under that catalog's `/context/`, redirects included. The §1.7 row and the `remote-reads` matrix row state it for the next release and keep what 0.4.3 does; no property changes.
+  published advisories and the comment on issue #144. The 2026-11-26
+  re-binding used the same model and plugin pin, without an interview; the
+  two changed rows were checked against `src/export.mjs` at `c17a11a` and
+  `CHANGELOG.md` 0.4.4.
+- **Revisions**: 2026-11-26, re-bound to `v0.4.4` (§1.16 trigger): the security release 0.4.4 makes `export --to geonicdb` read a model's context and the contexts it imports only under that catalog's `/context/`, redirects included (geolonia/datamodels-toolkit#167, #168). The §1.7 row and the `remote-reads` matrix row now state that rule without the 0.4.3 clauses, and the §1.16 trigger is removed; no property changes.
+  2026-11-23, for geolonia/datamodels-toolkit#167, on `main` after the `v0.4.3` binding: the §1.7 row and the `remote-reads` matrix row stated the rule for the next release and kept what 0.4.3 did.
   2026-11-23, for issue #144 (§1.16 triggers: claimed
   properties and disclaimers changed by the security releases 0.3.17, 0.3.18
   and 0.3.19, and a new adapter and library export in 0.4.0 and 0.4.1).
@@ -431,7 +437,7 @@ line, and the individual fields of `catalog.yaml`, `notes.yaml`,
 | `export`, `extend` | the model argument (`subject/Type` or a type IRI) | no — command line | resource-name | n/a; a type IRI selects the index of the node that made it | *(documented, src/discover.mjs `indexForModel` comment)* |
 | `export`, `extend` | the other node's catalog entry (type, version, URLs, texts) | **yes** | data, resource-name | nothing; type must be UpperCamelCase and version `x.y.z`; schema and example only under that node's `schema/` and `examples/` | *(documented, CHANGELOG.md 0.3.15 "Security": "so a catalog cannot add lines to the files they write")* |
 | `extend` | the other node's schema and example | **yes** | data, size | the owner reviews what `extend` copied before committing (`D-REMOTE-CONTENT-UNREVIEWED`) | *(maintainer, 2026-10)* |
-| `export --to geonicdb` | the other node's context for the model (`contextUrl`) and the contexts it imports | **yes** | data, resource-name | nothing; after 0.4.3, the context itself and every context it imports are read only under that catalog's own `/context/`, redirects included (geolonia/datamodels-toolkit#167). 0.4.3 checked only the context's own URL: its redirects and its imports could reach any public https host; all through the shared reader; its terms only expand a VocabProperty's allowed terms | *(documented, src/export.mjs `exportModel` comment: "Only contexts of that catalog's own site")* |
+| `export --to geonicdb` | the other node's context for the model (`contextUrl`) and the contexts it imports | **yes** | data, resource-name | nothing; the context itself and every context it imports are read only under that catalog's own `/context/`, redirects included (geolonia/datamodels-toolkit#167), all through the shared reader; its terms only expand a VocabProperty's allowed terms | *(documented, src/export.mjs `exportModel` comment: "Only contexts of that catalog's own site")* |
 | all reads of other nodes | HTTP status, headers, redirects, body size, timing | **yes** | data, size, rate | nothing; at most 5 redirects, each checked; 5 MB; one deadline per read | *(documented, src/adapters/index.mjs `getter` comment: "One deadline for the read")* |
 | all reads of other nodes | DNS answers for the other node's host | **yes** | resource-name | nothing; every address must be public, checked at connection | *(documented, src/adapters/net.mjs `publicLookup` comment: "dns.lookup that refuses a host with any non-public address")* |
 | `check` (JSON-LD) | remote `@context` documents named by examples and contexts | **yes** | data, size | nothing; read through the shared reader; an unread one is a note | *(documented, src/build/examples.mjs `contextLoader`)* |
@@ -506,7 +512,7 @@ may read as instructions).
 | `remote-reads` | reference and object lifecycle | N/A — each command reads afresh; caches live for one run | | §1.5 | *(documented, src/adapters/index.mjs `getter`: "A reader of JSON URLs that reads each once")* |
 | `remote-reads` | concurrency and reentrancy | N/A — reads within one command | | §1.5 | *(documented, src/discover.mjs header)* |
 | `remote-reads` | resource complexity | claimed | 5 MB per response, one deadline per read, 50 nodes | §1.11 `P-REMOTE-READS-BOUNDED` | *(documented, src/adapters/net.mjs `MAX_BYTES`)* |
-| `remote-reads` | x-outbound-requests | claimed | https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's `schema/` or `examples/` stay there; after 0.4.3, `export --to geonicdb` reads the model's context and its imports only under that catalog's `/context/`, redirects included (#167; 0.4.3 checked only the context's own URL, so its redirects and imports could reach any public host) | §1.11 `P-PUBLIC-READS` | *(documented, CHANGELOG.md 0.3.15 "Security")* |
+| `remote-reads` | x-outbound-requests | claimed | https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's `schema/` or `examples/` stay there; `export --to geonicdb` reads the model's context and its imports only under that catalog's `/context/`, redirects included (#167) | §1.11 `P-PUBLIC-READS` | *(documented, CHANGELOG.md 0.3.15 "Security")* |
 | `remote-reads` | x-agent-instructions | claimed | text from other nodes printed by `search` and `nodes` has no control characters or direction overrides, on one line | §1.11 `P-TERMINAL-TEXT-PLAIN` | *(documented, src/discover.mjs `plain` comment: "an escape sequence could rewrite the screen")* |
 | `init-github` | numeric domain and representational limits | claimed | `--github` must be `owner/name` of letters, digits and `._-` | §1.11 `P-INIT-ONLY-ITS-FILES` | *(documented, src/init.mjs `REPO_NAME`)* |
 | `init-github` | failure and exception atomicity | claimed | settings are checked before anything is written; with `--github`, other files or changes in the working tree, or other files in any earlier commit, stop it before a commit; the earlier contents of init's own files are pushed as they are (`D-INIT-PUSHES-HISTORY`) | §1.11 `P-INIT-ONLY-ITS-FILES` | *(documented, src/init.mjs `publishToGitHub` comment: "Every file in the history must be one init writes")* |
@@ -1204,7 +1210,6 @@ Revise the model when any of these happens:
 - The agent skill moves into the npm package or another distribution.
 - The catalogue's model changes what it relies on from the toolkit.
 - A change to a cap of `P-WORK-BOUNDED`, or a new expansion without one.
-- The release after 0.4.3, which restricts the contexts a model's context imports to that catalog's `/context/` in `export --to geonicdb` (geolonia/datamodels-toolkit#167): re-bind the model to it and drop the 0.4.3 clauses of the §1.7 row and the `remote-reads` x-outbound-requests row.
 - A new product adapter, or a change in what the GeonicDB adapter leaves out
   of a body or where it points `contextUrl`.
 - A new advisory for this repository.

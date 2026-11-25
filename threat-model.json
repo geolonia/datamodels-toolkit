@@ -1,8 +1,8 @@
 {
   "spec_version": 1,
   "repository": "https://github.com/geolonia/datamodels-toolkit",
-  "commit": "42022cd67ef94bb0aa9d6bc328ab26cf4f8f5fac",
-  "date": "2026-11-23",
+  "commit": "c17a11a7e5d05fe42316b43a395d859bff4fe258",
+  "date": "2026-11-26",
   "scope_subpath": null,
   "description": "datamodels-toolkit is a command line and a GitHub Action for data models in the style of datamodels.jp. People use it to turn a CSV list into NGSI-LD entities, to start and maintain a *node* (a site of their own that publishes JSON Schemas, JSON-LD @context files and vocabularies at fixed URLs), to find models on other nodes, and to export a model for other tools (a CSV template, a Table Schema, a JSON Schema for AI output, a PostgreSQL table, and, for a node that turns it on, a GeonicDB Custom Data Model body). It runs on the user's machine or in the user's GitHub Actions job, with the user's rights. It has no server, stores nothing of its own and holds no credential except the job token the Action is given, which it passes only to the fetch of a pull request's base branch and to GitHub's Pages actions.",
   "confidence": {
