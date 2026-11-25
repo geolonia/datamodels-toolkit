@@ -892,11 +892,11 @@ contract_dimensions:
 - component: remote-reads
   dimension: x-outbound-requests
   status: claimed
-  conditions: "https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's schema/ or examples/ stay there; export --to geonicdb reads a context only under that catalog's /context/"
+  conditions: "https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's schema/ or examples/ stay there; export --to geonicdb reads the model's context and its imports only under that catalog's /context/, redirects included"
   property_id: P-PUBLIC-READS
   provenance:
     kind: documented
-    source: "CHANGELOG.md 0.3.15 \"Security\""
+    source: "CHANGELOG.md 0.3.15 \"Security\"; CHANGELOG.md 0.4.4 \"Security\""
 - component: remote-reads
   dimension: x-agent-instructions
   status: claimed
