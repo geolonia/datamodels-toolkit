@@ -36,8 +36,8 @@
   against the code at `42022cd`, `CHANGELOG.md` 0.3.17 to 0.4.3, the 11
   published advisories and the comment on issue #144. The 2026-11-26
   re-binding used the same model and plugin pin, without an interview; the
-  two changed rows were checked against `src/export.mjs` at `c17a11a` and
-  `CHANGELOG.md` 0.4.4.
+  two changed rows were checked against `src/export.mjs` and the shared
+  reader in `src/adapters/index.mjs` at `c17a11a`, and `CHANGELOG.md` 0.4.4.
 - **Revisions**: 2026-11-26, re-bound to `v0.4.4` (§1.16 trigger): the security release 0.4.4 makes `export --to geonicdb` read a model's context and the contexts it imports only under that catalog's `/context/`, redirects included (geolonia/datamodels-toolkit#167, #168). The §1.7 row and the `remote-reads` matrix row now state that rule without the 0.4.3 clauses, and the §1.16 trigger is removed; no property changes.
   2026-11-23, for geolonia/datamodels-toolkit#167, on `main` after the `v0.4.3` binding: the §1.7 row and the `remote-reads` matrix row stated the rule for the next release and kept what 0.4.3 did.
   2026-11-23, for issue #144 (§1.16 triggers: claimed
@@ -512,7 +512,7 @@ may read as instructions).
 | `remote-reads` | reference and object lifecycle | N/A — each command reads afresh; caches live for one run | | §1.5 | *(documented, src/adapters/index.mjs `getter`: "A reader of JSON URLs that reads each once")* |
 | `remote-reads` | concurrency and reentrancy | N/A — reads within one command | | §1.5 | *(documented, src/discover.mjs header)* |
 | `remote-reads` | resource complexity | claimed | 5 MB per response, one deadline per read, 50 nodes | §1.11 `P-REMOTE-READS-BOUNDED` | *(documented, src/adapters/net.mjs `MAX_BYTES`)* |
-| `remote-reads` | x-outbound-requests | claimed | https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's `schema/` or `examples/` stay there; `export --to geonicdb` reads the model's context and its imports only under that catalog's `/context/`, redirects included (#167) | §1.11 `P-PUBLIC-READS` | *(documented, CHANGELOG.md 0.3.15 "Security")* |
+| `remote-reads` | x-outbound-requests | claimed | https only, public host names, addresses checked at connection, redirects checked again, reads limited to a node's `schema/` or `examples/` stay there; `export --to geonicdb` reads the model's context and its imports only under that catalog's `/context/`, redirects included (#167) | §1.11 `P-PUBLIC-READS` | *(documented, CHANGELOG.md 0.3.15 "Security"; CHANGELOG.md 0.4.4 "Security")* |
 | `remote-reads` | x-agent-instructions | claimed | text from other nodes printed by `search` and `nodes` has no control characters or direction overrides, on one line | §1.11 `P-TERMINAL-TEXT-PLAIN` | *(documented, src/discover.mjs `plain` comment: "an escape sequence could rewrite the screen")* |
 | `init-github` | numeric domain and representational limits | claimed | `--github` must be `owner/name` of letters, digits and `._-` | §1.11 `P-INIT-ONLY-ITS-FILES` | *(documented, src/init.mjs `REPO_NAME`)* |
 | `init-github` | failure and exception atomicity | claimed | settings are checked before anything is written; with `--github`, other files or changes in the working tree, or other files in any earlier commit, stop it before a commit; the earlier contents of init's own files are pushed as they are (`D-INIT-PUSHES-HISTORY`) | §1.11 `P-INIT-ONLY-ITS-FILES` | *(documented, src/init.mjs `publishToGitHub` comment: "Every file in the history must be one init writes")* |
