@@ -16,12 +16,12 @@ Command-line tools and a GitHub Action for the [datamodels.jp](https://datamodel
 Node.js 24 or later. Run a release of [`@geolonia/datamodels`](https://www.npmjs.com/package/@geolonia/datamodels) with `npx`:
 
 ```bash
-npx @geolonia/datamodels@0.4.4 --help
+npx @geolonia/datamodels@0.4.5 --help
 ```
 
 A mapping file is configuration, like a script: `convert` follows it with your rights. Its `via` can read any `.yaml` or `.yml` file you can read, also outside the mapping's folder. Read a mapping file from someone else before you use it ([Converting your data](https://datamodels.jp/en/toolkit/convert#your-own-list)).
 
-Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.4.4`) and run `npx datamodels …` there. Releases before 0.3.8 are not on npm; they run from GitHub (`npx github:geolonia/datamodels-toolkit#v0.3.7 …`).
+Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.4.5`) and run `npx datamodels …` there. Releases before 0.3.8 are not on npm; they run from GitHub (`npx github:geolonia/datamodels-toolkit#v0.3.7 …`).
 
 ## Commands
 
@@ -36,10 +36,10 @@ Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.4.4`) and
 | `bump`, `release`, `upgrade` | Change a published model in a new version; move to a newer toolkit | [Versions](https://datamodels.jp/en/toolkit/versions) |
 
 ```bash
-npx @geolonia/datamodels@0.4.4 search 避難
-npx @geolonia/datamodels@0.4.4 convert disaster/EvacuationSite jichitai-opendata-site sites.csv --out sites.json
-npx @geolonia/datamodels@0.4.4 export disaster/EvacuationSite --to csv
-npx @geolonia/datamodels@0.4.4 init my-models
+npx @geolonia/datamodels@0.4.5 search 避難
+npx @geolonia/datamodels@0.4.5 convert disaster/EvacuationSite jichitai-opendata-site sites.csv --out sites.json
+npx @geolonia/datamodels@0.4.5 export disaster/EvacuationSite --to csv
+npx @geolonia/datamodels@0.4.5 init my-models
 ```
 
 ## GitHub Action
@@ -55,7 +55,7 @@ You need it only to publish data models of your own. To use existing models, sta
 
 **Start in three steps** ([Starting a site](https://datamodels.jp/en/toolkit/start), step by step):
 
-1. Run `npx @geolonia/datamodels@0.4.4 init my-models`. It asks a few questions (the web address, who publishes, the first subject) and writes the repository: the settings (`node.yaml`), a folder for your models (`models/`) and the workflow with this Action.
+1. Run `npx @geolonia/datamodels@0.4.5 init my-models`. It asks a few questions (the web address, who publishes, the first subject) and writes the repository: the settings (`node.yaml`), a folder for your models (`models/`) and the workflow with this Action.
 2. Put the folder on GitHub, and in the repository settings set Pages to deploy from GitHub Actions. With the [GitHub CLI](https://cli.github.com/), add `--github my-org/my-models` to the command of step 1, and `init` does both.
 3. Add your models ([Your site's models](https://datamodels.jp/en/toolkit/models)). Each push to `main` updates the site.
 
@@ -64,7 +64,7 @@ Sites that run on it: [models.geolonia.com](https://models.geolonia.com/) ([repo
 **The workflow.** `init` writes it, so you do not need to write it yourself. Its main step:
 
 ```yaml
-- uses: geolonia/datamodels-toolkit@42022cd67ef94bb0aa9d6bc328ab26cf4f8f5fac # v0.4.3
+- uses: geolonia/datamodels-toolkit@c17a11a7e5d05fe42316b43a395d859bff4fe258 # v0.4.4
   with:
     deploy: 'false'   # on pull requests: check and build, publish nothing
 ```
@@ -96,7 +96,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: geolonia/datamodels-toolkit@42022cd67ef94bb0aa9d6bc328ab26cf4f8f5fac # v0.4.3
+      - uses: geolonia/datamodels-toolkit@c17a11a7e5d05fe42316b43a395d859bff4fe258 # v0.4.4
         with:
           deploy: 'false'
 
@@ -119,7 +119,7 @@ jobs:
         with:
           persist-credentials: false
       - id: node
-        uses: geolonia/datamodels-toolkit@42022cd67ef94bb0aa9d6bc328ab26cf4f8f5fac # v0.4.3
+        uses: geolonia/datamodels-toolkit@c17a11a7e5d05fe42316b43a395d859bff4fe258 # v0.4.4
 ```
 
 </details>
