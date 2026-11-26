@@ -33,6 +33,8 @@ Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.4.4`) and
 | `check`, `build` | Check the node and build its files and pages | [Checking and building](https://datamodels.jp/en/toolkit/check), [The node and build](https://datamodels.jp/en/toolkit/node) |
 | `bump`, `release`, `upgrade` | Change a published model in a new version; move to a newer toolkit | [Versions](https://datamodels.jp/en/toolkit/versions) |
 
+A mapping file is configuration, like a script: `convert` follows it with your rights. Its `via` can read any `.yaml` or `.yml` file you can read, also outside the mapping's folder. Read a mapping file from someone else before you use it ([Converting your data](https://datamodels.jp/en/toolkit/convert#your-own-list)).
+
 ```bash
 npx @geolonia/datamodels@0.4.4 search 避難
 npx @geolonia/datamodels@0.4.4 convert disaster/EvacuationSite jichitai-opendata-site sites.csv --out sites.json
