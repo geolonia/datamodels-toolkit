@@ -8,9 +8,10 @@
   "Data model node (datamodels.jp)" in `action.yml`, and the agent skill in
   `skills/datamodels/`.
 - **Repository**: https://github.com/geolonia/datamodels-toolkit
-- **Version binding**: commit `c17a11a7e5d05fe42316b43a395d859bff4fe258` on
-  `main` (2026-11-23), tagged `v0.4.4`. The revision before was bound to commit
-  `42022cd` (2026-11-23, tagged `v0.4.3`); the first revision was bound to commit
+- **Version binding**: commit `1ab24cdc59ffcb458fd0f96105a79ed6377d1ad3` on
+  `main` (2026-11-26), tagged `v0.4.5`. The revisions before were bound to
+  commit `c17a11a` (2026-11-23, tagged `v0.4.4`) and commit `42022cd`
+  (2026-11-23, tagged `v0.4.3`); the first revision was bound to commit
   `4d88e4e` (2026-10-15: release `v0.3.16` plus one commit that only changes
   the version `init` pins and the README). A report against another release is
   triaged against the model as it stood at that release, not against this
@@ -19,7 +20,7 @@
   Kastl, on 2026-10-17, who accepted every proposed answer of the 24 questions
   of the first draft in one batch. Revised on 2026-11-23 for issue #144 (see
   Revisions); the maintainer answered its three questions the same day.
-  Re-bound to `v0.4.4` on 2026-11-26 (see Revisions).
+  Re-bound to `v0.4.4` and to `v0.4.5` on 2026-11-26 (see Revisions).
 - **Generation metadata**: produced with AI assistance. Model/agent: Claude
   Opus 5.5 (`claude-opus-5-5`) in Claude Code; effort: session default.
   Skills used: the Alpha-Omega `threat-model` plugin, version 1.2.1 at commit
@@ -37,13 +38,17 @@
   published advisories and the comment on issue #144. The 2026-11-26
   re-binding used the same model and plugin pin, without an interview; the
   two changed rows were checked against `src/export.mjs` and the shared
-  reader in `src/adapters/index.mjs` at `c17a11a`, and `CHANGELOG.md` 0.4.4.
-- **Revisions**: 2026-11-26, re-bound to `v0.4.4` (§1.16 trigger): the security release 0.4.4 makes `export --to geonicdb` read a model's context and the contexts it imports only under that catalog's `/context/`, redirects included (geolonia/datamodels-toolkit#167, #168). The §1.7 row and the `remote-reads` matrix row now state that rule without the 0.4.3 clauses, and the §1.16 trigger is removed; no property changes.
+  reader in `src/adapters/index.mjs` at `c17a11a`, and `CHANGELOG.md` 0.4.4. The
+  re-binding to `v0.4.5` checked the GeonicDB row against
+  `src/adapters/geonicdb/custom-data-model.mjs` at `1ab24cd` and `CHANGELOG.md` 0.4.5.
+- **Revisions**: 2026-11-26, re-bound to `v0.4.5`: the GeonicDB adapter sends the ISO 8601 duration `pattern` again, and the bodies need GeonicDB v0.29.0 or later (#172, geolonia/geonicdb#4180). `D-GEONICDB-BODY-NOT-THE-SCHEMA` no longer lists the duration pattern among the rules left out; no property changes.
+  2026-11-26, re-bound to `v0.4.4` (§1.16 trigger): the security release 0.4.4 makes `export --to geonicdb` read a model's context and the contexts it imports only under that catalog's `/context/`, redirects included (geolonia/datamodels-toolkit#167, #168). The §1.7 row and the `remote-reads` matrix row now state that rule without the 0.4.3 clauses, and the §1.16 trigger is removed; no property changes.
   2026-11-23, for geolonia/datamodels-toolkit#167, on `main` after the `v0.4.3` binding: the §1.7 row and the `remote-reads` matrix row stated the rule for the next release and kept what 0.4.3 did.
   2026-11-26, after the binding: the GeonicDB adapter sends the ISO 8601
   duration `pattern` again, since GeonicDB v0.29.0 accepts it
   (geolonia/geonicdb#4180). `D-GEONICDB-BODY-NOT-THE-SCHEMA` keeps what 0.4.4
-  left out; no property changes. Re-bind at the next release.
+  left out; no property changes. Superseded by the `v0.4.5` binding the same
+  day, which drops the duration pattern from that disclaimer.
   2026-11-23, for issue #144 (§1.16 triggers: claimed
   properties and disclaimers changed by the security releases 0.3.17, 0.3.18
   and 0.3.19, and a new adapter and library export in 0.4.0 and 0.4.1).
@@ -1058,7 +1063,7 @@ what remains.
 | `D-INIT-PUSHES-HISTORY` | keeping private the earlier contents of the files `init` writes, and the messages and authors of earlier commits | stated by the maintainer: the check is by file name, and whoever runs `init --github` in an existing repository reviews that history first or uses a new folder. In a folder that is already a git repository without a remote, `init --github` checks the file names of every earlier commit, not their contents, and pushes the whole local history to the new public repository: an earlier version of `node.yaml` or `README.md`, and every commit's message and author, are published as they are | security-critical | no | *(maintainer, 2026-11)* |
 | `D-RELEASE-SINGLE-GATE` | a second approval before a version reaches npm | stated. Publishing the GitHub release is the only gate | security-critical | no | *(documented, .github/workflows/publish.yml header: "no second approval on npmjs.com")* |
 | `D-PROVENANCE-NOT-REVIEW` | review or audit evidence from npm provenance | stated. Provenance names the commit and the workflow that built the package | correctness-only | yes: provenance says where a package was built, not that it was reviewed | *(documented, README "Releases")* |
-| `D-GEONICDB-BODY-NOT-THE-SCHEMA` | a GeonicDB body that checks what the model's schema checks, or that keeps its bytes | stated. Rules GeonicDB refuses or cannot apply are left out, most with a note: a VocabProperty's `pattern` and lengths, the item rules of a list that is not of scalar Property values, scalar rules at the top level of a list, the string checks inside a language map (0.4.4 also left out the ISO 8601 duration `pattern`, which GeonicDB v0.25.0 to v0.28.x refused; after 0.4.4 it is sent, and the bodies need GeonicDB v0.29.0, geolonia/geonicdb#4180); `additionalProperties` is true unless the schema says false (`src/adapters/geonicdb/custom-data-model.mjs:283`); `contextUrl` is, without an `extend.contextUrl`, a `contextUrl` option or the model's own context link, the subject's major-version alias; like every adapter file the body is rebuilt with the node | correctness-only *(maintainer, 2026-11)* | yes: a model GeonicDB registered from the body does not check all the model's schema checks | *(documented, CHANGELOG.md 0.4.3 "Fixed": "GeonicDB then does not check the duration")* |
+| `D-GEONICDB-BODY-NOT-THE-SCHEMA` | a GeonicDB body that checks what the model's schema checks, or that keeps its bytes | stated. Rules GeonicDB refuses or cannot apply are left out, most with a note: a VocabProperty's `pattern` and lengths, the item rules of a list that is not of scalar Property values, scalar rules at the top level of a list, the string checks inside a language map; the bodies need GeonicDB v0.29.0 or later, since v0.25.0 to v0.28.x refuse the ISO 8601 duration `pattern` they carry (geolonia/geonicdb#4180); `additionalProperties` is true unless the schema says false (`src/adapters/geonicdb/custom-data-model.mjs:283`); `contextUrl` is, without an `extend.contextUrl`, a `contextUrl` option or the model's own context link, the subject's major-version alias; like every adapter file the body is rebuilt with the node | correctness-only *(maintainer, 2026-11)* | yes: a model GeonicDB registered from the body does not check all the model's schema checks | *(documented, src/adapters/geonicdb/custom-data-model.mjs `vocabValidation` comment: "not sent, and `warn` says so")* |
 | `D-NO-SHRINKWRAP` | a fixed dependency tree for `npx` and `npm install` users | stated by the maintainer. Direct dependencies are exact versions; the package ships no lockfile, so transitive versions are resolved at install time. The Action installs from the repository's lockfile | security-critical | no | *(maintainer, 2026-10)* |
 
 Well-known attack classes for a tool of this kind that the project leaves to
