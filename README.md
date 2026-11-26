@@ -19,6 +19,8 @@ Node.js 24 or later. Run a release of [`@geolonia/datamodels`](https://www.npmjs
 npx @geolonia/datamodels@0.4.4 --help
 ```
 
+A mapping file is configuration, like a script: `convert` follows it with your rights. Its `via` can read any `.yaml` or `.yml` file you can read, also outside the mapping's folder. Read a mapping file from someone else before you use it ([Converting your data](https://datamodels.jp/en/toolkit/convert#your-own-list)).
+
 Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.4.4`) and run `npx datamodels …` there. Releases before 0.3.8 are not on npm; they run from GitHub (`npx github:geolonia/datamodels-toolkit#v0.3.7 …`).
 
 ## Commands
@@ -32,8 +34,6 @@ Or add it to a project (`npm install --save-dev @geolonia/datamodels@0.4.4`) and
 | `add`, `extend` | Add a model to your site, or start from a catalog model | [Your site's models](https://datamodels.jp/en/toolkit/models) |
 | `check`, `build` | Check the node and build its files and pages | [Checking and building](https://datamodels.jp/en/toolkit/check), [The node and build](https://datamodels.jp/en/toolkit/node) |
 | `bump`, `release`, `upgrade` | Change a published model in a new version; move to a newer toolkit | [Versions](https://datamodels.jp/en/toolkit/versions) |
-
-A mapping file is configuration, like a script: `convert` follows it with your rights. Its `via` can read any `.yaml` or `.yml` file you can read, also outside the mapping's folder. Read a mapping file from someone else before you use it ([Converting your data](https://datamodels.jp/en/toolkit/convert#your-own-list)).
 
 ```bash
 npx @geolonia/datamodels@0.4.4 search 避難
