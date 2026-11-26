@@ -32,14 +32,10 @@ const VALUE_CHECKS = ['minLength', 'maxLength', 'minimum', 'maximum', 'pattern',
 // not check inside a value; their length rules are still sent.
 const LIST_CHECKS = ['minItems', 'maxItems', 'uniqueItems'];
 
-// Patterns GeonicDB's ReDoS check refuses although they are linear, so a body
-// with one could not be registered at all (400): the ISO 8601 duration of
-// Task.estimatedDuration and the fieldservice durations, refused since GeonicDB
-// v0.25.0 (geolonia/geonicdb#4180). They are not sent, and `warn` says so: the
-// broker then does not check the format of that value. Remove an entry once the
-// GeonicDB that refuses it is gone.
-const GEONICDB_REFUSED_PATTERNS = [/^\^P\(\?!\$\)/];
-const refusedPattern = (pattern) => typeof pattern === 'string' && GEONICDB_REFUSED_PATTERNS.some((re) => re.test(pattern));
+// Patterns are sent as the schema has them. GeonicDB v0.25.0 to v0.28.x refused
+// the ISO 8601 duration patterns of Task.estimatedDuration and the fieldservice
+// durations as possible catastrophic backtracking (geolonia/geonicdb#4180);
+// v0.29.0 accepts them, and is the GeonicDB these bodies need.
 
 /**
  * The full IRI of a VocabProperty term, or undefined, expanded with `terms` (the
@@ -130,10 +126,6 @@ function listValidation(prop, where, warn) {
   const itemRules = {};
   if (scalar && ngsiType !== 'VocabProperty' && ngsiType !== 'LanguageProperty') {
     for (const k of VALUE_CHECKS) if (items[k] !== undefined) itemRules[k] = items[k];
-    if (refusedPattern(itemRules.pattern)) {
-      delete itemRules.pattern;
-      warn(`${where}: GeonicDB adapter: pattern of the items not sent, GeonicDB refuses it (geolonia/geonicdb#4180)`);
-    }
   } else if (VALUE_CHECKS.some((k) => items[k] !== undefined)) {
     warn(`${where}: GeonicDB adapter: rules of the items not sent (GeonicDB checks only scalar items of a Property list)`);
   }
@@ -257,10 +249,6 @@ export function toCustomDataModel(subject, model, context, { typePrefix = '', ty
       validation = listValidation(prop, where, warn);
     } else {
       for (const k of VALUE_CHECKS) if (prop[k] !== undefined) validation[k] = prop[k];
-      if (refusedPattern(validation.pattern)) {
-        delete validation.pattern;
-        warn(`${where}: GeonicDB adapter: pattern not sent, GeonicDB refuses it (geolonia/geonicdb#4180)`);
-      }
     }
     if (ngsiType === 'VocabProperty' && d.valueType !== 'array') {
       validation = vocabValidation(validation, terms, where, `define its prefix or term in ${subject.name}/context.jsonld (or a context it imports), or write the full IRI${termsMissing}`, warn);

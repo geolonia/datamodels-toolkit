@@ -162,7 +162,10 @@
       "example": "PT1H30M",
       "required": false,
       "description": "見積もった作業時間。ISO 8601 の期間（例：PT1H30M）で書きます（RFC 8984 estimatedDuration）。",
-      "@context": "https://datamodels.jp/ns/task/estimatedDuration"
+      "@context": "https://datamodels.jp/ns/task/estimatedDuration",
+      "validation": {
+        "pattern": "^P(?!$)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$"
+      }
     },
     "percentComplete": {
       "ngsiType": "Property",
