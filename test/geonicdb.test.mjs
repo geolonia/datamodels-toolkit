@@ -321,15 +321,11 @@ test('a list sends the rules of its scalar items and its length; GeonicDB refuse
   assert.ok(notes.some((n) => /Site\.tags: .*rules of the items not sent/.test(n)), notes.join('\n'));
 });
 
-test('a pattern GeonicDB refuses (the ISO 8601 duration) is not sent, and a note says so', (t) => {
+test('the ISO 8601 duration pattern is sent, as GeonicDB v0.29.0 accepts it (geolonia/geonicdb#4180)', (t) => {
   const warn = t.mock.fn();
   const d = body('Task', { warn }).propertyDetails;
-  assert.equal(Object.hasOwn(d.estimatedDuration, 'validation'), false);
-  assert.ok(warn.mock.calls.some((c) => /Task\.estimatedDuration: .*geonicdb#4180/.test(c.arguments[0])));
-  // Other patterns are still sent.
-  const subject = { name: 'x', version: '1.0.0', models: [] };
-  const m = { type: 'X', kind: 'entity', examples: {}, catalog: {}, schema: { properties: { id: {}, type: {}, code: { type: 'string', pattern: '^[0-9]{6}$' } } } };
-  assert.deepEqual(toCustomDataModel(subject, m, { ...context, terms: { x: {} } }).propertyDetails.code.validation, { pattern: '^[0-9]{6}$' });
+  assert.match(d.estimatedDuration.validation.pattern, /^\^P\(\?!\$\)/);
+  assert.equal(warn.mock.calls.some((c) => /estimatedDuration/.test(c.arguments[0])), false);
 });
 
 test('objectType: a list of targets without duplicates; a short name or a list with any sends none', (t) => {
@@ -378,18 +374,16 @@ test('a nullable list is still a list: type [array, null] gets the list rules', 
   assert.deepEqual(d.names.validation, { items: { minLength: 1 } }, 'nullable items keep their rules');
 });
 
-test('the duration pattern is left out of list items too; other rules of the attribute stay', (t) => {
-  const warn = t.mock.fn();
+test('a duration pattern is sent in list items and next to other rules', () => {
   const subject = { name: 'x', version: '1.0.0', models: [] };
-  const DUR = '^P(?!$)(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$';
+  const DUR = '^P(?!$)(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+(\\.\\d+)?S)?)?$';
   const m = { type: 'X', kind: 'entity', examples: {}, catalog: {}, schema: { properties: { id: {}, type: {},
     windows: { type: 'array', items: { type: 'string', pattern: DUR, maxLength: 20 }, minItems: 1 },
     wait: { type: 'string', pattern: DUR, minLength: 3 },
   } } };
-  const d = toCustomDataModel(subject, m, { ...context, terms: { x: {} } }, { warn }).propertyDetails;
-  assert.deepEqual(d.windows.validation, { items: { maxLength: 20 }, minItems: 1 });
-  assert.deepEqual(d.wait.validation, { minLength: 3 });
-  assert.equal(warn.mock.calls.filter((c) => /geonicdb#4180/.test(c.arguments[0])).length, 2);
+  const d = toCustomDataModel(subject, m, { ...context, terms: { x: {} } }).propertyDetails;
+  assert.deepEqual(d.windows.validation, { items: { pattern: DUR, maxLength: 20 }, minItems: 1 });
+  assert.deepEqual(d.wait.validation, { pattern: DUR, minLength: 3 });
 });
 
 test('extension attributes pass through in GeonicDB\'s form, objectType and list rules included', () => {
