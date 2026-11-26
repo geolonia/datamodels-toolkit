@@ -1,7 +1,7 @@
 {
   "spec_version": 1,
   "repository": "https://github.com/geolonia/datamodels-toolkit",
-  "commit": "c17a11a7e5d05fe42316b43a395d859bff4fe258",
+  "commit": "1ab24cdc59ffcb458fd0f96105a79ed6377d1ad3",
   "date": "2026-11-26",
   "scope_subpath": null,
   "description": "datamodels-toolkit is a command line and a GitHub Action for data models in the style of datamodels.jp. People use it to turn a CSV list into NGSI-LD entities, to start and maintain a *node* (a site of their own that publishes JSON Schemas, JSON-LD @context files and vocabularies at fixed URLs), to find models on other nodes, and to export a model for other tools (a CSV template, a Table Schema, a JSON Schema for AI output, a PostgreSQL table, and, for a node that turns it on, a GeonicDB Custom Data Model body). It runs on the user's machine or in the user's GitHub Actions job, with the user's rights. It has no server, stores nothing of its own and holds no credential except the job token the Action is given, which it passes only to the fetch of a pull request's base branch and to GitHub's Pages actions.",
@@ -1070,10 +1070,10 @@
     },
     {
       "property": "D-GEONICDB-BODY-NOT-THE-SCHEMA",
-      "reason": "stated. Rules GeonicDB refuses or cannot apply are left out, most with a note (0.4.4 also the duration pattern, sent again after 0.4.4 for GeonicDB v0.29.0; a VocabProperty's pattern and lengths, item rules of non-scalar lists, scalar rules at the top of a list, string checks in a language map); additionalProperties true unless the schema says false; contextUrl the model's own context link, the subject's major-version alias only as the last fallback; rebuilt with the node",
+      "reason": "stated. Rules GeonicDB refuses or cannot apply are left out, most with a note (a VocabProperty's pattern and lengths, item rules of non-scalar lists, scalar rules at the top of a list, string checks in a language map); additionalProperties true unless the schema says false; contextUrl the model's own context link, the subject's major-version alias only as the last fallback; rebuilt with the node",
       "false_friend": true,
       "provenance": "documented",
-      "source": "CHANGELOG.md 0.4.3 \"Fixed\": \"GeonicDB then does not check the duration\""
+      "source": "src/adapters/geonicdb/custom-data-model.mjs vocabValidation comment: \"not sent, and warn says so\""
     },
     {
       "property": "D-NO-SHRINKWRAP",

@@ -1,7 +1,7 @@
 # threat-model.yaml — derived index; the prose threat model (threat-model.md) is canonical.
 schema: threat-model-sidecar/v2
 project: datamodels-toolkit
-prose_version: "threat-model.md@sha256:b9135749332f0d9ef4e8c580f6dd1270405779a02992f549af7eb545d68555e3"
+prose_version: "threat-model.md@sha256:9fda03ca8192e1fff83c84cd2ce8d2d13026858431ece3002bf2ca9c83dc46f2"
 model_status: accepted
 triage_policy: strict
 confidence:
@@ -1335,7 +1335,7 @@ outputs:
     statement: "that GeonicDB checks everything the schema checks; that the file keeps its bytes; that its descriptions are free of instructions; that its patterns are cheap to run"
     provenance:
       kind: documented
-      source: "CHANGELOG.md 0.4.3 \"Fixed\": \"GeonicDB then does not check the duration\""
+      source: "src/adapters/geonicdb/custom-data-model.mjs vocabValidation comment: \"not sent, and warn says so\""
 - component: remote-reads
   channel: extend-written-files
   taint: same-as-input
@@ -2312,12 +2312,12 @@ properties_disclaimed:
   - node-tools
   - remote-reads
   - library
-  conditions: "stated. Rules GeonicDB refuses or cannot apply are left out, most with a note (0.4.4 also the duration pattern, sent again after 0.4.4 for GeonicDB v0.29.0; a VocabProperty's pattern and lengths, item rules of non-scalar lists, scalar rules at the top of a list, string checks in a language map); additionalProperties true unless the schema says false; contextUrl the model's own context link, the subject's major-version alias only as the last fallback; rebuilt with the node"
+  conditions: "stated. Rules GeonicDB refuses or cannot apply are left out, most with a note (a VocabProperty's pattern and lengths, item rules of non-scalar lists, scalar rules at the top of a list, string checks in a language map); additionalProperties true unless the schema says false; contextUrl the model's own context link, the subject's major-version alias only as the last fallback; rebuilt with the node"
   tier: correctness-only
   false_friend: true
   provenance:
     kind: documented
-    source: "CHANGELOG.md 0.4.3 \"Fixed\": \"GeonicDB then does not check the duration\""
+    source: "src/adapters/geonicdb/custom-data-model.mjs vocabValidation comment: \"not sent, and warn says so\""
 - id: D-NO-SHRINKWRAP
   components:
   - release-pipeline
