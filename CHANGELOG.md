@@ -6,6 +6,15 @@ Entries for the next release wait in [`changes/`](https://github.com/geolonia/da
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-11-26
+
+The GeonicDB adapter sends the ISO 8601 duration pattern again, so GeonicDB checks a duration's format; the bodies need GeonicDB v0.29.0 or later (#172, geolonia/geonicdb#4180). `init` pins the Action v0.4.4.
+
+### Changed
+
+- The GeonicDB adapter sends the ISO 8601 duration `pattern` again (Task's `estimatedDuration`, the fieldservice durations), so GeonicDB checks a duration's format. It needs GeonicDB v0.29.0 or later: v0.25.0 to v0.28.x refuse the pattern and with it the whole body (geolonia/geonicdb#4180, fixed in v0.29.0).
+- `datamodels init` writes a workflow pinned to the v0.4.4 release of the Action, and a README whose commands run `npx @geolonia/datamodels@0.4.4`. This repository's README shows that workflow and runs `npx @geolonia/datamodels@0.4.5`, whose `init` writes it.
+
 ## [0.4.4] - 2026-11-23
 
 A security release: `export --to geonicdb` reads a remote model's context and the contexts it imports only under that catalog's `context/`, redirects included (#168, closes #167); `init` pins the Action v0.4.3.
@@ -445,7 +454,8 @@ First release: the CSV converter moved from [geolonia/datamodels](https://github
 - The command line is built on [commander](https://github.com/tj/commander.js) (#9); `--help` also lists the arguments.
 - `--normalized`: dates follow the catalog's rule (geolonia/datamodels#183). An attribute with `format: date` becomes `{"@type": "Date"}`, and one that takes a date or a date-time (Task's `start` and `due`) gets the type that fits the value.
 
-[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.4...main
+[Unreleased]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.5...main
+[0.4.5]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/geolonia/datamodels-toolkit/compare/v0.4.1...v0.4.2
