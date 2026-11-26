@@ -47,7 +47,8 @@
   2026-11-26, after the binding: the GeonicDB adapter sends the ISO 8601
   duration `pattern` again, since GeonicDB v0.29.0 accepts it
   (geolonia/geonicdb#4180). `D-GEONICDB-BODY-NOT-THE-SCHEMA` keeps what 0.4.4
-  left out; no property changes. Re-bound to `v0.4.5` the same day.
+  left out; no property changes. Superseded by the `v0.4.5` binding the same
+  day, which drops the duration pattern from that disclaimer.
   2026-11-23, for issue #144 (§1.16 triggers: claimed
   properties and disclaimers changed by the security releases 0.3.17, 0.3.18
   and 0.3.19, and a new adapter and library export in 0.4.0 and 0.4.1).
